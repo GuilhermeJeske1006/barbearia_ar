@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Livewire\Admin\Usuarios;
+
+use App\Actions\Usuarios\AtualizarUsuarioBarbeariaAction;
+use App\Actions\Usuarios\CriarUsuarioBarbeariaAction;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+#[Layout('layouts::app')]
+class CrudUsuario extends Component
+{
+    use WithPagination;
+
+    private const ROLES_ATRIBUIVEIS = ['atendente', 'barbeiro'];
+
+    public ?int $editandoId = null;
+
+    public string $nome = '';
+
+    public string $email = '';
+
+    public string $senha = '';
+
+    public string $telefone = '';
+
+    public string $role = 'atendente';
+
+    public string $percentualComissao = '';
+
+    public bool $mostrarForm = false;
+
+    protected function rules(): array
+    {
+        return [
+            'nome' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required', 'email', 'max:255',
+                Rule::unique('users', 'email')->ignore($this->editandoId),
+            ],
+            'senha' => [$this->editandoId ? 'nullable' : 'required', 'string', 'min:8'],
+            'telefone' => ['required', 'string', 'max:30'],
+            'role' => ['required', Rule::in(self::ROLES_ATRIBUIVEIS)],
+            'percentualComissao' => [$this->role === 'barbeiro' ? 'required' : 'nullable', 'numeric', 'min:0', 'max:100'],
+        ];
+    }
+
+    public function criar(): void
+    {
+        $this->reset(['editandoId', 'nome', 'email', 'senha', 'telefone', 'percentualComissao']);
+        $this->role = 'atendente';
+        $this->mostrarForm = true;
+    }
+
+    public function editar(int $id): void
+    {
+        $user = User::where('barbearia_atual_id', app('barbearia.id'))->findOrFail($id);
+
+        $this->editandoId = $user->id;
+        $this->nome = $user->name;
+        $this->email = $user->email;
+        $this->senha = '';
+        $this->telefone = (string) $user->telefone;
+        $this->role = $user->tipo;
+        $this->percentualComissao = (string) $user->barbeiro()->first()?->percentual_comissao;
+        $this->mostrarForm = true;
+    }
+
+    public function salvar(CriarUsuarioBarbeariaAction $criar, AtualizarUsuarioBarbeariaAction $atualizar): void
+    {
+        $this->validate();
+
+        if ($this->editandoId) {
+            $atualizar->handle(
+                User::where('barbearia_atual_id', app('barbearia.id'))->findOrFail($this->editandoId),
+                $this->nome,
+                $this->telefone,
+                $this->role,
+            );
+        } else {
+            $criar->handle(
+                app('barbearia.id'),
+                $this->nome,
+                $this->email,
+                $this->senha,
+                $this->telefone,
+                $this->role,
+                $this->percentualComissao ?: null,
+            );
+        }
+
+        $this->mostrarForm = false;
+        $this->reset(['editandoId', 'nome', 'email', 'senha', 'telefone', 'percentualComissao']);
+    }
+
+    public function cancelar(): void
+    {
+        $this->mostrarForm = false;
+        $this->resetValidation();
+        $this->reset(['editandoId', 'nome', 'email', 'senha', 'telefone', 'percentualComissao']);
+    }
+
+    public function alternarAtivo(int $id): void
+    {
+        $user = User::where('barbearia_atual_id', app('barbearia.id'))->findOrFail($id);
+
+        if ($user->id === Auth::id()) {
+            $this->addError('form', __('painel.nao_pode_alterar_a_si_mesmo'));
+
+            return;
+        }
+
+        if ($user->ativo && $user->tipo === 'dono') {
+            $donosAtivos = User::where('barbearia_atual_id', app('barbearia.id'))
+                ->where('tipo', 'dono')->where('ativo', true)->count();
+
+            if ($donosAtivos <= 1) {
+                $this->addError('form', __('painel.nao_pode_desativar_ultimo_dono'));
+
+                return;
+            }
+        }
+
+        $user->update(['ativo' => ! $user->ativo]);
+    }
+
+    public function render()
+    {
+        return view('livewire.admin.usuarios.crud-usuario', [
+            'usuarios' => User::where('barbearia_atual_id', app('barbearia.id'))
+                ->orderBy('name')->paginate(10),
+        ]);
+    }
+}

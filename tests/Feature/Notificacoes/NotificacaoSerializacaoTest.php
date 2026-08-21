@@ -9,6 +9,7 @@ use App\Models\Cliente;
 use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
 use App\Notifications\AgendamentoLembrete;
+use App\Notifications\AgendamentoPesquisaSatisfacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -101,5 +102,47 @@ class NotificacaoSerializacaoTest extends TestCase
 
         $this->assertStringContainsString('María', $mail->greeting);
         $this->assertStringContainsString('Pedro', collect($mail->introLines)->join(' '));
+    }
+
+    public function test_agendamento_confirmado_whatsapp_sobrevive_a_serializacao_real_da_fila(): void
+    {
+        $agendamento = $this->criarAgendamentoComRelacoesCarregadas();
+        $cliente = $agendamento->cliente;
+
+        $notification = new AgendamentoConfirmado($agendamento);
+        $restaurada = $this->simularRoundTripDeFila($notification);
+
+        $texto = $restaurada->toWhatsApp($cliente);
+
+        $this->assertStringContainsString('María', $texto);
+        $this->assertStringContainsString('Pedro', $texto);
+        $this->assertStringContainsString('Corte', $texto);
+    }
+
+    public function test_agendamento_lembrete_whatsapp_sobrevive_a_serializacao_real_da_fila(): void
+    {
+        $agendamento = $this->criarAgendamentoComRelacoesCarregadas();
+        $cliente = $agendamento->cliente;
+
+        $notification = new AgendamentoLembrete($agendamento);
+        $restaurada = $this->simularRoundTripDeFila($notification);
+
+        $texto = $restaurada->toWhatsApp($cliente);
+
+        $this->assertStringContainsString('María', $texto);
+        $this->assertStringContainsString('Pedro', $texto);
+    }
+
+    public function test_agendamento_pesquisa_satisfacao_whatsapp_sobrevive_a_serializacao_real_da_fila(): void
+    {
+        $agendamento = $this->criarAgendamentoComRelacoesCarregadas();
+        $cliente = $agendamento->cliente;
+
+        $notification = new AgendamentoPesquisaSatisfacao($agendamento);
+        $restaurada = $this->simularRoundTripDeFila($notification);
+
+        $texto = $restaurada->toWhatsApp($cliente);
+
+        $this->assertStringContainsString('María', $texto);
     }
 }

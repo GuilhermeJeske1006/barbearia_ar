@@ -11,6 +11,7 @@ use App\Models\Comissao;
 use App\Models\Pagamento;
 use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
+use App\Notifications\AgendamentoPesquisaSatisfacao;
 use App\Services\MercadoPagoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -193,7 +194,7 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         Notification::assertSentTo($this->agendamento->cliente->fresh(), AgendamentoConfirmado::class);
     }
 
-    public function test_nao_notifica_para_venda_pdv_mesmo_com_pagamento_aprovado(): void
+    public function test_nao_notifica_confirmacao_para_venda_pdv_mas_notifica_pesquisa_satisfacao(): void
     {
         Notification::fake();
         $this->agendamento->update(['origem_pdv' => true]);
@@ -215,7 +216,8 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
 
         $this->agendamento->refresh();
         $this->assertSame('concluido', $this->agendamento->status);
-        Notification::assertNothingSent();
+        Notification::assertNotSentTo($this->agendamento->cliente, AgendamentoConfirmado::class);
+        Notification::assertSentTo($this->agendamento->cliente, AgendamentoPesquisaSatisfacao::class);
     }
 
     public function test_agendamento_inexistente_nao_quebra(): void

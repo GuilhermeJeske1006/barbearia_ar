@@ -35,6 +35,17 @@ return [
         ],
     ],
 
+    'wuzapi' => [
+        // Provedor de WhatsApp: wuzapi (github.com/asternic/wuzapi), servidor
+        // próprio self-hosted, sessão pareada via QR. 1 sessão por barbearia
+        // (token/webhook_token ficam em Barbearia, não aqui — só a base_url e
+        // o admin_token são globais, usados pra provisionar cada sessão). Ver
+        // App\Services\WuzApiService, App\Console\Commands\ConectarWhatsApp e
+        // App\Http\Controllers\WhatsAppWebhookController.
+        'base_url' => env('WUZAPI_BASE_URL'),
+        'admin_token' => env('WUZAPI_ADMIN_TOKEN'),
+    ],
+
     'mercadopago' => [
         'client_id' => env('MP_CLIENT_ID'),
         'client_secret' => env('MP_CLIENT_SECRET'),

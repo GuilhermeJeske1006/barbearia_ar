@@ -28,7 +28,7 @@ return [
     'confirmado_detalhe' => 'Te esperamos em :data às :hora.',
     'agendar_outro' => 'Agendar outro horário',
 
-    'paso' => 'Passo :n de 4',
+    'paso' => 'Passo :n de 5',
     'periodo_manana' => 'Manhã',
     'periodo_tarde' => 'Tarde',
     'periodo_noche' => 'Noite',

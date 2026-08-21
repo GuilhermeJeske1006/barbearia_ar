@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Agendamento extends Model
 {
@@ -16,7 +17,7 @@ class Agendamento extends Model
     protected $fillable = [
         'barbearia_id', 'barbeiro_id', 'cliente_id', 'criado_por', 'data_hora_inicio',
         'data_hora_fim', 'status', 'origem_pdv', 'observacoes', 'pagamento_id',
-        'created_by', 'updated_by', 'lembrete_enviado_em',
+        'created_by', 'updated_by', 'lembrete_enviado_em', 'pesquisa_enviada_em',
     ];
 
     protected $casts = [
@@ -24,6 +25,7 @@ class Agendamento extends Model
         'data_hora_fim' => 'datetime',
         'origem_pdv' => 'boolean',
         'lembrete_enviado_em' => 'datetime',
+        'pesquisa_enviada_em' => 'datetime',
     ];
 
     public function barbeiro(): BelongsTo
@@ -58,5 +60,10 @@ class Agendamento extends Model
     public function pagamentos(): HasMany
     {
         return $this->hasMany(Pagamento::class);
+    }
+
+    public function pesquisaSatisfacao(): HasOne
+    {
+        return $this->hasOne(PesquisaSatisfacao::class);
     }
 }

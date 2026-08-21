@@ -26,4 +26,20 @@ class Cliente extends Model
     {
         return $this->hasMany(Agendamento::class);
     }
+
+    /**
+     * Usado pelo WhatsAppChannel. Normaliza pra só dígitos (E.164 sem '+') —
+     * telefone é digitado livremente no wizard/PDV, pode vir com espaços,
+     * parênteses ou hífen.
+     */
+    public function routeNotificationForWhatsApp(): ?string
+    {
+        if (! $this->telefone) {
+            return null;
+        }
+
+        $digitos = preg_replace('/\D/', '', $this->telefone);
+
+        return $digitos !== '' ? $digitos : null;
+    }
 }

@@ -9,6 +9,7 @@ use App\Models\Barbeiro;
 use App\Models\Cliente;
 use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
+use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -66,7 +67,7 @@ class NotificarAgendamentoConfirmadoActionTest extends TestCase
         Notification::assertSentTo($agendamento->cliente, AgendamentoConfirmado::class);
     }
 
-    public function test_nao_envia_quando_cliente_sem_email(): void
+    public function test_envia_por_whatsapp_quando_cliente_sem_email(): void
     {
         Notification::fake();
 
@@ -74,7 +75,23 @@ class NotificarAgendamentoConfirmadoActionTest extends TestCase
 
         app(NotificarAgendamentoConfirmadoAction::class)->handle($agendamento);
 
-        Notification::assertNothingSent();
+        Notification::assertSentTo($agendamento->cliente, AgendamentoConfirmado::class);
+    }
+
+    public function test_nao_envia_por_whatsapp_quando_barbearia_desativa(): void
+    {
+        Notification::fake();
+
+        $agendamento = $this->criarAgendamento('maria@example.com');
+        $agendamento->barbearia->update(['whatsapp_notifica_confirmacao' => false]);
+
+        app(NotificarAgendamentoConfirmadoAction::class)->handle($agendamento);
+
+        Notification::assertSentTo(
+            $agendamento->cliente,
+            AgendamentoConfirmado::class,
+            fn ($notification, $channels) => ! in_array(WhatsAppChannel::class, $channels, true),
+        );
     }
 
     public function test_usa_idioma_do_cliente_quando_definido(): void

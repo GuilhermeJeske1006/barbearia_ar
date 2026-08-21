@@ -12,12 +12,13 @@
 
             <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_servico') }}" rows="2" />
 
-            <div class="flex gap-4">
-                <x-ui.input label="{{ __('painel.duracao_minutos') }}" id="duracaoMinutos" name="duracaoMinutos" type="number" min="1" wire:model="duracaoMinutos" placeholder="{{ __('painel.placeholder_duracao') }}" suffix="min" class="w-32" />
-                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" class="w-32" />
+            <div class="grid grid-cols-3 gap-4">
+                <x-ui.input label="{{ __('painel.duracao_minutos') }}" id="duracaoMinutos" name="duracaoMinutos" type="number" min="1" wire:model="duracaoMinutos" placeholder="{{ __('painel.placeholder_duracao') }}" suffix="min" />
+                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" />
+                <div class="flex items-center pt-6">
+                    <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
+                </div>
             </div>
-
-            <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
 
             <div class="flex gap-2">
                 <x-ui.button type="submit">{{ __('painel.salvar') }}</x-ui.button>

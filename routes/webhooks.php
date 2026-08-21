@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MercadoPagoWebhookController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,3 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/webhooks/mercadopago', MercadoPagoWebhookController::class)
     ->name('webhooks.mercadopago');
+
+Route::post('/webhooks/whatsapp/{webhookToken}', [WhatsAppWebhookController::class, 'receber'])
+    ->middleware('throttle:whatsapp-webhook')
+    ->name('webhooks.whatsapp');

@@ -3,6 +3,7 @@
 namespace App\Actions\Pagamento;
 
 use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
+use App\Actions\Notificacoes\NotificarPesquisaSatisfacaoAction;
 use App\Models\Agendamento;
 use App\Models\Pagamento;
 use App\Services\ComissaoService;
@@ -21,6 +22,7 @@ class ProcessarWebhookMercadoPagoAction
         private readonly CalcularComissaoAction $calcularComissao,
         private readonly ComissaoService $comissaoService,
         private readonly NotificarAgendamentoConfirmadoAction $notificarConfirmado,
+        private readonly NotificarPesquisaSatisfacaoAction $notificarPesquisa,
     ) {}
 
     public function handle(string $mpPaymentId): void
@@ -43,8 +45,9 @@ class ProcessarWebhookMercadoPagoAction
         app()->instance('barbearia.id', $agendamento->barbearia_id);
 
         $confirmouAgoraOnline = false;
+        $concluiuAgoraPdv = false;
 
-        DB::transaction(function () use ($agendamento, $paymentApi, $mpPaymentId, &$confirmouAgoraOnline) {
+        DB::transaction(function () use ($agendamento, $paymentApi, $mpPaymentId, &$confirmouAgoraOnline, &$concluiuAgoraPdv) {
             // Prioridade: (1) já processamos esse mp_payment_id antes —
             // idempotência num reenvio do webhook; (2) existe um Pagamento
             // "reservado" pela CriarPreferenciaMercadoPagoAction no momento
@@ -88,13 +91,18 @@ class ProcessarWebhookMercadoPagoAction
                 $agendamento->update(['status' => $statusFinal, 'pagamento_id' => $pagamento->id]);
                 $this->comissaoService->registrar($pagamento);
                 $confirmouAgoraOnline = $statusFinal === 'confirmado';
+                $concluiuAgoraPdv = $statusFinal === 'concluido';
             }
         });
 
-        // Fora da transação: um problema ao enfileirar o e-mail não pode
+        // Fora da transação: um problema ao enfileirar a notificação não pode
         // reverter a confirmação do pagamento que já foi commitada.
         if ($confirmouAgoraOnline) {
             $this->notificarConfirmado->handle($agendamento->fresh());
+        }
+
+        if ($concluiuAgoraPdv) {
+            $this->notificarPesquisa->handle($agendamento->fresh());
         }
     }
 }

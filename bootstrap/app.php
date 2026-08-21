@@ -39,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             | Request::HEADER_X_FORWARDED_PROTO);
         $middleware->appendToGroup('web', [SetLocale::class, ResolveTheme::class]);
         $middleware->alias(['tenant' => ResolveTenant::class]);
-        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago']);
+        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago', 'webhooks/whatsapp/*']);
 
         // ResolveTenant precisa rodar antes de SubstituteBindings: rotas com
         // model binding implícito (ex.: {barbeiro}) resolvem o Eloquent

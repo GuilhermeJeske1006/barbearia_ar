@@ -67,6 +67,7 @@
                     <p class="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">{{ __('painel.categoria_financeiro') }}</p>
                     @can('barbearia.gerenciar')
                         <x-ui.nav-item :href="route('admin.mercadopago')" :active="request()->routeIs('admin.mercadopago')">{{ __('painel.mp_titulo') }}</x-ui.nav-item>
+                        <x-ui.nav-item :href="route('admin.whatsapp')" :active="request()->routeIs('admin.whatsapp')">{{ __('painel.whatsapp_titulo') }}</x-ui.nav-item>
                     @endcan
                     @can('financeiro.visualizar')
                         <x-ui.nav-item :href="route('admin.relatorios.comissoes')" :active="request()->routeIs('admin.relatorios.comissoes')">{{ __('painel.comisiones') }}</x-ui.nav-item>

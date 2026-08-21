@@ -7,6 +7,7 @@ use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\Cliente;
 use App\Notifications\AgendamentoLembrete;
+use App\Notifications\Channels\WhatsAppChannel;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -99,7 +100,7 @@ class EnviarLembretesAgendamentoTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_marca_como_enviado_mesmo_sem_email_pra_nao_reprocessar(): void
+    public function test_envia_por_whatsapp_mesmo_sem_email(): void
     {
         Notification::fake();
 
@@ -107,8 +108,24 @@ class EnviarLembretesAgendamentoTest extends TestCase
 
         $this->artisan('agendamentos:enviar-lembretes');
 
-        Notification::assertNothingSent();
+        Notification::assertSentTo($agendamento->cliente, AgendamentoLembrete::class);
         $this->assertNotNull($agendamento->fresh()->lembrete_enviado_em);
+    }
+
+    public function test_nao_envia_por_whatsapp_quando_barbearia_desativa(): void
+    {
+        Notification::fake();
+
+        $this->barbearia->update(['whatsapp_notifica_lembrete' => false]);
+        $agendamento = $this->criarAgendamento(now()->addHours(2));
+
+        $this->artisan('agendamentos:enviar-lembretes');
+
+        Notification::assertSentTo(
+            $agendamento->cliente,
+            AgendamentoLembrete::class,
+            fn ($notification, $channels) => ! in_array(WhatsAppChannel::class, $channels, true),
+        );
     }
 
     public function test_processa_agendamentos_de_todas_as_barbearias(): void

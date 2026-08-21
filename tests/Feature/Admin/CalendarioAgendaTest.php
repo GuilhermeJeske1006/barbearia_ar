@@ -9,11 +9,14 @@ use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\BarbeiroHorario;
 use App\Models\Cliente;
+use App\Models\Produto;
 use App\Models\Servico;
 use App\Models\User;
+use App\Notifications\AgendamentoPesquisaSatisfacao;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -111,6 +114,35 @@ class CalendarioAgendaTest extends TestCase
         $this->assertSame('em_atendimento', $this->agendamento->fresh()->status);
     }
 
+    public function test_transicao_para_concluido_dispara_pesquisa_de_satisfacao(): void
+    {
+        Notification::fake();
+
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('transicionar', $this->agendamento->id, 'concluido');
+
+        Notification::assertSentTo($this->agendamento->cliente, AgendamentoPesquisaSatisfacao::class);
+        $this->assertNotNull($this->agendamento->fresh()->pesquisa_enviada_em);
+    }
+
+    public function test_transicao_para_concluido_nao_notifica_quando_barbearia_desativa_pesquisa(): void
+    {
+        Notification::fake();
+
+        $this->barbearia->update(['whatsapp_notifica_pesquisa_satisfacao' => false]);
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('transicionar', $this->agendamento->id, 'concluido');
+
+        Notification::assertNotSentTo($this->agendamento->cliente, AgendamentoPesquisaSatisfacao::class);
+        $this->assertNull($this->agendamento->fresh()->pesquisa_enviada_em);
+    }
+
     public function test_transicao_nao_permitida_e_ignorada(): void
     {
         $this->agendamento->update(['status' => 'concluido']);
@@ -185,6 +217,211 @@ class CalendarioAgendaTest extends TestCase
         $this->assertSame('confirmado', $criado->status);
         $this->assertSame('atendente', $criado->criado_por);
         $this->assertSame('Cliente Novo', $criado->cliente->nome);
+    }
+
+    public function test_grade_mostra_todos_horarios_do_expediente_mesmo_sem_agendamento(): void
+    {
+        BarbeiroHorario::create([
+            'barbeiro_id' => $this->barbeiro->id,
+            'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => Carbon::today()->dayOfWeek,
+            'hora_inicio' => '09:00',
+            'hora_fim' => '12:00',
+        ]);
+
+        $this->agendamento->delete();
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->assertSee('09:00')
+            ->assertSee('09:30')
+            ->assertSee('11:30')
+            ->assertDontSee('12:00');
+    }
+
+    public function test_busca_cliente_encontra_por_nome_ou_telefone(): void
+    {
+        $clienteExistente = Cliente::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Roberto Alves',
+            'telefone' => '4499998888',
+        ]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->set('buscaCliente', 'Roberto')
+            ->assertSee('Roberto Alves')
+            ->assertSee('4499998888');
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->set('buscaCliente', '9998888')
+            ->assertSee($clienteExistente->nome);
+    }
+
+    public function test_selecionar_cliente_existente_preenche_form_e_reutiliza_no_salvar(): void
+    {
+        $servicoNovo = Servico::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Barba',
+            'duracao_minutos' => 30,
+            'preco' => 3000,
+        ]);
+
+        $barbeiro2 = Barbeiro::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Lucas',
+            'percentual_comissao' => 50,
+        ]);
+
+        BarbeiroHorario::create([
+            'barbeiro_id' => $barbeiro2->id,
+            'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => Carbon::today()->dayOfWeek,
+            'hora_inicio' => '09:00',
+            'hora_fim' => '18:00',
+        ]);
+
+        $clienteExistente = Cliente::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Roberto Alves',
+            'telefone' => '4499998888',
+        ]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->set('buscaCliente', 'Roberto')
+            ->call('selecionarCliente', $clienteExistente->id)
+            ->assertSet('novoClienteId', $clienteExistente->id)
+            ->assertSet('novoClienteNome', 'Roberto Alves')
+            ->assertSet('novoClienteTelefone', '4499998888')
+            ->assertSet('buscaCliente', '')
+            ->set('novoBarbeiroId', $barbeiro2->id)
+            ->set('novoServicosSelecionados', [$servicoNovo->id])
+            ->set('novoData', Carbon::today()->toDateString())
+            ->set('novoHorario', '09:00')
+            ->call('salvarNovo')
+            ->assertSet('mostrarForm', false);
+
+        $this->assertSame(1, Cliente::where('telefone', '4499998888')->count());
+
+        $criado = Agendamento::where('barbeiro_id', $barbeiro2->id)->first();
+        $this->assertSame($clienteExistente->id, $criado->cliente_id);
+    }
+
+    public function test_abrir_pagamento_preenche_servicos_ja_agendados(): void
+    {
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->assertSet('mostrarPagamento', true)
+            ->assertSet('pagamentoServicosSelecionados', [$this->agendamento->servicos->first()->id]);
+    }
+
+    public function test_confirmar_pagamento_conclui_agendamento_e_gera_comissao(): void
+    {
+        Notification::fake();
+
+        $this->agendamento->update(['status' => 'em_atendimento']);
+        $servicoId = $this->agendamento->servicos->first()->id;
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->set('metodoPagamentoManual', 'dinheiro')
+            ->call('confirmarPagamento')
+            ->assertSet('mostrarPagamento', false);
+
+        $agendamento = $this->agendamento->fresh();
+        $this->assertSame('concluido', $agendamento->status);
+        $this->assertNotNull($agendamento->pagamento_id);
+        $this->assertSame([$servicoId], $agendamento->servicos->pluck('id')->all());
+
+        $pagamento = $agendamento->pagamento;
+        $this->assertEquals(5000, $pagamento->valor_total);
+        $this->assertEquals(2500, $pagamento->valor_comissao_barbeiro);
+        $this->assertSame('dinheiro', $pagamento->metodo);
+        $this->assertSame('manual', $pagamento->forma_split);
+
+        $comissao = $pagamento->comissoes->first();
+        $this->assertNotNull($comissao);
+        $this->assertSame($this->barbeiro->id, $comissao->barbeiro_id);
+        $this->assertEquals(2500, $comissao->valor);
+        $this->assertSame('pendente', $comissao->status);
+
+        Notification::assertSentTo($this->agendamento->cliente, AgendamentoPesquisaSatisfacao::class);
+    }
+
+    public function test_confirmar_pagamento_permite_adicionar_servico_extra_em_cima_da_hora(): void
+    {
+        $servicoExtra = Servico::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Barba',
+            'duracao_minutos' => 20,
+            'preco' => 2000,
+        ]);
+
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->call('togglePagamentoServico', $servicoExtra->id)
+            ->call('confirmarPagamento');
+
+        $agendamento = $this->agendamento->fresh();
+        $this->assertEqualsCanonicalizing(
+            [$this->agendamento->servicos->first()->id, $servicoExtra->id],
+            $agendamento->servicos->pluck('id')->all(),
+        );
+
+        $pagamento = $agendamento->pagamento;
+        $this->assertEquals(7000, $pagamento->valor_total);
+        $this->assertEquals(3500, $pagamento->valor_comissao_barbeiro);
+    }
+
+    public function test_confirmar_pagamento_permite_adicionar_produto_vendido_no_balcao(): void
+    {
+        $produto = Produto::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Pomada',
+            'preco' => 1500,
+            'ativo' => true,
+        ]);
+
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->call('incrementarPagamentoProduto', $produto->id)
+            ->call('confirmarPagamento');
+
+        $agendamento = $this->agendamento->fresh();
+        $pagamento = $agendamento->pagamento;
+        $this->assertEquals(6500, $pagamento->valor_total);
+        // comissão calculada só sobre serviços (5000 * 50%); produto vai integral pra barbearia
+        $this->assertEquals(2500, $pagamento->valor_comissao_barbeiro);
+        $this->assertEquals(4000, $pagamento->valor_barbearia);
+    }
+
+    public function test_confirmar_pagamento_exige_ao_menos_um_servico(): void
+    {
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->call('togglePagamentoServico', $this->agendamento->servicos->first()->id)
+            ->call('confirmarPagamento')
+            ->assertHasErrors(['pagamentoServicosSelecionados']);
+
+        $this->assertSame('em_atendimento', $this->agendamento->fresh()->status);
     }
 
     public function test_atendente_sem_permissao_de_agenda_nao_acessa(): void

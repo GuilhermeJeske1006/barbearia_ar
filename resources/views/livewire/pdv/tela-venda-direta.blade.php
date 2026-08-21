@@ -11,115 +11,18 @@
 
         @if ($etapa > 1)
             <div class="mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-slate-400">
-                <span>{{ __('pdv.cliente') }}: <span class="font-semibold text-white">{{ $clienteNome ?: $clienteTelefone }}</span></span>
                 @if ($this->barbeiroAtual())
                     <span>{{ __('pdv.barbeiro') }}: <span class="font-semibold text-white">{{ $this->barbeiroAtual()->nome }}</span></span>
+                @endif
+                @if ($clienteNome || $clienteTelefone)
+                    <span>{{ __('pdv.cliente') }}: <span class="font-semibold text-white">{{ $clienteNome ?: $clienteTelefone }}</span></span>
                 @endif
             </div>
         @endif
     @endif
 
-    {{-- Etapa 1: dados do cliente --}}
+    {{-- Etapa 1: serviços + produtos --}}
     @if ($etapa === 1)
-        <h1 class="mb-6 text-2xl font-extrabold">{{ __('pdv.dados_cliente') }}</h1>
-
-        <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <form wire:submit="confirmarCliente" class="max-w-xl space-y-5">
-                <div>
-                    <label for="clienteTelefone" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.telefono_cliente') }}</label>
-                    <input id="clienteTelefone" type="tel" wire:model.live="clienteTelefone" placeholder="{{ __('pdv.placeholder_telefone') }}" autofocus
-                        x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}"
-                        class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white focus:border-brand-500 focus:ring-brand-500">
-                    @error('clienteTelefone') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
-                    <p class="mt-1.5 text-xs text-slate-500">{{ __('pdv.ajuda_telefone') }}</p>
-                </div>
-
-                <div>
-                    <label for="clienteNome" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.nombre_cliente') }}</label>
-                    <input id="clienteNome" type="text" wire:model="clienteNome" placeholder="{{ __('pdv.placeholder_nome_cliente') }}"
-                        class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white placeholder:text-slate-600 focus:border-brand-500 focus:ring-brand-500">
-                    @error('clienteNome') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
-                </div>
-
-                <div class="flex justify-end border-t border-slate-800 pt-5">
-                    <x-ui.button type="submit" size="lg">
-                        {{ __('pdv.continuar') }} →
-                    </x-ui.button>
-                </div>
-            </form>
-
-            <div class="rounded-2xl bg-slate-800 p-5">
-                @php $clienteExistente = $this->clienteExistente(); @endphp
-                @if ($clienteExistente)
-                    <h3 class="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('pdv.cliente_reconhecido') }}</h3>
-                    <div class="flex items-center justify-between border-b border-dashed border-slate-700 py-2 text-[13px]">
-                        <span class="text-slate-400">{{ __('pdv.nombre_cliente') }}</span>
-                        <span class="font-bold">{{ $clienteExistente->nome }}</span>
-                    </div>
-                    <div class="flex items-center justify-between border-b border-dashed border-slate-700 py-2 text-[13px]">
-                        <span class="text-slate-400">{{ __('pdv.cliente_desde') }}</span>
-                        <span class="font-bold">{{ $clienteExistente->created_at->translatedFormat('M/Y') }}</span>
-                    </div>
-                    <div class="flex items-center justify-between py-2 text-[13px]">
-                        <span class="text-slate-400">{{ __('pdv.visitas') }}</span>
-                        <span class="font-bold">{{ $clienteExistente->agendamentos()->count() }}</span>
-                    </div>
-                    @if ($ultimo = $this->ultimoAgendamentoCliente($clienteExistente))
-                        <div class="mt-3 rounded-xl bg-slate-900 p-3 text-[12.5px]">
-                            <span class="block text-slate-500">{{ __('pdv.ultima_visita') }}</span>
-                            <span class="font-semibold">
-                                {{ $ultimo->data_hora_inicio->translatedFormat('d/m/Y') }} · {{ $ultimo->servicos->pluck('nome')->join(', ') }}
-                            </span>
-                        </div>
-                    @endif
-
-                    @if ($this->clienteTemPendencia($clienteExistente))
-                        <x-ui.badge tone="amber" class="mt-3">⚠ {{ __('pdv.com_pendencia') }}</x-ui.badge>
-                    @else
-                        <x-ui.badge tone="green" class="mt-3">✓ {{ __('pdv.sem_pendencia') }}</x-ui.badge>
-                    @endif
-                @else
-                    <h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('pdv.cliente_reconhecido') }}</h3>
-                    <p class="text-[13px] text-slate-500">{{ __('pdv.novo_cliente_ajuda') }}</p>
-                @endif
-            </div>
-        </div>
-    @endif
-
-    {{-- Etapa 2: barbeiro --}}
-    @if ($etapa === 2)
-        <h1 class="mb-6 text-2xl font-extrabold">{{ __('pdv.elegir_barbero') }}</h1>
-
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            @foreach ($this->barbeirosComStatus() as $barbeiro)
-                <button type="button" wire:click="escolherBarbeiro({{ $barbeiro->id }})"
-                    @class([
-                        'flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 text-center transition-colors hover:border-brand-500',
-                        'border-brand-500 bg-brand-600/5' => ! $barbeiro->ocupadoAte,
-                        'border-slate-700 bg-slate-800' => $barbeiro->ocupadoAte,
-                    ])>
-                    @if ($barbeiro->foto_path)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeiro->foto_path) }}" class="h-14 w-14 rounded-full object-cover">
-                    @else
-                        <x-ui.avatar :name="$barbeiro->nome" size="lg" />
-                    @endif
-                    <span class="text-base font-bold">{{ $barbeiro->nome }}</span>
-                    @if ($barbeiro->ocupadoAte)
-                        <x-ui.badge tone="amber">{{ __('pdv.ocupado_hasta', ['hora' => $barbeiro->ocupadoAte->format('H:i')]) }}</x-ui.badge>
-                    @else
-                        <x-ui.badge tone="green">{{ __('pdv.libre') }}</x-ui.badge>
-                    @endif
-                </button>
-            @endforeach
-        </div>
-
-        <x-ui.button variant="secondary-dark" size="lg" wire:click="voltar" class="mt-6">
-            {{ __('pdv.atras') }}
-        </x-ui.button>
-    @endif
-
-    {{-- Etapa 3: serviços + produtos --}}
-    @if ($etapa === 3)
         <h1 class="mb-5 text-xl font-extrabold">{{ __('pdv.servicios_y_productos') }}</h1>
 
         @if ($erro)
@@ -237,13 +140,112 @@
                 </div>
 
                 <div class="mt-3 flex gap-2">
-                    <x-ui.button variant="secondary-dark" size="lg" wire:click="voltar">
-                        {{ __('pdv.atras') }}
-                    </x-ui.button>
-                    <x-ui.button size="lg" wire:click="irParaPagamento" class="flex-1">
+                    <x-ui.button size="lg" wire:click="irParaBarbeiro" class="flex-1">
                         {{ __('pdv.continuar') }} →
                     </x-ui.button>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Etapa 2: barbeiro --}}
+    @if ($etapa === 2)
+        <h1 class="mb-6 text-2xl font-extrabold">{{ __('pdv.elegir_barbero') }}</h1>
+
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            @foreach ($this->barbeirosComStatus() as $barbeiro)
+                <button type="button" wire:click="escolherBarbeiro({{ $barbeiro->id }})"
+                    @class([
+                        'flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 text-center transition-colors hover:border-brand-500',
+                        'border-brand-500 bg-brand-600/5' => ! $barbeiro->ocupadoAte,
+                        'border-slate-700 bg-slate-800' => $barbeiro->ocupadoAte,
+                    ])>
+                    @if ($barbeiro->foto_path)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeiro->foto_path) }}" class="h-14 w-14 rounded-full object-cover">
+                    @else
+                        <x-ui.avatar :name="$barbeiro->nome" size="lg" />
+                    @endif
+                    <span class="text-base font-bold">{{ $barbeiro->nome }}</span>
+                    @if ($barbeiro->ocupadoAte)
+                        <x-ui.badge tone="amber">{{ __('pdv.ocupado_hasta', ['hora' => $barbeiro->ocupadoAte->format('H:i')]) }}</x-ui.badge>
+                    @else
+                        <x-ui.badge tone="green">{{ __('pdv.libre') }}</x-ui.badge>
+                    @endif
+                </button>
+            @endforeach
+        </div>
+
+        <x-ui.button variant="secondary-dark" size="lg" wire:click="voltar" class="mt-6">
+            {{ __('pdv.atras') }}
+        </x-ui.button>
+    @endif
+
+    {{-- Etapa 3: dados do cliente --}}
+    @if ($etapa === 3)
+        <h1 class="mb-6 text-2xl font-extrabold">{{ __('pdv.dados_cliente') }}</h1>
+
+        <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <form wire:submit="confirmarCliente" class="max-w-xl space-y-5">
+                <div>
+                    <label for="clienteTelefone" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.telefono_cliente') }}</label>
+                    <input id="clienteTelefone" type="tel" wire:model.live="clienteTelefone" placeholder="{{ __('pdv.placeholder_telefone') }}" autofocus
+                        x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}"
+                        class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white focus:border-brand-500 focus:ring-brand-500">
+                    @error('clienteTelefone') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
+                    <p class="mt-1.5 text-xs text-slate-500">{{ __('pdv.ajuda_telefone') }}</p>
+                </div>
+
+                <div>
+                    <label for="clienteNome" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.nombre_cliente') }}</label>
+                    <input id="clienteNome" type="text" wire:model="clienteNome" placeholder="{{ __('pdv.placeholder_nome_cliente') }}"
+                        class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white placeholder:text-slate-600 focus:border-brand-500 focus:ring-brand-500">
+                    @error('clienteNome') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="flex justify-between border-t border-slate-800 pt-5">
+                    <x-ui.button type="button" variant="secondary-dark" size="lg" wire:click="voltar">
+                        {{ __('pdv.atras') }}
+                    </x-ui.button>
+                    <x-ui.button type="submit" size="lg">
+                        {{ __('pdv.continuar') }} →
+                    </x-ui.button>
+                </div>
+            </form>
+
+            <div class="rounded-2xl bg-slate-800 p-5">
+                @php $clienteExistente = $this->clienteExistente(); @endphp
+                @if ($clienteExistente)
+                    <h3 class="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('pdv.cliente_reconhecido') }}</h3>
+                    <div class="flex items-center justify-between border-b border-dashed border-slate-700 py-2 text-[13px]">
+                        <span class="text-slate-400">{{ __('pdv.nombre_cliente') }}</span>
+                        <span class="font-bold">{{ $clienteExistente->nome }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-dashed border-slate-700 py-2 text-[13px]">
+                        <span class="text-slate-400">{{ __('pdv.cliente_desde') }}</span>
+                        <span class="font-bold">{{ $clienteExistente->created_at->translatedFormat('M/Y') }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 text-[13px]">
+                        <span class="text-slate-400">{{ __('pdv.visitas') }}</span>
+                        <span class="font-bold">{{ $clienteExistente->agendamentos()->count() }}</span>
+                    </div>
+                    @if ($ultimo = $this->ultimoAgendamentoCliente($clienteExistente))
+                        <div class="mt-3 rounded-xl bg-slate-900 p-3 text-[12.5px]">
+                            <span class="block text-slate-500">{{ __('pdv.ultima_visita') }}</span>
+                            <span class="font-semibold">
+                                {{ $ultimo->data_hora_inicio->translatedFormat('d/m/Y') }} · {{ $ultimo->servicos->pluck('nome')->join(', ') }}
+                            </span>
+                        </div>
+                    @endif
+
+                    @if ($this->clienteTemPendencia($clienteExistente))
+                        <x-ui.badge tone="amber" class="mt-3">⚠ {{ __('pdv.com_pendencia') }}</x-ui.badge>
+                    @else
+                        <x-ui.badge tone="green" class="mt-3">✓ {{ __('pdv.sem_pendencia') }}</x-ui.badge>
+                    @endif
+                @else
+                    <h3 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('pdv.cliente_reconhecido') }}</h3>
+                    <p class="text-[13px] text-slate-500">{{ __('pdv.novo_cliente_ajuda') }}</p>
+                @endif
             </div>
         </div>
     @endif

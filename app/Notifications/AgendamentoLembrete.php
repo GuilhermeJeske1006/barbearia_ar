@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Agendamento;
+use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -26,7 +27,27 @@ class AgendamentoLembrete extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        $canais = ['mail'];
+
+        if ($this->agendamento->barbearia->whatsapp_notifica_lembrete) {
+            $canais[] = WhatsAppChannel::class;
+        }
+
+        return $canais;
+    }
+
+    public function toWhatsApp(object $notifiable): string
+    {
+        app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+
+        $agendamento = $this->agendamento;
+
+        return __('notificacoes.whatsapp_lembrete', [
+            'nome' => $agendamento->cliente->nome,
+            'barbearia' => $agendamento->barbearia->nome,
+            'hora' => $agendamento->data_hora_inicio->format('H:i'),
+            'barbeiro' => $agendamento->barbeiro->nome,
+        ]);
     }
 
     public function toMail(object $notifiable): MailMessage

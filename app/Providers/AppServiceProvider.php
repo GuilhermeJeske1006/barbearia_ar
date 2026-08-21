@@ -49,5 +49,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('publico', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        // Webhook do wuzapi: público (sem sessão), protegido só pelo token
+        // no path — limita por token pra um webhookToken vazado/força-bruta
+        // não conseguir bombardear o endpoint.
+        RateLimiter::for('whatsapp-webhook', function (Request $request) {
+            return Limit::perMinute(60)->by($request->route('webhookToken'));
+        });
     }
 }

@@ -7,6 +7,7 @@ use App\Livewire\Admin\Barbeiros\EscalaBarbeiro;
 use App\Livewire\Admin\Clientes\CrudCliente;
 use App\Livewire\Admin\Configuracoes\ConfigMercadoPago;
 use App\Livewire\Admin\Configuracoes\ConfiguracoesBarbearia;
+use App\Livewire\Admin\Configuracoes\ConfigWhatsApp;
 use App\Livewire\Admin\Produtos\CrudProduto;
 use App\Livewire\Admin\Relatorios\RelatorioComissoes;
 use App\Livewire\Admin\Servicos\CrudServico;
@@ -81,6 +82,9 @@ Route::middleware(['auth', 'tenant'])->prefix('painel')->group(function () {
 
     Route::get('/mercadopago/conectar', [MercadoPagoConnectController::class, 'redirecionar'])
         ->middleware('can:barbearia.gerenciar')->name('mercadopago.conectar');
+
+    Route::get('/whatsapp', ConfigWhatsApp::class)
+        ->middleware('can:barbearia.gerenciar')->name('admin.whatsapp');
 
     Route::get('/relatorios/comissoes', RelatorioComissoes::class)
         ->middleware('can:financeiro.visualizar')->name('admin.relatorios.comissoes');

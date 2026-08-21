@@ -3,6 +3,7 @@
 namespace App\Livewire\Pdv;
 
 use App\Actions\Agendamento\CriarAgendamentoAction;
+use App\Actions\Notificacoes\NotificarPesquisaSatisfacaoAction;
 use App\Actions\Pagamento\CalcularComissaoAction;
 use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
@@ -19,11 +20,11 @@ use Livewire\Component;
 use RuntimeException;
 
 /**
- * Kiosk de venda direta: atendente (ou o próprio cliente) seleciona barbeiro
- * + serviço/produto + paga na hora. Sem seleção de horário — é sempre "agora"
- * (ver seção 6.2/9 do documento de arquitetura). Um único componente cobre
- * as 3 telas do fluxo em vez de 3 rotas separadas, mesma escolha já feita
- * pro AgendamentoWizard público (ver docs/adr/0004).
+ * Kiosk de venda direta: serviço/produto → barbeiro → cadastro do cliente →
+ * pagamento, sempre "agora" (sem seleção de horário — ver seção 6.2/9 do
+ * documento de arquitetura). Um único componente cobre as 4 telas do fluxo
+ * em vez de 4 rotas separadas, mesma escolha já feita pro AgendamentoWizard
+ * público (ver docs/adr/0004).
  */
 #[Layout('layouts::pdv')]
 class TelaVendaDireta extends Component
@@ -61,7 +62,7 @@ class TelaVendaDireta extends Component
             'clienteNome' => 'required|string|max:255',
         ]);
 
-        $this->etapa = 2;
+        $this->etapa = 4;
     }
 
     public function clienteExistente(): ?Cliente
@@ -180,7 +181,7 @@ class TelaVendaDireta extends Component
         return $this->totalServicos() + $this->totalProdutos();
     }
 
-    public function irParaPagamento(): void
+    public function irParaBarbeiro(): void
     {
         if ($this->servicosSelecionados === [] && $this->produtosSelecionados === []) {
             $this->erro = __('pdv.selecione_algo');
@@ -189,7 +190,7 @@ class TelaVendaDireta extends Component
         }
 
         $this->erro = null;
-        $this->etapa = 4;
+        $this->etapa = 2;
     }
 
     public function voltar(): void
@@ -197,8 +198,11 @@ class TelaVendaDireta extends Component
         $this->etapa = max(1, $this->etapa - 1);
     }
 
-    public function finalizar(CriarAgendamentoAction $criarAgendamento, CriarPreferenciaMercadoPagoAction $criarPreferencia): void
-    {
+    public function finalizar(
+        CriarAgendamentoAction $criarAgendamento,
+        CriarPreferenciaMercadoPagoAction $criarPreferencia,
+        NotificarPesquisaSatisfacaoAction $notificarPesquisa,
+    ): void {
         $this->validate([
             'clienteTelefone' => 'required|string|max:30',
             'clienteNome' => 'required|string|max:255',
@@ -233,6 +237,7 @@ class TelaVendaDireta extends Component
 
         if ($ehDinheiro) {
             $this->registrarPagamentoEmDinheiro($agendamento);
+            $notificarPesquisa->handle($agendamento->fresh());
             $this->vendaConcluida = $agendamento;
             $this->etapa = 5;
 

@@ -6,7 +6,7 @@
         @endcan
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_barbeiro') }}" onClose="cancelar">
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_barbeiro') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
             <div class="flex items-center gap-4">
                 @if ($foto)
@@ -25,11 +25,24 @@
             </div>
 
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_barbeiro') }}" autofocus />
-            <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" hint="{{ __('painel.hint_percentual_comissao') }}" class="w-32" />
 
-            <div class="flex gap-6">
-                <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
-                <x-ui.checkbox wire:model="aceitaOnline" :label="__('painel.aceita_online')" />
+            <div class="grid grid-cols-2 gap-4">
+                <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" hint="{{ __('painel.hint_percentual_comissao') }}" />
+                <div class="flex flex-col justify-center gap-2">
+                    <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
+                    <x-ui.checkbox wire:model="aceitaOnline" :label="__('painel.aceita_online')" />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.servicos') }}</label>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_servicos_barbeiro') }}</p>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    @foreach ($this->servicosParaForm() as $servico)
+                        <x-ui.checkbox wire:model="servicosSelecionados" value="{{ $servico->id }}" :label="$servico->nome" />
+                    @endforeach
+                </div>
+                @error('servicosSelecionados') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             <div class="flex gap-2">

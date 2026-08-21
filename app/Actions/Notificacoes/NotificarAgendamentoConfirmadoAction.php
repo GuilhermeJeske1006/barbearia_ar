@@ -11,7 +11,7 @@ class NotificarAgendamentoConfirmadoAction
     {
         $cliente = $agendamento->cliente;
 
-        if (! $cliente->email) {
+        if (! $cliente->email && ! $cliente->telefone) {
             return;
         }
 

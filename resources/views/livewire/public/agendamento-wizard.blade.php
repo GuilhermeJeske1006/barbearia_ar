@@ -1,7 +1,7 @@
 <div>
     <div class="lg:grid lg:grid-cols-[.86fr_1.5fr] lg:items-stretch">
         {{-- Painel de marca + resumo persistente (desktop) --}}
-        @if ($etapa < 5)
+        @if ($etapa < 6)
             <aside class="relative hidden overflow-hidden bg-slate-900 px-8 py-10 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
                 <div class="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-brand-500/35 blur-3xl"></div>
 
@@ -59,9 +59,9 @@
         @endif
 
         <div class="lg:flex lg:min-h-screen lg:flex-col">
-            @if ($etapa < 5)
+            @if ($etapa < 6)
                 <div class="flex gap-1.5 px-4 pt-3.5 md:px-8 lg:px-10 lg:pt-8">
-                    @for ($i = 1; $i <= 4; $i++)
+                    @for ($i = 1; $i <= 5; $i++)
                         <div class="h-1 flex-1 rounded-full {{ $i <= $etapa ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-800' }}"></div>
                     @endfor
                 </div>
@@ -185,10 +185,25 @@
             @error('horarioSelecionado') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
         @endif
 
-        {{-- Etapa 4: dados do cliente + confirmação --}}
+        {{-- Etapa 4: dados do cliente --}}
         @if ($etapa === 4)
             <h1 class="text-[17px] font-extrabold leading-tight">{{ __('agendamento.tus_datos') }}</h1>
             <p class="mb-3.5 text-[12.5px] text-slate-500 dark:text-slate-400">{{ __('agendamento.paso', ['n' => 4]) }}</p>
+
+            <div class="grid gap-3.5 sm:grid-cols-2">
+                <x-ui.input label="{{ __('agendamento.nombre_completo') }}" id="clienteNome" name="clienteNome" wire:model="clienteNome" placeholder="{{ __('painel.placeholder_nome_completo') }}" />
+                <x-ui.input label="{{ __('agendamento.telefono') }}" id="clienteTelefone" name="clienteTelefone" type="tel" wire:model="clienteTelefone" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
+            </div>
+        @endif
+
+        {{-- Etapa 5: pagamento + confirmação --}}
+        @if ($etapa === 5)
+            <h1 class="text-[17px] font-extrabold leading-tight">{{ __('agendamento.elegir_metodo_pago') }}</h1>
+            <p class="mb-3.5 text-[12.5px] text-slate-500 dark:text-slate-400">{{ __('agendamento.paso', ['n' => 5]) }}</p>
+
+            @if ($erroConfirmacao)
+                <x-ui.alert tone="danger" class="mb-3.5">{{ $erroConfirmacao }}</x-ui.alert>
+            @endif
 
             <x-ui.card class="mb-3.5 lg:hidden" padding="p-3.5">
                 <div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-800 py-1.5 text-[13px]">
@@ -205,14 +220,8 @@
             </x-ui.card>
 
             <form wire:submit="confirmar" id="confirmar-form" class="space-y-3.5">
-                <div class="grid gap-3.5 sm:grid-cols-2">
-                    <x-ui.input label="{{ __('agendamento.nombre_completo') }}" id="clienteNome" name="clienteNome" wire:model="clienteNome" placeholder="{{ __('painel.placeholder_nome_completo') }}" />
-                    <x-ui.input label="{{ __('agendamento.telefono') }}" id="clienteTelefone" name="clienteTelefone" type="tel" wire:model="clienteTelefone" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
-                </div>
-
                 @if ($this->podeEscolherPagamento())
                     <div>
-                        <p class="mb-2 text-[13px] font-bold text-slate-700 dark:text-slate-300">{{ __('agendamento.elegir_metodo_pago') }}</p>
                         <div class="flex flex-col gap-2.5 sm:flex-row">
                             <label class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
                                 <input type="radio" wire:model="metodoPagamento" value="agora" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
@@ -238,8 +247,8 @@
             </form>
         @endif
 
-        {{-- Etapa 5: confirmado --}}
-        @if ($etapa === 5 && $agendamentoConfirmado)
+        {{-- Etapa 6: confirmado --}}
+        @if ($etapa === 6 && $agendamentoConfirmado)
             <div class="py-10 text-center">
                 <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl text-green-600">✓</div>
                 <h2 class="text-lg font-extrabold text-green-800">{{ __('agendamento.turno_confirmado') }}</h2>
@@ -277,7 +286,7 @@
             </div>
 
             {{-- CTA --}}
-            @if ($etapa < 5)
+            @if ($etapa < 6)
                 <div class="sticky bottom-0 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 md:px-8 lg:static lg:mt-auto lg:px-10 lg:py-6">
                     <div class="text-[11px] text-slate-400">
                         {{ __('agendamento.total') }}
@@ -296,6 +305,8 @@
                         @elseif ($etapa === 3)
                             <x-ui.button size="lg" wire:click="irParaEtapa4">{{ __('agendamento.continuar') }} →</x-ui.button>
                         @elseif ($etapa === 4)
+                            <x-ui.button size="lg" wire:click="irParaEtapa5">{{ __('agendamento.continuar') }} →</x-ui.button>
+                        @elseif ($etapa === 5)
                             <x-ui.button size="lg" type="submit" form="confirmar-form" wire:loading.attr="disabled">
                                 {{ ($this->podeEscolherPagamento() && $metodoPagamento === 'agora') ? __('agendamento.pagar_y_confirmar') : __('agendamento.confirmar') }}
                             </x-ui.button>

@@ -50,7 +50,7 @@ class EnviarLembretesAgendamento extends Command
 
             $cliente = $agendamento->cliente;
 
-            if ($cliente->email) {
+            if ($cliente->email || $cliente->telefone) {
                 // AgendamentoLembrete despoja as relações do agendamento no
                 // próprio construtor antes de ser enfileirada — necessário
                 // porque uma relação carregada aqui viraria parte do

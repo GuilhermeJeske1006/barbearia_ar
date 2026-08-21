@@ -65,7 +65,7 @@ class AgendamentoComPagamentoTest extends TestCase
         ]);
     }
 
-    private function preencherAteEtapa4(): Testable
+    private function preencherAteEtapa5(): Testable
     {
         $data = Carbon::parse('next monday');
 
@@ -78,7 +78,8 @@ class AgendamentoComPagamentoTest extends TestCase
             ->set('horarioSelecionado', '09:00')
             ->call('irParaEtapa4')
             ->set('clienteNome', 'María López')
-            ->set('clienteTelefone', '+54 9 11 5555-5555');
+            ->set('clienteTelefone', '+54 9 11 5555-5555')
+            ->call('irParaEtapa5');
     }
 
     public function test_barbearia_com_pagamento_exigido_cria_agendamento_pendente_e_redireciona_ao_checkout(): void
@@ -89,7 +90,7 @@ class AgendamentoComPagamentoTest extends TestCase
                 ->andReturn(['id' => 'pref-123', 'init_point' => 'https://mercadopago.com.ar/checkout/pref-123']);
         });
 
-        $this->preencherAteEtapa4()
+        $this->preencherAteEtapa5()
             ->set('dispositivoMovel', true)
             ->call('confirmar')
             ->assertRedirect('https://mercadopago.com.ar/checkout/pref-123');
@@ -113,10 +114,10 @@ class AgendamentoComPagamentoTest extends TestCase
                 ->andReturn(['id' => 'pref-123', 'init_point' => 'https://mercadopago.com.ar/checkout/pref-123']);
         });
 
-        $this->preencherAteEtapa4()
+        $this->preencherAteEtapa5()
             ->set('dispositivoMovel', false)
             ->call('confirmar')
-            ->assertSet('etapa', 4)
+            ->assertSet('etapa', 5)
             ->assertSet('mostrarQrCode', true)
             ->assertSet('linkPagamentoQrCode', 'https://mercadopago.com.ar/checkout/pref-123')
             ->assertNoRedirect();
@@ -132,17 +133,17 @@ class AgendamentoComPagamentoTest extends TestCase
                 ->andReturn(['id' => 'pref-123', 'init_point' => 'https://mercadopago.com.ar/checkout/pref-123']);
         });
 
-        $component = $this->preencherAteEtapa4()->set('dispositivoMovel', false)->call('confirmar');
+        $component = $this->preencherAteEtapa5()->set('dispositivoMovel', false)->call('confirmar');
 
         $agendamento = Agendamento::firstOrFail();
         $agendamento->update(['status' => 'confirmado']);
 
         $component->call('verificarPagamentoQrCode')
-            ->assertSet('etapa', 5)
+            ->assertSet('etapa', 6)
             ->assertSet('mostrarQrCode', false);
     }
 
-    public function test_falha_ao_criar_preferencia_mostra_erro_e_mantem_na_etapa_4(): void
+    public function test_falha_ao_criar_preferencia_mostra_erro_e_mantem_na_etapa_5(): void
     {
         $this->mock(MercadoPagoService::class, function ($mock) {
             $mock->shouldReceive('criarPreferencia')
@@ -150,9 +151,9 @@ class AgendamentoComPagamentoTest extends TestCase
                 ->andThrow(new \RuntimeException('mp indisponível'));
         });
 
-        $this->preencherAteEtapa4()
+        $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 4)
+            ->assertSet('etapa', 5)
             ->assertSet('erroConfirmacao', __('agendamento.erro_pagamento'));
 
         $this->assertSame('pendente', Agendamento::firstOrFail()->status);
@@ -166,9 +167,9 @@ class AgendamentoComPagamentoTest extends TestCase
             $mock->shouldNotReceive('criarPreferencia');
         });
 
-        $this->preencherAteEtapa4()
+        $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 5);
+            ->assertSet('etapa', 6);
 
         $agendamento = Agendamento::firstOrFail();
         $this->assertSame('confirmado', $agendamento->status);
@@ -183,9 +184,9 @@ class AgendamentoComPagamentoTest extends TestCase
             $mock->shouldNotReceive('criarPreferencia');
         });
 
-        $this->preencherAteEtapa4()
+        $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 5);
+            ->assertSet('etapa', 6);
 
         $this->assertSame('confirmado', Agendamento::firstOrFail()->status);
     }

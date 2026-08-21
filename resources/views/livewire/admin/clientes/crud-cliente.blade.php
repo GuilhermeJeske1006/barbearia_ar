@@ -12,14 +12,14 @@
 
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_cliente') }}" onClose="cancelar">
         <form wire:submit="salvar" class="space-y-4">
-            <div class="flex gap-4">
-                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus class="flex-1" />
-                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" class="w-48" />
+            <div class="grid grid-cols-3 gap-4">
+                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus class="col-span-2" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
-            <div class="flex gap-4">
-                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="flex-1" />
-                <x-ui.input label="{{ __('painel.dni') }}" id="dni" name="dni" wire:model="dni" placeholder="{{ __('painel.placeholder_dni') }}" x-mask="{{ \App\Support\InputMasks::documentoPessoal() }}" class="w-48" />
+            <div class="grid grid-cols-3 gap-4">
+                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="col-span-2" />
+                <x-ui.input label="{{ __('painel.dni') }}" id="dni" name="dni" wire:model="dni" placeholder="{{ __('painel.placeholder_dni') }}" x-mask="{{ \App\Support\InputMasks::documentoPessoal() }}" />
             </div>
 
             <x-ui.textarea label="{{ __('painel.observacoes') }}" id="observacoes" name="observacoes" wire:model="observacoes" placeholder="{{ __('painel.placeholder_observacoes') }}" rows="2" />

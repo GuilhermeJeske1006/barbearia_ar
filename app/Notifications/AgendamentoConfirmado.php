@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Agendamento;
+use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,9 +12,8 @@ use Illuminate\Notifications\Notification;
 /**
  * Disparada quando um agendamento vira 'confirmado' — tanto no caminho sem
  * pagamento (AgendamentoWizard::confirmar) quanto no de pagamento aprovado
- * (ProcessarWebhookMercadoPagoAction). Canal WhatsApp fica de fora aqui de
- * propósito — exigiria um provedor externo (Twilio/Wati) com credenciais
- * que não existem neste ambiente; ver docs/ARQUITETURA.md, seção Fase 6.
+ * (ProcessarWebhookMercadoPagoAction). Canal WhatsApp via WuzApiService — ver
+ * docs/ARQUITETURA.md, seção Fase 6.
  */
 class AgendamentoConfirmado extends Notification implements ShouldQueue
 {
@@ -34,7 +34,29 @@ class AgendamentoConfirmado extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        $canais = ['mail'];
+
+        if ($this->agendamento->barbearia->whatsapp_notifica_confirmacao) {
+            $canais[] = WhatsAppChannel::class;
+        }
+
+        return $canais;
+    }
+
+    public function toWhatsApp(object $notifiable): string
+    {
+        app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+
+        $agendamento = $this->agendamento;
+
+        return __('notificacoes.whatsapp_confirmado', [
+            'nome' => $agendamento->cliente->nome,
+            'barbearia' => $agendamento->barbearia->nome,
+            'data' => $agendamento->data_hora_inicio->translatedFormat('d/m/Y'),
+            'hora' => $agendamento->data_hora_inicio->format('H:i'),
+            'barbeiro' => $agendamento->barbeiro->nome,
+            'servicos' => $agendamento->servicos->pluck('nome')->join(', '),
+        ]);
     }
 
     public function toMail(object $notifiable): MailMessage

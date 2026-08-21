@@ -54,6 +54,8 @@ class AgendamentoWizardTest extends TestCase
             'aceita_online' => true,
         ]);
 
+        $this->barbeiro->servicos()->attach($this->servico->id);
+
         // Segunda-feira, 09:00–18:00, sem intervalo.
         BarbeiroHorario::create([
             'barbeiro_id' => $this->barbeiro->id,
@@ -96,8 +98,10 @@ class AgendamentoWizardTest extends TestCase
             ->assertSet('etapa', 4)
             ->set('clienteNome', 'María López')
             ->set('clienteTelefone', '+54 9 11 5555-5555')
-            ->call('confirmar')
+            ->call('irParaEtapa5')
             ->assertSet('etapa', 5)
+            ->call('confirmar')
+            ->assertSet('etapa', 6)
             ->assertHasNoErrors();
 
         $agendamento = Agendamento::firstOrFail();
@@ -134,8 +138,9 @@ class AgendamentoWizardTest extends TestCase
             ->call('irParaEtapa4')
             ->set('clienteNome', 'João')
             ->set('clienteTelefone', '11999998888')
+            ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 5);
+            ->assertSet('etapa', 6);
 
         $agendamento = Agendamento::firstOrFail();
         $this->assertSame($this->barbeiro->id, $agendamento->barbeiro_id);
@@ -213,14 +218,15 @@ class AgendamentoWizardTest extends TestCase
             ->call('irParaEtapa4')
             ->set('clienteNome', 'María López')
             ->set('clienteTelefone', '+54 9 11 5555-5555')
+            ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 5);
+            ->assertSet('etapa', 6);
 
         $this->assertDatabaseCount('clientes', 1);
         Notification::assertSentTo($clienteExistente, AgendamentoConfirmado::class);
     }
 
-    public function test_confirmar_nao_notifica_cliente_novo_sem_email(): void
+    public function test_confirmar_notifica_por_whatsapp_cliente_novo_sem_email(): void
     {
         Notification::fake();
 
@@ -236,9 +242,12 @@ class AgendamentoWizardTest extends TestCase
             ->call('irParaEtapa4')
             ->set('clienteNome', 'Novo Cliente')
             ->set('clienteTelefone', '11900001111')
+            ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 5);
+            ->assertSet('etapa', 6);
 
-        Notification::assertNothingSent();
+        $cliente = Cliente::where('telefone', '11900001111')->firstOrFail();
+
+        Notification::assertSentTo($cliente, AgendamentoConfirmado::class);
     }
 }

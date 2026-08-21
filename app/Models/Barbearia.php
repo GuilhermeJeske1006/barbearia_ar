@@ -10,6 +10,14 @@ class Barbearia extends Model
 {
     use HasFactory;
 
+    public const STATUS_WHATSAPP_DESCONECTADO = 'desconectado';
+
+    public const STATUS_WHATSAPP_CONECTANDO = 'conectando';
+
+    public const STATUS_WHATSAPP_CONECTADO = 'conectado';
+
+    public const STATUS_WHATSAPP_ERRO = 'erro';
+
     public const SIMBOLOS_MOEDA = [
         'ARS' => '$',
         'BRL' => 'R$',
@@ -25,6 +33,9 @@ class Barbearia extends Model
         'nome', 'slug', 'cuit', 'endereco', 'cidade', 'provincia', 'telefone', 'email',
         'logo_path', 'timezone', 'moeda', 'mp_user_id', 'mp_access_token', 'mp_refresh_token',
         'mp_public_key', 'mp_token_expira_em', 'status', 'plano_id', 'idioma_padrao', 'exige_pagamento_antecipado',
+        'wuzapi_token', 'wuzapi_session_name', 'wuzapi_webhook_token',
+        'status_conexao_whatsapp', 'numero_whatsapp_conectado', 'whatsapp_sincronizado_em',
+        'whatsapp_notifica_confirmacao', 'whatsapp_notifica_lembrete', 'whatsapp_notifica_pesquisa_satisfacao',
     ];
 
     protected $casts = [
@@ -32,6 +43,11 @@ class Barbearia extends Model
         'mp_refresh_token' => 'encrypted',
         'mp_token_expira_em' => 'datetime',
         'exige_pagamento_antecipado' => 'boolean',
+        'wuzapi_token' => 'encrypted',
+        'whatsapp_sincronizado_em' => 'datetime',
+        'whatsapp_notifica_confirmacao' => 'boolean',
+        'whatsapp_notifica_lembrete' => 'boolean',
+        'whatsapp_notifica_pesquisa_satisfacao' => 'boolean',
     ];
 
     public function conectadaAoMercadoPago(): bool

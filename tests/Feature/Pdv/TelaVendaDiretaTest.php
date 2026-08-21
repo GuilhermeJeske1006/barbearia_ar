@@ -72,16 +72,16 @@ class TelaVendaDiretaTest extends TestCase
     {
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
-            ->set('clienteTelefone', '11999998888')
-            ->set('clienteNome', 'Maria')
-            ->call('confirmarCliente')
-            ->assertSet('etapa', 2)
-            ->call('escolherBarbeiro', $this->barbeiro->id)
-            ->assertSet('etapa', 3)
             ->call('toggleServico', $this->servico->id)
             ->call('incrementarProduto', $this->produto->id)
             ->assertSet('produtosSelecionados.'.$this->produto->id, 1)
-            ->call('irParaPagamento')
+            ->call('irParaBarbeiro')
+            ->assertSet('etapa', 2)
+            ->call('escolherBarbeiro', $this->barbeiro->id)
+            ->assertSet('etapa', 3)
+            ->set('clienteTelefone', '11999998888')
+            ->set('clienteNome', 'Maria')
+            ->call('confirmarCliente')
             ->assertSet('etapa', 4)
             ->set('metodoPagamento', 'dinheiro')
             ->call('finalizar')
@@ -124,12 +124,12 @@ class TelaVendaDiretaTest extends TestCase
 
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
+            ->call('toggleServico', $this->servico->id)
+            ->call('irParaBarbeiro')
+            ->call('escolherBarbeiro', $this->barbeiro->id)
             ->set('clienteTelefone', '11999998888')
             ->set('clienteNome', 'Maria')
             ->call('confirmarCliente')
-            ->call('escolherBarbeiro', $this->barbeiro->id)
-            ->call('toggleServico', $this->servico->id)
-            ->call('irParaPagamento')
             ->set('metodoPagamento', 'mercadopago')
             ->call('finalizar')
             ->assertSet('etapa', 6)
@@ -174,11 +174,8 @@ class TelaVendaDiretaTest extends TestCase
     {
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
-            ->set('clienteTelefone', '11999998888')
-            ->call('confirmarCliente')
-            ->call('escolherBarbeiro', $this->barbeiro->id)
-            ->call('irParaPagamento')
-            ->assertSet('etapa', 3)
+            ->call('irParaBarbeiro')
+            ->assertSet('etapa', 1)
             ->assertSet('erro', fn ($erro) => ! empty($erro));
     }
 
@@ -189,7 +186,6 @@ class TelaVendaDiretaTest extends TestCase
 
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
-            ->call('escolherBarbeiro', $this->barbeiro->id)
             ->assertSee('Corte')
             ->assertDontSee('Barba Norte');
     }

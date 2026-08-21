@@ -27,12 +27,13 @@
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_produto') }}" autofocus />
             <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_produto') }}" rows="2" />
 
-            <div class="flex gap-4">
-                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" class="w-32" />
-                <x-ui.input label="{{ __('painel.estoque') }}" id="estoqueQtd" name="estoqueQtd" type="number" min="0" wire:model="estoqueQtd" placeholder="{{ __('painel.placeholder_estoque') }}" class="w-32" />
+            <div class="grid grid-cols-3 gap-4">
+                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" />
+                <x-ui.input label="{{ __('painel.estoque') }}" id="estoqueQtd" name="estoqueQtd" type="number" min="0" wire:model="estoqueQtd" placeholder="{{ __('painel.placeholder_estoque') }}" />
+                <div class="flex items-center pt-6">
+                    <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
+                </div>
             </div>
-
-            <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
 
             <div class="flex gap-2">
                 <x-ui.button type="submit">{{ __('painel.salvar') }}</x-ui.button>

@@ -3,6 +3,8 @@
 namespace App\Livewire\Admin\Barbeiros;
 
 use App\Models\Barbeiro;
+use App\Models\Servico;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -30,13 +32,16 @@ class CrudBarbeiro extends Component
     #[Validate('nullable|image|max:2048')]
     public $foto = null;
 
+    /** @var array<int, int> */
+    public array $servicosSelecionados = [];
+
     public bool $mostrarForm = false;
 
     public ?int $removendoId = null;
 
     public function criar(): void
     {
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
         $this->ativo = true;
         $this->aceitaOnline = true;
         $this->mostrarForm = true;
@@ -52,7 +57,13 @@ class CrudBarbeiro extends Component
         $this->ativo = $barbeiro->ativo;
         $this->aceitaOnline = $barbeiro->aceita_online;
         $this->foto = null;
+        $this->servicosSelecionados = $barbeiro->servicos()->pluck('servico_id')->all();
         $this->mostrarForm = true;
+    }
+
+    public function servicosParaForm(): Collection
+    {
+        return Servico::where('ativo', true)->orderBy('nome')->get();
     }
 
     public function salvar(): void
@@ -69,6 +80,8 @@ class CrudBarbeiro extends Component
             ],
         );
 
+        $barbeiro->servicos()->sync($this->servicosSelecionados);
+
         if ($this->foto) {
             $caminho = $this->foto->store('barbeiros', 'public');
 
@@ -80,14 +93,14 @@ class CrudBarbeiro extends Component
         }
 
         $this->mostrarForm = false;
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
     }
 
     public function cancelar(): void
     {
         $this->mostrarForm = false;
         $this->resetValidation();
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
     }
 
     public function confirmarRemocao(int $id): void

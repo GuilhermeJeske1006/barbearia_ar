@@ -11,21 +11,29 @@
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_usuario') }}" onClose="cancelar">
         <form wire:submit="salvar" class="space-y-4">
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_completo') }}" autofocus />
-            <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" :disabled="(bool) $editandoId" />
+
+            <div class="grid grid-cols-2 gap-4">
+                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" :disabled="(bool) $editandoId" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
+            </div>
 
             @unless ($editandoId)
                 <x-ui.input label="{{ __('painel.senha') }}" id="senha" name="senha" type="password" wire:model="senha" placeholder="{{ __('painel.placeholder_senha') }}" />
             @endunless
 
-            <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
-
-            <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
-                <option value="atendente">{{ __('painel.papel_atendente') }}</option>
-                <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
-            </x-ui.select>
-
             @if ($role === 'barbeiro')
-                <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" class="w-32" />
+                <div class="grid grid-cols-2 gap-4">
+                    <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
+                        <option value="atendente">{{ __('painel.papel_atendente') }}</option>
+                        <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
+                    </x-ui.select>
+                    <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" />
+                </div>
+            @else
+                <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
+                    <option value="atendente">{{ __('painel.papel_atendente') }}</option>
+                    <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
+                </x-ui.select>
             @endif
 
             <div class="flex gap-2">

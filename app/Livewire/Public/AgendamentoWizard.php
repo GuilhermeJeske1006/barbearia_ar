@@ -71,7 +71,13 @@ class AgendamentoWizard extends Component
 
     public function barbeirosDisponiveis(): Collection
     {
-        return Barbeiro::where('ativo', true)->where('aceita_online', true)->orderBy('nome')->get();
+        $query = Barbeiro::where('ativo', true)->where('aceita_online', true);
+
+        foreach ($this->servicosSelecionados as $servicoId) {
+            $query->whereHas('servicos', fn ($q) => $q->where('servicos.id', $servicoId));
+        }
+
+        return $query->orderBy('nome')->get();
     }
 
     public function barbeiroSelecionadoAtual(): ?Barbeiro
@@ -139,6 +145,16 @@ class AgendamentoWizard extends Component
         ]);
 
         $this->etapa = 4;
+    }
+
+    public function irParaEtapa5(): void
+    {
+        $this->validate([
+            'clienteNome' => 'required|string|max:255',
+            'clienteTelefone' => 'required|string|max:30',
+        ]);
+
+        $this->etapa = 5;
     }
 
     public function voltar(): void
@@ -246,7 +262,7 @@ class AgendamentoWizard extends Component
         if (! $pagarAgora) {
             $notificarConfirmado->handle($agendamento);
             $this->agendamentoConfirmado = $agendamento;
-            $this->etapa = 5;
+            $this->etapa = 6;
 
             return null;
         }
@@ -256,7 +272,7 @@ class AgendamentoWizard extends Component
         } catch (\Throwable $e) {
             report($e);
             $this->erroConfirmacao = __('agendamento.erro_pagamento');
-            $this->etapa = 4;
+            $this->etapa = 5;
 
             return null;
         }
@@ -289,7 +305,7 @@ class AgendamentoWizard extends Component
         if ($agendamento && in_array($agendamento->status, ['confirmado', 'concluido'], true)) {
             $this->mostrarQrCode = false;
             $this->agendamentoConfirmado = $agendamento;
-            $this->etapa = 5;
+            $this->etapa = 6;
         }
     }
 

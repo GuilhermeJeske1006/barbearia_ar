@@ -25,7 +25,9 @@ class ResolveTheme
 
         $response = $next($request);
 
-        return $response->withCookie(cookie('theme', $theme, 60 * 24 * 365));
+        $response->headers->setCookie(cookie('theme', $theme, 60 * 24 * 365));
+
+        return $response;
     }
 
     private function resolve(Request $request): string

@@ -58,6 +58,7 @@ class TelaVendaDireta extends Component
     {
         $this->validate([
             'clienteTelefone' => 'required|string|max:30',
+            'clienteNome' => 'required|string|max:255',
         ]);
 
         $this->etapa = 2;
@@ -200,6 +201,7 @@ class TelaVendaDireta extends Component
     {
         $this->validate([
             'clienteTelefone' => 'required|string|max:30',
+            'clienteNome' => 'required|string|max:255',
         ]);
 
         $this->erro = null;
@@ -207,7 +209,7 @@ class TelaVendaDireta extends Component
         $barbeiro = Barbeiro::findOrFail($this->barbeiroId);
         $cliente = Cliente::firstOrCreate(
             ['telefone' => $this->clienteTelefone],
-            ['nome' => $this->clienteNome ?: __('pdv.cliente_balcao')],
+            ['nome' => $this->clienteNome],
         );
 
         $ehDinheiro = $this->metodoPagamento === 'dinheiro';

@@ -26,13 +26,14 @@
         </div>
     </div>
 
-    <div class="mt-4 grid grid-cols-3 gap-4">
-        <x-ui.kpi :label="__('painel.total')" value="$ {{ number_format($totais['total'], 2, ',', '.') }}" />
-        <x-ui.kpi :label="__('painel.status_pendente')" value="$ {{ number_format($totais['pendente'], 2, ',', '.') }}" />
-        <x-ui.kpi :label="__('painel.status_pago')" value="$ {{ number_format($totais['pago'], 2, ',', '.') }}" />
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <x-ui.kpi :label="__('painel.total')" value="{{ \App\Support\Money::format($totais['total']) }}" />
+        <x-ui.kpi :label="__('painel.status_pendente')" value="{{ \App\Support\Money::format($totais['pendente']) }}" />
+        <x-ui.kpi :label="__('painel.status_pago')" value="{{ \App\Support\Money::format($totais['pago']) }}" />
     </div>
 
     <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
                 <tr>
@@ -48,7 +49,7 @@
                     <tr wire:key="comissao-{{ $comissao->id }}">
                         <td class="px-4 py-2.5">{{ $comissao->data_referencia->format('d/m/Y') }}</td>
                         <td class="px-4 py-2.5">{{ $comissao->barbeiro->nome }}</td>
-                        <td class="px-4 py-2.5 font-semibold">$ {{ number_format($comissao->valor, 2, ',', '.') }}</td>
+                        <td class="px-4 py-2.5 font-semibold"><x-ui.money :value="$comissao->valor" /></td>
                         <td class="px-4 py-2.5"><x-ui.status-comissao :status="$comissao->status" /></td>
                         <td class="px-4 py-2.5 text-right">
                             @if ($comissao->status === 'pendente')
@@ -65,5 +66,6 @@
                 @endforelse
             </tbody>
         </table>
+      </div>
     </div>
 </div>

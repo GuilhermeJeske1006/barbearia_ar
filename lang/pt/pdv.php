@@ -30,7 +30,7 @@ return [
     'total' => 'Total',
     'datos_y_pago' => 'Dados e pagamento',
     'telefono_cliente' => 'Telefone do cliente',
-    'nombre_cliente' => 'Nome (opcional)',
+    'nombre_cliente' => 'Nome',
     'cliente_balcao' => 'Cliente',
     'forma_pago' => 'Forma de pagamento',
     'pago_dinheiro' => 'Dinheiro',

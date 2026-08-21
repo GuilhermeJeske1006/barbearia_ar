@@ -119,6 +119,7 @@ return [
     'selecione' => 'Seleccioná...',
     'sem_horario_disponivel' => 'No hay horarios disponibles para ese barbero/servicios en esa fecha.',
     'logo' => 'Logo',
+    'foto' => 'Foto',
     'endereco' => 'Dirección',
     'cidade' => 'Ciudad',
     'provincia' => 'Provincia',

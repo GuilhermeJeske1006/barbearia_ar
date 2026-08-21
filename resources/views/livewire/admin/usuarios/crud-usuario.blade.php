@@ -36,6 +36,7 @@
     </x-ui.modal>
 
     <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
                 <tr>
@@ -71,6 +72,7 @@
                 @endforelse
             </tbody>
         </table>
+      </div>
     </div>
 
     <div class="mt-4">

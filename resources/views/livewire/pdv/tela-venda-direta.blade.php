@@ -38,6 +38,7 @@
                     <label for="clienteNome" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.nombre_cliente') }}</label>
                     <input id="clienteNome" type="text" wire:model="clienteNome" placeholder="{{ __('pdv.placeholder_nome_cliente') }}"
                         class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white placeholder:text-slate-600 focus:border-brand-500 focus:ring-brand-500">
+                    @error('clienteNome') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="flex justify-end border-t border-slate-800 pt-5">
@@ -97,7 +98,11 @@
                         'border-brand-500 bg-brand-600/5' => ! $barbeiro->ocupadoAte,
                         'border-slate-700 bg-slate-800' => $barbeiro->ocupadoAte,
                     ])>
-                    <x-ui.avatar :name="$barbeiro->nome" size="lg" />
+                    @if ($barbeiro->foto_path)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeiro->foto_path) }}" class="h-14 w-14 rounded-full object-cover">
+                    @else
+                        <x-ui.avatar :name="$barbeiro->nome" size="lg" />
+                    @endif
                     <span class="text-base font-bold">{{ $barbeiro->nome }}</span>
                     @if ($barbeiro->ocupadoAte)
                         <x-ui.badge tone="amber">{{ __('pdv.ocupado_hasta', ['hora' => $barbeiro->ocupadoAte->format('H:i')]) }}</x-ui.badge>
@@ -142,42 +147,62 @@
                     @foreach ($this->servicosDisponiveis() as $servico)
                         <button type="button" wire:click="toggleServico({{ $servico->id }})"
                             @class([
-                                'min-h-20 rounded-xl border-2 p-3.5 text-left transition-colors',
+                                'overflow-hidden rounded-xl border-2 bg-slate-800 text-left transition-colors',
                                 'border-brand-500 bg-brand-600/20' => in_array($servico->id, $servicosSelecionados),
-                                'border-slate-700 bg-slate-800' => ! in_array($servico->id, $servicosSelecionados),
+                                'border-slate-700' => ! in_array($servico->id, $servicosSelecionados),
                             ])>
-                            <span class="block text-sm font-bold">{{ $servico->nome }}</span>
-                            <span class="flex items-center justify-between gap-1.5 text-xs text-slate-400">
-                                <span>{{ $servico->duracao_minutos }} {{ __('pdv.minutos') }}</span>
-                                <span>$ {{ number_format($servico->preco, 2, ',', '.') }}</span>
-                            </span>
-                            @if ($servico->descricao)
-                                <span class="mt-1.5 block text-[11px] leading-snug text-slate-500">{{ $servico->descricao }}</span>
-                            @endif
+                            <div class="flex aspect-square w-full items-center justify-center bg-slate-700/60">
+                                <x-ui.avatar :name="$servico->nome" size="lg" />
+                            </div>
+
+                            <div class="p-3">
+                                <span class="block text-sm font-bold leading-snug">{{ $servico->nome }}</span>
+                                <span class="mt-1 flex items-center justify-between gap-1.5 text-xs text-slate-400">
+                                    <span>{{ $servico->duracao_minutos }} {{ __('pdv.minutos') }}</span>
+                                    <span><x-ui.money :value="$servico->preco" /></span>
+                                </span>
+                                @if ($servico->descricao)
+                                    <span class="mt-1 block text-[11px] leading-snug text-slate-500">{{ $servico->descricao }}</span>
+                                @endif
+                            </div>
                         </button>
                     @endforeach
                 @endif
 
                 @if ($categoriaFiltro !== 'servicos')
                     @foreach ($this->produtosDisponiveis() as $produto)
-                        <div class="min-h-20 rounded-xl border-2 border-slate-700 bg-slate-800 p-3.5">
-                            <span class="block text-sm font-bold">{{ $produto->nome }}</span>
-                            <span class="flex items-center justify-between gap-1.5 text-xs text-slate-400">
-                                <span>{{ __('pdv.produto') }}</span>
-                                <span>$ {{ number_format($produto->preco, 2, ',', '.') }}</span>
-                            </span>
-                            @if ($produto->descricao)
-                                <span class="mt-1 block text-[11px] leading-snug text-slate-500">{{ $produto->descricao }}</span>
+                        <div @class([
+                            'overflow-hidden rounded-xl border-2 bg-slate-800',
+                            'border-brand-500 bg-brand-600/10' => ($produtosSelecionados[$produto->id] ?? 0) > 0,
+                            'border-slate-700' => ($produtosSelecionados[$produto->id] ?? 0) === 0,
+                        ])>
+                            @if ($produto->foto_path)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($produto->foto_path) }}" class="aspect-square w-full object-cover">
+                            @else
+                                <div class="flex aspect-square w-full items-center justify-center bg-slate-700/60">
+                                    <x-ui.avatar :name="$produto->nome" size="lg" />
+                                </div>
                             @endif
-                            @if (! is_null($produto->estoque_qtd) && $produto->estoque_qtd <= 5)
-                                <span class="mt-1.5 block text-[11px] font-bold text-amber-400">{{ __('pdv.estoque_baixo', ['n' => $produto->estoque_qtd]) }}</span>
-                            @endif
-                            <div class="mt-2.5 flex items-center gap-3">
-                                <button type="button" wire:click="decrementarProduto({{ $produto->id }})"
-                                    class="h-9 w-9 rounded-lg bg-slate-700 text-lg leading-none hover:bg-slate-600">−</button>
-                                <span class="w-4 text-center font-semibold">{{ $produtosSelecionados[$produto->id] ?? 0 }}</span>
-                                <button type="button" wire:click="incrementarProduto({{ $produto->id }})"
-                                    class="h-9 w-9 rounded-lg bg-slate-700 text-lg leading-none hover:bg-slate-600">+</button>
+
+                            <div class="p-3">
+                                <span class="block text-sm font-bold leading-snug">{{ $produto->nome }}</span>
+                                <span class="mt-1 flex items-center justify-between gap-1.5 text-xs text-slate-400">
+                                    <span>{{ __('pdv.produto') }}</span>
+                                    <span><x-ui.money :value="$produto->preco" /></span>
+                                </span>
+                                @if ($produto->descricao)
+                                    <span class="mt-1 block text-[11px] leading-snug text-slate-500">{{ $produto->descricao }}</span>
+                                @endif
+                                @if (! is_null($produto->estoque_qtd) && $produto->estoque_qtd <= 5)
+                                    <span class="mt-1.5 block text-[11px] font-bold text-amber-400">{{ __('pdv.estoque_baixo', ['n' => $produto->estoque_qtd]) }}</span>
+                                @endif
+                                <div class="mt-2.5 flex items-center gap-3">
+                                    <button type="button" wire:click="decrementarProduto({{ $produto->id }})"
+                                        class="h-9 w-9 rounded-lg bg-slate-700 text-lg leading-none hover:bg-slate-600">−</button>
+                                    <span class="w-4 text-center font-semibold">{{ $produtosSelecionados[$produto->id] ?? 0 }}</span>
+                                    <button type="button" wire:click="incrementarProduto({{ $produto->id }})"
+                                        class="h-9 w-9 rounded-lg bg-slate-700 text-lg leading-none hover:bg-slate-600">+</button>
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -194,13 +219,13 @@
                         @foreach ($this->servicosDisponiveis()->whereIn('id', $servicosSelecionados) as $servico)
                             <div class="flex justify-between gap-2 border-b border-slate-700 py-1.5 text-[12.5px]">
                                 <span class="truncate">{{ $servico->nome }}</span>
-                                <span class="shrink-0">$ {{ number_format($servico->preco, 2, ',', '.') }}</span>
+                                <span class="shrink-0"><x-ui.money :value="$servico->preco" /></span>
                             </div>
                         @endforeach
                         @foreach ($this->produtosDisponiveis()->whereIn('id', array_keys($produtosSelecionados)) as $produto)
                             <div class="flex justify-between gap-2 border-b border-slate-700 py-1.5 text-[12.5px]">
                                 <span class="truncate">{{ $produto->nome }} × {{ $produtosSelecionados[$produto->id] }}</span>
-                                <span class="shrink-0">$ {{ number_format($produto->preco * $produtosSelecionados[$produto->id], 2, ',', '.') }}</span>
+                                <span class="shrink-0"><x-ui.money :value="$produto->preco * $produtosSelecionados[$produto->id]" /></span>
                             </div>
                         @endforeach
                     </div>
@@ -208,7 +233,7 @@
 
                 <div class="mt-3 flex justify-between border-t border-slate-700 pt-3 text-base font-extrabold">
                     <span>{{ __('pdv.total') }}</span>
-                    <span>$ {{ number_format($this->totalGeral(), 2, ',', '.') }}</span>
+                    <span><x-ui.money :value="$this->totalGeral()" /></span>
                 </div>
 
                 <div class="mt-3 flex gap-2">
@@ -256,7 +281,7 @@
                 </label>
 
                 <div class="mt-8 flex items-center justify-between border-t border-slate-800 pt-5">
-                    <span class="text-lg">{{ __('pdv.total') }}: <strong>$ {{ number_format($this->totalGeral(), 2, ',', '.') }}</strong></span>
+                    <span class="text-lg">{{ __('pdv.total') }}: <strong><x-ui.money :value="$this->totalGeral()" /></strong></span>
                     <div class="flex gap-2">
                         <x-ui.button variant="secondary-dark" size="lg" wire:click="voltar">
                             {{ __('pdv.atras') }}
@@ -274,19 +299,19 @@
                     @foreach ($this->servicosDisponiveis()->whereIn('id', $servicosSelecionados) as $servico)
                         <div class="flex justify-between gap-2 border-b border-slate-700 py-1.5 text-[13px]">
                             <span class="truncate">{{ $servico->nome }}</span>
-                            <span class="shrink-0">$ {{ number_format($servico->preco, 2, ',', '.') }}</span>
+                            <span class="shrink-0"><x-ui.money :value="$servico->preco" /></span>
                         </div>
                     @endforeach
                     @foreach ($this->produtosDisponiveis()->whereIn('id', array_keys($produtosSelecionados)) as $produto)
                         <div class="flex justify-between gap-2 border-b border-slate-700 py-1.5 text-[13px]">
                             <span class="truncate">{{ $produto->nome }} × {{ $produtosSelecionados[$produto->id] }}</span>
-                            <span class="shrink-0">$ {{ number_format($produto->preco * $produtosSelecionados[$produto->id], 2, ',', '.') }}</span>
+                            <span class="shrink-0"><x-ui.money :value="$produto->preco * $produtosSelecionados[$produto->id]" /></span>
                         </div>
                     @endforeach
                 </div>
                 <div class="mt-3 flex justify-between border-t border-slate-700 pt-3 text-base font-extrabold">
                     <span>{{ __('pdv.total') }}</span>
-                    <span>$ {{ number_format($this->totalGeral(), 2, ',', '.') }}</span>
+                    <span><x-ui.money :value="$this->totalGeral()" /></span>
                 </div>
             </div>
         </form>
@@ -294,14 +319,28 @@
 
     {{-- Etapa 5: concluído --}}
     @if ($etapa === 5 && $vendaConcluida)
+        @php $barbeariaAtual = app()->bound('barbearia') ? app('barbearia') : null; @endphp
         <div class="flex flex-col items-center justify-center py-16 text-center">
+            @if ($barbeariaAtual?->logo_path)
+                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" class="mb-5 h-16 w-16 rounded-full object-cover">
+            @endif
+
             <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-600 text-4xl">✓</div>
             <h1 class="text-2xl font-extrabold">{{ __('pdv.venda_concluida') }}</h1>
-            <p class="mt-2 text-slate-400">$ {{ number_format($this->totalGeral(), 2, ',', '.') }}</p>
+            <p class="mt-2 text-slate-400"><x-ui.money :value="$this->totalGeral()" /></p>
 
             <x-ui.button size="lg" wire:click="novaVenda" class="mt-8">
                 {{ __('pdv.nova_venda') }}
             </x-ui.button>
+
+            @if ($barbeariaAtual)
+                <div class="mt-10 border-t border-slate-800 pt-5">
+                    <p class="text-sm font-bold text-slate-300">{{ $barbeariaAtual->nome }}</p>
+                    @if ($barbeariaAtual->endereco || $barbeariaAtual->telefone)
+                        <p class="mt-1 text-xs text-slate-500">{{ collect([$barbeariaAtual->endereco, $barbeariaAtual->telefone])->filter()->join(' · ') }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
     @endif
 
@@ -310,7 +349,7 @@
         <div wire:poll.3s="verificarPagamento" class="flex flex-col items-center justify-center py-16 text-center">
             <div class="mb-5 h-[52px] w-[52px] animate-spin rounded-full border-4 border-slate-700 border-t-brand-500"></div>
             <h1 class="text-2xl font-extrabold">{{ __('pdv.aguardando_pagamento') }}</h1>
-            <p class="mt-2 text-3xl font-extrabold">$ {{ number_format($this->totalGeral(), 2, ',', '.') }}</p>
+            <p class="mt-2 text-3xl font-extrabold"><x-ui.money :value="$this->totalGeral()" /></p>
             <p class="mt-2 max-w-sm text-slate-400">{{ __('pdv.aguardando_pagamento_ajuda') }}</p>
 
             @if ($mpInitPoint)

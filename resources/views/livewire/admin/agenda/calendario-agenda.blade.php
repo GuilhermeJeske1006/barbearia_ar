@@ -1,16 +1,16 @@
 <div wire:poll.5s="verificarNovosAgendamentos">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.agenda') }}</h1>
             <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{{ \Carbon\Carbon::parse($data)->translatedFormat('l, d/m/Y') }}</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <x-ui.button variant="secondary" size="sm" wire:click="diaAnterior">&larr;</x-ui.button>
             <x-ui.button variant="secondary" size="sm" wire:click="hoje">{{ __('painel.hoje') }}</x-ui.button>
             <x-ui.input type="date" id="data" wire:model.live="data" class="w-40" />
             <x-ui.button variant="secondary" size="sm" wire:click="proximoDia">&rarr;</x-ui.button>
-            <x-ui.button size="sm" wire:click="abrirForm" class="ml-2">{{ __('painel.novo_agendamento') }}</x-ui.button>
+            <x-ui.button size="sm" wire:click="abrirForm" class="sm:ml-2">{{ __('painel.novo_agendamento') }}</x-ui.button>
         </div>
     </div>
 

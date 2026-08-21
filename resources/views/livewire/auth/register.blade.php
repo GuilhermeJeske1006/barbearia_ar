@@ -9,7 +9,7 @@
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" required />
-                <x-ui.input label="{{ __('painel.telefone') }}" id="telefoneDono" name="telefoneDono" wire:model="telefoneDono" placeholder="{{ __('painel.placeholder_telefone') }}" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefoneDono" name="telefoneDono" type="tel" wire:model="telefoneDono" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -27,8 +27,8 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <x-ui.input label="{{ __('painel.telefone') }}" id="telefoneBarbearia" name="telefoneBarbearia" wire:model="telefoneBarbearia" placeholder="{{ __('painel.placeholder_telefone') }}" />
-                <x-ui.input label="{{ __('painel.cuit') }}" id="cuitBarbearia" name="cuitBarbearia" wire:model="cuitBarbearia" placeholder="{{ __('painel.placeholder_cnpj') }}" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefoneBarbearia" name="telefoneBarbearia" type="tel" wire:model="telefoneBarbearia" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
+                <x-ui.input label="{{ __('painel.cuit') }}" id="cuitBarbearia" name="cuitBarbearia" wire:model="cuitBarbearia" placeholder="{{ __('painel.placeholder_cnpj') }}" x-mask="{{ \App\Support\InputMasks::documentoEmpresa() }}" />
             </div>
 
             <x-ui.input label="{{ __('painel.endereco') }}" id="enderecoBarbearia" name="enderecoBarbearia" wire:model="enderecoBarbearia" placeholder="{{ __('painel.placeholder_endereco') }}" />

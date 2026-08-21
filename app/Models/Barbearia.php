@@ -10,6 +10,17 @@ class Barbearia extends Model
 {
     use HasFactory;
 
+    public const SIMBOLOS_MOEDA = [
+        'ARS' => '$',
+        'BRL' => 'R$',
+        'USD' => 'US$',
+        'MXN' => '$',
+        'CLP' => '$',
+        'COP' => '$',
+        'PEN' => 'S/',
+        'UYU' => '$U',
+    ];
+
     protected $fillable = [
         'nome', 'slug', 'cuit', 'endereco', 'cidade', 'provincia', 'telefone', 'email',
         'logo_path', 'timezone', 'moeda', 'mp_user_id', 'mp_access_token', 'mp_refresh_token',
@@ -26,6 +37,11 @@ class Barbearia extends Model
     public function conectadaAoMercadoPago(): bool
     {
         return ! empty($this->mp_access_token);
+    }
+
+    public function simboloMoeda(): string
+    {
+        return self::SIMBOLOS_MOEDA[$this->moeda] ?? '$';
     }
 
     public function barbeiros(): HasMany

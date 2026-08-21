@@ -9,12 +9,12 @@
 
     @if ($ehGestor)
         <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            <x-ui.kpi label="{{ __('painel.faturamento_hoje') }}" value="$ {{ number_format($metricas['faturamento_hoje'], 2, ',', '.') }}" />
+            <x-ui.kpi label="{{ __('painel.faturamento_hoje') }}" value="{{ \App\Support\Money::format($metricas['faturamento_hoje']) }}" />
             <x-ui.kpi label="{{ __('painel.turnos_hoje') }}" value="{{ $metricas['agendamentos_hoje'] }}" />
             <x-ui.kpi label="{{ __('painel.aguardando_confirmacao') }}" value="{{ $metricas['aguardando_confirmacao'] }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="$ {{ number_format($metricas['comissoes_pendentes'], 2, ',', '.') }}" />
+            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
             <x-ui.kpi label="{{ __('painel.clientes_novos_mes') }}" value="{{ $metricas['clientes_novos_mes'] }}" />
-            <x-ui.kpi label="{{ __('painel.ticket_medio_hoje') }}" value="$ {{ number_format($metricas['ticket_medio_hoje'], 2, ',', '.') }}" />
+            <x-ui.kpi label="{{ __('painel.ticket_medio_hoje') }}" value="{{ \App\Support\Money::format($metricas['ticket_medio_hoje']) }}" />
         </div>
 
         <x-ui.card class="mt-5" padding="p-4">
@@ -48,8 +48,8 @@
         <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <x-ui.kpi label="{{ __('painel.atendimentos_hoje') }}" value="{{ $metricas['atendimentos_hoje'] }}" />
             <x-ui.kpi label="{{ __('painel.proximo_atendimento') }}" value="{{ $metricas['proximo_horario']?->format('H:i') ?? '—' }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="$ {{ number_format($metricas['comissoes_pendentes'], 2, ',', '.') }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_pagas_mes') }}" value="$ {{ number_format($metricas['comissoes_pagas_mes'], 2, ',', '.') }}" />
+            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
+            <x-ui.kpi label="{{ __('painel.comissoes_pagas_mes') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pagas_mes']) }}" />
         </div>
     @endif
 

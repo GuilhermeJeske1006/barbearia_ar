@@ -3,15 +3,17 @@
 namespace App\Livewire\Admin\Barbeiros;
 
 use App\Models\Barbeiro;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 #[Layout('layouts::app')]
 class CrudBarbeiro extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public ?int $editandoId = null;
 
@@ -25,13 +27,16 @@ class CrudBarbeiro extends Component
 
     public bool $aceitaOnline = true;
 
+    #[Validate('nullable|image|max:2048')]
+    public $foto = null;
+
     public bool $mostrarForm = false;
 
     public ?int $removendoId = null;
 
     public function criar(): void
     {
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
         $this->ativo = true;
         $this->aceitaOnline = true;
         $this->mostrarForm = true;
@@ -46,6 +51,7 @@ class CrudBarbeiro extends Component
         $this->percentualComissao = (string) $barbeiro->percentual_comissao;
         $this->ativo = $barbeiro->ativo;
         $this->aceitaOnline = $barbeiro->aceita_online;
+        $this->foto = null;
         $this->mostrarForm = true;
     }
 
@@ -53,7 +59,7 @@ class CrudBarbeiro extends Component
     {
         $this->validate();
 
-        Barbeiro::updateOrCreate(
+        $barbeiro = Barbeiro::updateOrCreate(
             ['id' => $this->editandoId],
             [
                 'nome' => $this->nome,
@@ -63,15 +69,25 @@ class CrudBarbeiro extends Component
             ],
         );
 
+        if ($this->foto) {
+            $caminho = $this->foto->store('barbeiros', 'public');
+
+            if ($barbeiro->foto_path) {
+                Storage::disk('public')->delete($barbeiro->foto_path);
+            }
+
+            $barbeiro->update(['foto_path' => $caminho]);
+        }
+
         $this->mostrarForm = false;
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
     }
 
     public function cancelar(): void
     {
         $this->mostrarForm = false;
         $this->resetValidation();
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto']);
     }
 
     public function confirmarRemocao(int $id): void

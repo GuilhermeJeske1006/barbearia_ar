@@ -14,7 +14,7 @@
 
             <div class="flex gap-4">
                 <x-ui.input label="{{ __('painel.duracao_minutos') }}" id="duracaoMinutos" name="duracaoMinutos" type="number" min="1" wire:model="duracaoMinutos" placeholder="{{ __('painel.placeholder_duracao') }}" suffix="min" class="w-32" />
-                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="R$" class="w-32" />
+                <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" class="w-32" />
             </div>
 
             <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
@@ -35,6 +35,7 @@
     </x-ui.modal>
 
     <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
                 <tr>
@@ -50,7 +51,7 @@
                     <tr wire:key="servico-{{ $servico->id }}">
                         <td class="px-4 py-2.5">{{ $servico->nome }}</td>
                         <td class="px-4 py-2.5">{{ $servico->duracao_minutos }}</td>
-                        <td class="px-4 py-2.5">$ {{ number_format($servico->preco, 2, ',', '.') }}</td>
+                        <td class="px-4 py-2.5"><x-ui.money :value="$servico->preco" /></td>
                         <td class="px-4 py-2.5">
                             <x-ui.badge :tone="$servico->ativo ? 'green' : 'slate'">{{ $servico->ativo ? __('painel.sim') : __('painel.nao') }}</x-ui.badge>
                         </td>
@@ -70,6 +71,7 @@
                 @endforelse
             </tbody>
         </table>
+      </div>
     </div>
 
     <div class="mt-4">

@@ -29,7 +29,9 @@ class SetLocale
 
         $response = $next($request);
 
-        return $response->withCookie(cookie('locale', $locale, 60 * 24 * 365));
+        $response->headers->setCookie(cookie('locale', $locale, 60 * 24 * 365));
+
+        return $response;
     }
 
     private function resolve(Request $request): string

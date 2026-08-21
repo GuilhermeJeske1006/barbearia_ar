@@ -119,6 +119,7 @@ return [
     'selecione' => 'Selecione...',
     'sem_horario_disponivel' => 'Nenhum horário disponível para este barbeiro/serviços nessa data.',
     'logo' => 'Logo',
+    'foto' => 'Foto',
     'endereco' => 'Endereço',
     'cidade' => 'Cidade',
     'provincia' => 'Estado',

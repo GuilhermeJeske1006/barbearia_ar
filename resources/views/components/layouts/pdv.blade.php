@@ -30,9 +30,15 @@
         class="flex min-h-screen flex-col"
     >
         <header class="flex items-center justify-between bg-slate-900 px-6 py-3.5">
-            <div>
-                <p class="text-sm font-extrabold leading-tight">{{ __('pdv.titulo') }}</p>
-                <p class="text-[11px] text-slate-400">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</p>
+            <div class="flex items-center gap-3">
+                @php $barbeariaAtual = app()->bound('barbearia') ? app('barbearia') : null; @endphp
+                @if ($barbeariaAtual?->logo_path)
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" class="h-9 w-9 shrink-0 rounded-full object-cover">
+                @endif
+                <div>
+                    <p class="text-sm font-extrabold leading-tight">{{ $barbeariaAtual?->nome ?? config('app.name') }}</p>
+                    <p class="text-[11px] text-slate-400">{{ __('pdv.titulo') }}</p>
+                </div>
             </div>
             <span class="text-[11px] text-slate-400" x-text="hora"></span>
         </header>

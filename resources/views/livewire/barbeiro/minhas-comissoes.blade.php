@@ -11,10 +11,10 @@
 
         <div class="mt-4 rounded-xl bg-linear-to-br from-brand-600 to-brand-700 p-5 text-white">
             <p class="text-[11px] font-semibold opacity-85">{{ __('painel.total') }}</p>
-            <p class="mt-0.5 text-2xl font-extrabold">$ {{ number_format($totais['total'], 2, ',', '.') }}</p>
+            <p class="mt-0.5 text-2xl font-extrabold"><x-ui.money :value="$totais['total']" /></p>
             <div class="mt-3 flex gap-5 text-[12.5px] font-semibold opacity-90">
-                <span>{{ __('painel.status_pendente') }}: $ {{ number_format($totais['pendente'], 2, ',', '.') }}</span>
-                <span>{{ __('painel.status_pago') }}: $ {{ number_format($totais['pago'], 2, ',', '.') }}</span>
+                <span>{{ __('painel.status_pendente') }}: <x-ui.money :value="$totais['pendente']" /></span>
+                <span>{{ __('painel.status_pago') }}: <x-ui.money :value="$totais['pago']" /></span>
             </div>
         </div>
 
@@ -23,7 +23,7 @@
                 <x-ui.card padding="p-3.5" wire:key="comissao-{{ $comissao->id }}">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-bold text-slate-900 dark:text-white">$ {{ number_format($comissao->valor, 2, ',', '.') }}</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white"><x-ui.money :value="$comissao->valor" /></p>
                             <p class="text-xs text-slate-400">{{ $comissao->data_referencia->format('d/m/Y') }}</p>
                         </div>
                         <x-ui.status-comissao :status="$comissao->status" />

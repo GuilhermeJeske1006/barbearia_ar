@@ -30,7 +30,7 @@
                             @foreach ($this->servicosSelecionadosCollection() as $servico)
                                 <div class="flex justify-between gap-2 border-b border-dashed border-white/10 py-1.5 text-[12.5px]">
                                     <span class="truncate text-slate-300">{{ $servico->nome }}</span>
-                                    <span class="shrink-0 font-semibold">$ {{ number_format($servico->preco, 2, ',', '.') }}</span>
+                                    <span class="shrink-0 font-semibold"><x-ui.money :value="$servico->preco" /></span>
                                 </div>
                             @endforeach
                         </div>
@@ -51,7 +51,7 @@
 
                         <div class="mt-3 flex justify-between border-t border-white/10 pt-3 text-sm font-extrabold">
                             <span>{{ __('agendamento.total') }}</span>
-                            <span>$ {{ number_format($this->precoTotal(), 2, ',', '.') }}</span>
+                            <span><x-ui.money :value="$this->precoTotal()" /></span>
                         </div>
                     @endif
                 </div>
@@ -83,7 +83,7 @@
                         <input type="checkbox" wire:model.live="servicosSelecionados" value="{{ $servico->id }}" class="sr-only">
                         <span class="flex items-start justify-between gap-3">
                             <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $servico->nome }}</span>
-                            <span class="shrink-0 text-sm font-extrabold text-brand-600">$ {{ number_format($servico->preco, 2, ',', '.') }}</span>
+                            <span class="shrink-0 text-sm font-extrabold text-brand-600"><x-ui.money :value="$servico->preco" /></span>
                         </span>
                         <span class="mt-0.5 text-xs text-slate-400">{{ $servico->duracao_minutos }} {{ __('agendamento.minutos') }}</span>
                         @if ($servico->descricao)
@@ -111,7 +111,11 @@
                 @foreach ($this->barbeirosDisponiveis() as $barbeiro)
                     <label class="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
                         <input type="radio" wire:model="barbeiroSelecionado" value="{{ $barbeiro->id }}" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
-                        <x-ui.avatar :name="$barbeiro->nome" />
+                        @if ($barbeiro->foto_path)
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeiro->foto_path) }}" class="h-11 w-11 shrink-0 rounded-full object-cover">
+                        @else
+                            <x-ui.avatar :name="$barbeiro->nome" />
+                        @endif
                         <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ $barbeiro->nome }}</span>
                     </label>
                 @endforeach
@@ -189,14 +193,14 @@
             <x-ui.card class="mb-3.5 lg:hidden" padding="p-3.5">
                 <div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-800 py-1.5 text-[13px]">
                     <span class="text-slate-500 dark:text-slate-400">{{ $this->servicosSelecionadosCollection()->pluck('nome')->join(', ') }}</span>
-                    <span class="font-semibold">$ {{ number_format($this->precoTotal(), 2, ',', '.') }}</span>
+                    <span class="font-semibold"><x-ui.money :value="$this->precoTotal()" /></span>
                 </div>
                 <div class="flex justify-between py-1.5 text-[13px]">
                     <span class="text-slate-500 dark:text-slate-400">{{ \Carbon\Carbon::parse($data)->translatedFormat('d/m/Y') }} {{ $horarioSelecionado }}</span>
                 </div>
                 <div class="flex justify-between border-t border-dashed border-slate-200 dark:border-slate-800 pt-2.5 text-[13px] font-extrabold">
                     <span>{{ __('agendamento.total') }}</span>
-                    <span>$ {{ number_format($this->precoTotal(), 2, ',', '.') }}</span>
+                    <span><x-ui.money :value="$this->precoTotal()" /></span>
                 </div>
             </x-ui.card>
 
@@ -277,7 +281,7 @@
                 <div class="sticky bottom-0 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 md:px-8 lg:static lg:mt-auto lg:px-10 lg:py-6">
                     <div class="text-[11px] text-slate-400">
                         {{ __('agendamento.total') }}
-                        <b class="block text-base text-slate-900 dark:text-white">$ {{ number_format($this->precoTotal(), 2, ',', '.') }}</b>
+                        <b class="block text-base text-slate-900 dark:text-white"><x-ui.money :value="$this->precoTotal()" /></b>
                     </div>
 
                     <div class="flex gap-2">

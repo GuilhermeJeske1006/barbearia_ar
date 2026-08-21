@@ -8,14 +8,21 @@
     @livewireStyles
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-    <div class="flex min-h-screen">
-        <aside class="flex w-50 shrink-0 flex-col bg-slate-900 px-3 py-5">
-            <a href="{{ route('painel') }}" wire:navigate class="mb-5 flex items-center gap-2 px-2 text-sm font-extrabold text-white">
-                <span class="h-6 w-6 shrink-0 rounded-md bg-brand-600"></span>
-                <span class="truncate">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</span>
-            </a>
+    <div class="flex min-h-screen" x-data="{ mobileOpen: false }">
+        <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-slate-900/60 md:hidden"></div>
 
-            <nav class="flex flex-1 flex-col gap-0.5">
+        <aside :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-50 md:translate-x-0">
+            <div class="mb-5 flex items-center justify-between px-2">
+                <a href="{{ route('painel') }}" wire:navigate class="flex items-center gap-2 text-sm font-extrabold text-white">
+                    <span class="h-6 w-6 shrink-0 rounded-md bg-brand-600"></span>
+                    <span class="truncate">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</span>
+                </a>
+                <button type="button" @click="mobileOpen = false" class="text-slate-400 hover:text-white md:hidden" aria-label="{{ __('painel.cancelar') }}">
+                    &times;
+                </button>
+            </div>
+
+            <nav class="flex flex-1 flex-col gap-0.5" @click.capture="mobileOpen = false">
                 <x-ui.nav-item :href="route('painel')" :active="request()->routeIs('painel')">{{ __('painel.painel') }}</x-ui.nav-item>
 
                 @canany(['agenda.gerenciar', 'agenda.visualizar_propria', 'pdv.operar', 'horarios.visualizar_propria'])
@@ -99,13 +106,20 @@
             </div>
         </aside>
 
-        <div class="flex-1 overflow-x-hidden">
-            <div class="flex items-center justify-end gap-2 px-6 py-3">
-                <livewire:notificacoes-bell />
-                <livewire:theme-toggle />
-                <livewire:language-switcher />
+        <div class="min-w-0 flex-1 overflow-x-hidden">
+            <div class="flex items-center justify-between gap-2 px-4 py-3 md:justify-end md:px-6">
+                <button type="button" @click="mobileOpen = true" class="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white md:hidden" aria-label="{{ __('painel.painel') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-6 w-6">
+                        <path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2">
+                    <livewire:notificacoes-bell />
+                    <livewire:theme-toggle />
+                    <livewire:language-switcher />
+                </div>
             </div>
-            <main class="mx-auto max-w-6xl px-6 pb-12">
+            <main class="mx-auto max-w-6xl px-4 pb-12 md:px-6">
                 {{ $slot }}
             </main>
         </div>

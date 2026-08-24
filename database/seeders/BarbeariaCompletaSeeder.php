@@ -144,7 +144,7 @@ class BarbeariaCompletaSeeder extends Seeder
             ]
         );
 
-        if (! $this->barbearia->logo_path) {
+        if (! $this->arquivoExiste($this->barbearia->logo_path)) {
             $this->barbearia->update([
                 'logo_path' => $this->salvarImagem('logos', $this->gerarLogo('EP', self::PALETA[0])),
             ]);
@@ -228,7 +228,7 @@ class BarbeariaCompletaSeeder extends Seeder
                 ]
             );
 
-            if (! $produto->foto_path) {
+            if (! $this->arquivoExiste($produto->foto_path)) {
                 $cor = self::PALETA[$i % count(self::PALETA)];
                 $produto->update(['foto_path' => $this->salvarImagem('produtos', $this->gerarFotoProduto($p['nome'], $cor))]);
             }
@@ -253,7 +253,7 @@ class BarbeariaCompletaSeeder extends Seeder
                 ]
             );
 
-            if (! $barbeiro->foto_path) {
+            if (! $this->arquivoExiste($barbeiro->foto_path)) {
                 $iniciais = collect(explode(' ', $nome))->map(fn ($p) => mb_substr($p, 0, 1))->implode('');
                 $cor = self::PALETA[$i % count(self::PALETA)];
                 $barbeiro->update(['foto_path' => $this->salvarImagem('barbeiros', $this->gerarAvatarBarbeiro($iniciais, $cor))]);
@@ -535,10 +535,22 @@ class BarbeariaCompletaSeeder extends Seeder
         $this->command?->info('Agenda de amanhã ('.$amanha->toDateString().'): '.($barbeiros->count() * 2).' agendamentos.');
     }
 
+    /** Confere se o arquivo REALMENTE existe no disco, não só se a coluna tá preenchida. */
+    private function arquivoExiste(?string $caminho): bool
+    {
+        return $caminho && Storage::disk('public')->exists($caminho);
+    }
+
     private function salvarImagem(string $pasta, string $binario): string
     {
         $caminho = $pasta.'/'.Str::random(20).'.jpg';
-        Storage::disk('public')->put($caminho, $binario);
+
+        // O disco 'public' tem 'throw' => false (config/filesystems.php), então
+        // put() falha em silêncio (retorna false) em vez de lançar exceção —
+        // sem esse check, um erro de permissão vira um foto_path fantasma no banco.
+        if (! Storage::disk('public')->put($caminho, $binario)) {
+            throw new \RuntimeException("Falha ao gravar imagem em storage/app/public/{$caminho} — confira permissões de escrita do usuário que roda o PHP nesse diretório.");
+        }
 
         return $caminho;
     }

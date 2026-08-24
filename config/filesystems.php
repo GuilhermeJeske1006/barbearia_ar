@@ -39,9 +39,21 @@ return [
         ],
 
         'public' => [
-            'driver' => 'local',
+            // Laravel Cloud (e qualquer host com filesystem efêmero) roda várias
+            // instâncias sem disco local compartilhado: um arquivo escrito numa
+            // instância some/não existe pras outras. Segue FILESYSTEM_DISK (já
+            // provisionado automaticamente pelo Object Storage do Cloud) pra virar
+            // S3 nesses ambientes, sem exigir trocar nenhum Storage::disk('public')
+            // espalhado pelo código. Sem essa env, comportamento local não muda.
+            'driver' => env('FILESYSTEM_DISK', 'local') === 's3' ? 's3' : 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'url' => env('AWS_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

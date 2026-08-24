@@ -13,8 +13,6 @@ use App\Models\Pagamento;
 use App\Models\Produto;
 use App\Models\Servico;
 use App\Models\User;
-use Faker\Factory as FakerFactory;
-use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Spatie\Permission\PermissionRegistrar;
@@ -23,11 +21,12 @@ use Spatie\Permission\PermissionRegistrar;
  * Popula dados de demonstração em todas as tabelas de negócio, para 2
  * barbearias (prova o isolamento multi-tenant). Idempotente: roda com
  * firstOrCreate/updateOrCreate, seguro de repetir.
+ *
+ * Não usa Faker (nem em require-dev) — só arrays fixos + random_int/array_rand,
+ * pra rodar em qualquer ambiente (inclusive `composer install --no-dev`).
  */
 class DemoDataSeeder extends Seeder
 {
-    private Generator $faker;
-
     private const SERVICOS = [
         ['nome' => 'Corte de Cabelo', 'duracao' => 30, 'preco' => 25.00],
         ['nome' => 'Barba', 'duracao' => 20, 'preco' => 15.00],
@@ -44,10 +43,38 @@ class DemoDataSeeder extends Seeder
         ['nome' => 'Balm Pós-Barba', 'preco' => 14.00],
     ];
 
+    private const CIDADES = ['Buenos Aires', 'Bahía Blanca', 'Mar del Plata', 'La Plata', 'Rosario'];
+
+    private const NOMES_BARBEIROS = [
+        'Rafael Souza', 'Diego Martins', 'Bruno Alves', 'Thiago Rocha', 'Felipe Cardoso', 'Gustavo Lima',
+    ];
+
+    private const NOMES_CLIENTES = [
+        'Ana Beatriz Costa', 'Carlos Eduardo Pinto', 'Fernanda Ribeiro', 'João Pedro Barros',
+        'Larissa Mendes', 'Marcelo Nogueira', 'Patrícia Freitas', 'Rodrigo Teixeira',
+        'Vanessa Correia', 'Vinícius Moraes', 'Camila Duarte', 'Eduardo Vieira', 'Juliana Farias',
+        'Leandro Pires', 'Renata Guimarães',
+    ];
+
+    private const NOMES_ATENDENTES = ['Beatriz Campos', 'Roberta Azevedo', 'Simone Cavalcante'];
+
+    private const DESCRICOES_PRODUTO = [
+        'Fórmula profissional usada no salão.',
+        'Ideal para uso diário, não resseca.',
+        'Produto importado de primeira qualidade.',
+        'Recomendado pela equipe de barbeiros.',
+        'Rende vários meses de uso.',
+    ];
+
+    private const OBSERVACOES_CLIENTE = [
+        'Prefere horário à tarde.',
+        'Alérgico a alguns produtos com álcool.',
+        'Cliente frequente, sempre pede o mesmo barbeiro.',
+        'Pediu confirmação por telefone antes do agendamento.',
+    ];
+
     public function run(): void
     {
-        $this->faker = FakerFactory::create('pt_BR');
-
         $this->call(RoleAndPermissionSeeder::class);
 
         $barbeariaAr = $this->criarBarbearia('Barbearia AR', 'barbearia-ar', 'guilhermeieski@gmail.com');
@@ -64,9 +91,9 @@ class DemoDataSeeder extends Seeder
             [
                 'nome' => $nome,
                 'email' => $email,
-                'cidade' => $this->faker->city(),
+                'cidade' => $this->um(self::CIDADES),
                 'provincia' => 'Buenos Aires',
-                'telefone' => $this->faker->numerify('+54 9 11 ########'),
+                'telefone' => $this->telefoneAleatorio(),
                 'timezone' => 'America/Argentina/Buenos_Aires',
                 'moeda' => 'ARS',
                 'status' => 'ativa',
@@ -86,7 +113,7 @@ class DemoDataSeeder extends Seeder
 
         $atendente = $this->criarUsuario(
             Str::before($emailDono, '@').'.atendente@'.Str::after($emailDono, '@'),
-            $this->faker->name(),
+            $this->um(self::NOMES_ATENDENTES),
             'atendente',
             $barbearia->id,
             'atendente'
@@ -105,15 +132,20 @@ class DemoDataSeeder extends Seeder
         $produtos = collect(self::PRODUTOS)->map(fn (array $p) => Produto::firstOrCreate(
             ['barbearia_id' => $barbearia->id, 'nome' => $p['nome']],
             [
-                'descricao' => $this->faker->sentence(8),
+                'descricao' => $this->um(self::DESCRICOES_PRODUTO),
                 'preco' => $p['preco'],
-                'estoque_qtd' => $this->faker->numberBetween(5, 40),
+                'estoque_qtd' => $this->aleatorio(5, 40),
                 'ativo' => true,
             ]
         ));
 
-        $barbeiros = collect(range(1, 3))->map(function (int $i) use ($barbearia, $servicos) {
-            $nome = $this->faker->name('male');
+        // Deslocamento fixo por barbearia (sem RNG): mesmo slug -> mesmo trio de
+        // nomes sempre, o que mantém o firstOrCreate por e-mail idempotente.
+        $inicio = crc32($barbearia->slug) % (count(self::NOMES_BARBEIROS) - 2);
+        $nomesBarbeiros = collect(array_slice(self::NOMES_BARBEIROS, $inicio, 3));
+
+        $barbeiros = $nomesBarbeiros->map(function (string $nome, int $idx) use ($barbearia, $servicos) {
+            $i = $idx + 1;
             $email = Str::slug($nome).$i.'.'.$barbearia->slug.'@barbearia.test';
 
             $user = $this->criarUsuario($email, $nome, 'barbeiro', $barbearia->id, 'barbeiro');
@@ -122,7 +154,7 @@ class DemoDataSeeder extends Seeder
                 ['barbearia_id' => $barbearia->id, 'user_id' => $user->id],
                 [
                     'nome' => $nome,
-                    'percentual_comissao' => $this->faker->numberBetween(30, 50),
+                    'percentual_comissao' => $this->aleatorio(30, 50),
                     'ativo' => true,
                     'aceita_online' => true,
                 ]
@@ -130,7 +162,7 @@ class DemoDataSeeder extends Seeder
 
             foreach ($servicos as $servico) {
                 $barbeiro->servicos()->syncWithoutDetaching([
-                    $servico->id => ['percentual_comissao_override' => $this->faker->boolean(20) ? $this->faker->numberBetween(35, 55) : null],
+                    $servico->id => ['percentual_comissao_override' => $this->chance(20) ? $this->aleatorio(35, 55) : null],
                 ]);
             }
 
@@ -159,8 +191,10 @@ class DemoDataSeeder extends Seeder
         );
 
         $clientes = collect(range(1, 10))->map(function (int $i) use ($barbearia) {
-            $nome = $this->faker->name();
-            $telefone = $this->faker->numerify('+54 9 11 ########');
+            $nome = self::NOMES_CLIENTES[($i + (int) $barbearia->id) % count(self::NOMES_CLIENTES)];
+            // Telefone determinístico por barbearia+índice: mantém o seeder
+            // idempotente (firstOrCreate por telefone) sem depender de RNG com seed fixa.
+            $telefone = sprintf('+54 9 11 %08d', 40000000 + ($barbearia->id * 100) + $i);
             $userId = null;
 
             if ($i <= 3) {
@@ -172,11 +206,11 @@ class DemoDataSeeder extends Seeder
                 ['barbearia_id' => $barbearia->id, 'telefone' => $telefone],
                 [
                     'nome' => $nome,
-                    'email' => $this->faker->boolean(60) ? $this->faker->safeEmail() : null,
-                    'dni' => $this->faker->numerify('########'),
+                    'email' => $this->chance(60) ? Str::slug($nome).'@gmail.com' : null,
+                    'dni' => (string) $this->aleatorio(20000000, 45000000),
                     'user_id' => $userId,
-                    'idioma' => $this->faker->randomElement(['es', 'pt']),
-                    'observacoes' => $this->faker->boolean(20) ? $this->faker->sentence(6) : null,
+                    'idioma' => $this->um(['es', 'pt']),
+                    'observacoes' => $this->chance(20) ? $this->um(self::OBSERVACOES_CLIENTE) : null,
                 ]
             );
         });
@@ -191,7 +225,7 @@ class DemoDataSeeder extends Seeder
             [
                 'name' => $nome,
                 'password' => 'password',
-                'telefone' => $this->faker->numerify('+54 9 11 ########'),
+                'telefone' => $this->telefoneAleatorio(),
                 'tipo' => $tipo,
                 'barbearia_atual_id' => $barbeariaId,
                 'idioma' => 'pt',
@@ -219,14 +253,14 @@ class DemoDataSeeder extends Seeder
             $barbeiro = $barbeiros->random();
             $cliente = $clientes->random();
             $servicosEscolhidos = $servicos->random(random_int(1, 2));
-            $inicio = now()->subDays(random_int(1, 20))->setTime(random_int(9, 17), $this->faker->randomElement([0, 30]));
+            $inicio = now()->subDays(random_int(1, 20))->setTime(random_int(9, 17), $this->um([0, 30]));
             $duracao = $servicosEscolhidos->sum('duracao_minutos');
 
             $agendamento = Agendamento::create([
                 'barbearia_id' => $barbearia->id,
                 'barbeiro_id' => $barbeiro->id,
                 'cliente_id' => $cliente->id,
-                'criado_por' => $this->faker->randomElement($criadoresPossiveis),
+                'criado_por' => $this->um($criadoresPossiveis),
                 'data_hora_inicio' => $inicio,
                 'data_hora_fim' => (clone $inicio)->addMinutes($duracao),
                 'status' => 'concluido',
@@ -246,7 +280,7 @@ class DemoDataSeeder extends Seeder
             }
 
             $valorProdutos = 0;
-            if ($this->faker->boolean(40)) {
+            if ($this->chance(40)) {
                 $produto = $produtos->random();
                 $qtd = random_int(1, 2);
                 $agendamento->produtos()->attach($produto->id, [
@@ -266,9 +300,10 @@ class DemoDataSeeder extends Seeder
                 'valor_total' => $valorTotal,
                 'valor_comissao_barbeiro' => $valorComissao,
                 'valor_barbearia' => round($valorTotal - $valorComissao, 2),
-                'metodo' => $this->faker->randomElement(['dinheiro', 'mp_checkout', 'mp_point']),
-                'mp_payment_id' => $this->faker->boolean(50) ? (string) $this->faker->unique()->numberBetween(100000000, 999999999) : null,
-                'mp_status' => $this->faker->boolean(50) ? 'approved' : null,
+                'metodo' => $this->um(['dinheiro', 'mp_checkout', 'mp_point']),
+                // Base + barbearia_id + índice*1000 garante unicidade sem Faker::unique().
+                'mp_payment_id' => $this->chance(50) ? (string) (100000000 + $barbearia->id * 100000 + $i * 1000 + random_int(0, 999)) : null,
+                'mp_status' => $this->chance(50) ? 'approved' : null,
                 'forma_split' => 'manual',
                 'pago_em' => $agendamento->data_hora_fim,
             ]);
@@ -280,7 +315,7 @@ class DemoDataSeeder extends Seeder
                 'barbearia_id' => $barbearia->id,
                 'pagamento_id' => $pagamento->id,
                 'valor' => $valorComissao,
-                'status' => $this->faker->randomElement(['pendente', 'pendente', 'pago']),
+                'status' => $this->um(['pendente', 'pendente', 'pago']),
                 'data_referencia' => $agendamento->data_hora_fim->toDateString(),
             ]);
         }
@@ -290,17 +325,17 @@ class DemoDataSeeder extends Seeder
             $barbeiro = $barbeiros->random();
             $cliente = $clientes->random();
             $servicosEscolhidos = $servicos->random(random_int(1, 2));
-            $inicio = now()->addDays(random_int(1, 10))->setTime(random_int(9, 17), $this->faker->randomElement([0, 30]));
+            $inicio = now()->addDays(random_int(1, 10))->setTime(random_int(9, 17), $this->um([0, 30]));
             $duracao = $servicosEscolhidos->sum('duracao_minutos');
 
             $agendamento = Agendamento::create([
                 'barbearia_id' => $barbearia->id,
                 'barbeiro_id' => $barbeiro->id,
                 'cliente_id' => $cliente->id,
-                'criado_por' => $this->faker->randomElement($criadoresPossiveis),
+                'criado_por' => $this->um($criadoresPossiveis),
                 'data_hora_inicio' => $inicio,
                 'data_hora_fim' => (clone $inicio)->addMinutes($duracao),
-                'status' => $this->faker->randomElement(['pendente', 'confirmado']),
+                'status' => $this->um(['pendente', 'confirmado']),
                 'created_by' => $atendente->id,
             ]);
 
@@ -323,7 +358,7 @@ class DemoDataSeeder extends Seeder
                 'barbearia_id' => $barbearia->id,
                 'barbeiro_id' => $barbeiro->id,
                 'cliente_id' => $cliente->id,
-                'criado_por' => $this->faker->randomElement($criadoresPossiveis),
+                'criado_por' => $this->um($criadoresPossiveis),
                 'data_hora_inicio' => $inicio,
                 'data_hora_fim' => (clone $inicio)->addMinutes((int) $servico->duracao_minutos),
                 'status' => $status,
@@ -335,5 +370,25 @@ class DemoDataSeeder extends Seeder
                 'percentual_comissao_aplicado' => $barbeiro->percentualComissaoPara($servico),
             ]);
         }
+    }
+
+    private function aleatorio(int $min, int $max): int
+    {
+        return random_int($min, $max);
+    }
+
+    private function chance(int $percentual): bool
+    {
+        return random_int(1, 100) <= $percentual;
+    }
+
+    private function um(array $itens)
+    {
+        return $itens[array_rand($itens)];
+    }
+
+    private function telefoneAleatorio(): string
+    {
+        return sprintf('+54 9 11 %08d', random_int(0, 99999999));
     }
 }

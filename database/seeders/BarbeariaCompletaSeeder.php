@@ -168,6 +168,10 @@ class BarbeariaCompletaSeeder extends Seeder
             $this->command?->warn('Barbería El Punto já tem agendamentos — pulando geração de agenda/pagamentos pra não duplicar.');
         }
 
+        // Roda sempre (mesmo em reseed): a agenda de "amanhã" é relativa à
+        // data de execução, então cada slot é apagado e recriado toda vez.
+        $this->gerarAgendamentosAmanha($barbeiros, $clientes, $servicos, $atendente);
+
         $this->command?->info('Barbería El Punto: '.$barbeiros->count().' barbeiros, '.$servicos->count().' serviços, '.$produtos->count().' produtos, '.$clientes->count().' clientes.');
     }
 
@@ -488,6 +492,47 @@ class BarbeariaCompletaSeeder extends Seeder
     private function enderecoAleatorio(): string
     {
         return $this->um(self::RUAS_BUENOS_AIRES).' '.random_int(100, 6000);
+    }
+
+    /**
+     * Agenda de amanhã: 2 turnos fixos por barbeiro (10h e 16h, bem espaçados
+     * pra nunca se sobrepor mesmo com o serviço mais longo). Apaga e recria
+     * a cada execução, já que "amanhã" muda conforme a data do seed.
+     */
+    private function gerarAgendamentosAmanha($barbeiros, $clientes, $servicos, User $atendente): void
+    {
+        $amanha = now()->addDay();
+
+        Agendamento::whereDate('data_hora_inicio', $amanha->toDateString())->delete();
+
+        foreach ($barbeiros as $barbeiro) {
+            foreach (['10:00', '16:00'] as $hora) {
+                [$h, $m] = explode(':', $hora);
+                $inicio = $amanha->clone()->setTime((int) $h, (int) $m);
+                $servicosEscolhidos = $servicos->random(random_int(1, 2));
+                $duracao = $servicosEscolhidos->sum('duracao_minutos');
+
+                $agendamento = Agendamento::create([
+                    'barbearia_id' => $this->barbearia->id,
+                    'barbeiro_id' => $barbeiro->id,
+                    'cliente_id' => $clientes->random()->id,
+                    'criado_por' => $this->um(['cliente_online', 'atendente', 'pdv']),
+                    'data_hora_inicio' => $inicio,
+                    'data_hora_fim' => (clone $inicio)->addMinutes($duracao),
+                    'status' => $this->um(['pendente', 'confirmado']),
+                    'created_by' => $atendente->id,
+                ]);
+
+                foreach ($servicosEscolhidos as $servico) {
+                    $agendamento->servicos()->attach($servico->id, [
+                        'preco_cobrado' => $servico->preco,
+                        'percentual_comissao_aplicado' => $barbeiro->percentualComissaoPara($servico),
+                    ]);
+                }
+            }
+        }
+
+        $this->command?->info('Agenda de amanhã ('.$amanha->toDateString().'): '.($barbeiros->count() * 2).' agendamentos.');
     }
 
     private function salvarImagem(string $pasta, string $binario): string

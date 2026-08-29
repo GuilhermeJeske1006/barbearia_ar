@@ -24,6 +24,12 @@ class ProcessarRespostaPesquisaSatisfacaoAction
             return;
         }
 
+        // O webhookToken só identifica a barbearia, não a filial — cliente é
+        // isolado por filial, então só depois de achar o telefone (buscando
+        // entre todas as filiais do tenant) dá pra bindar filial.id e
+        // continuar escopado corretamente pro resto do fluxo.
+        app()->instance('filial.id', $cliente->filial_id);
+
         $pesquisa = PesquisaSatisfacao::whereHas('agendamento', fn ($query) => $query->where('cliente_id', $cliente->id))
             ->whereNull('respondido_em')
             ->latest('enviado_em')
@@ -52,7 +58,11 @@ class ProcessarRespostaPesquisaSatisfacaoAction
     {
         $sufixo = substr($telefone, -8);
 
-        return Cliente::whereRaw(
+        // withoutGlobalScope('filial'): a filial do cliente é justamente o
+        // que a gente está tentando descobrir aqui — busca entre todas as
+        // filiais da barbearia já bindada (BelongsToBarbearia continua
+        // aplicado), nunca entre outros tenants.
+        return Cliente::withoutGlobalScope('filial')->whereRaw(
             "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') LIKE ?",
             ["%{$sufixo}"]
         )->first();

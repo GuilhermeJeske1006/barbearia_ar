@@ -20,7 +20,7 @@ class CalcularSlotsDisponiveisAction
      */
     public function handle(Barbeiro $barbeiro, Carbon $data, Collection $servicos): Collection
     {
-        $duracaoTotal = $servicos->sum('duracao_minutos');
+        $duracaoTotal = $servicos->sum(fn (Servico $servico) => $barbeiro->duracaoParaServico($servico));
 
         return $this->disponibilidade->slotsDisponiveis($barbeiro, $data, $duracaoTotal);
     }

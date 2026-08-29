@@ -8,13 +8,14 @@ use App\Models\Barbearia;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class ConfigMercadoPagoTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -33,6 +34,7 @@ class ConfigMercadoPagoTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_dono_pode_ativar_exigencia_de_pagamento(): void
@@ -73,6 +75,7 @@ class ConfigMercadoPagoTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

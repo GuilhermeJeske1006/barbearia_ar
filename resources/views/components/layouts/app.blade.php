@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? config('app.name') }}</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -11,10 +13,10 @@
     <div class="flex min-h-screen" x-data="{ mobileOpen: false }">
         <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-slate-900/60 md:hidden"></div>
 
-        <aside :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-50 md:translate-x-0">
+        <aside :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-60 md:translate-x-0">
             <div class="mb-5 flex items-center justify-between px-2">
-                <a href="{{ route('painel') }}" wire:navigate class="flex items-center gap-2 text-sm font-extrabold text-white">
-                    <span class="h-6 w-6 shrink-0 rounded-md bg-brand-600"></span>
+                <a href="{{ route('painel') }}" wire:navigate class="flex items-center gap-2 font-display text-base tracking-wide text-white">
+                    <span class="h-6 w-6 shrink-0 rounded-md bg-brand-500"></span>
                     <span class="truncate">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</span>
                 </a>
                 <button type="button" @click="mobileOpen = false" class="text-slate-400 hover:text-white md:hidden" aria-label="{{ __('painel.cancelar') }}">
@@ -26,7 +28,15 @@
                 <x-ui.nav-item :href="route('painel')" :active="request()->routeIs('painel')">{{ __('painel.painel') }}</x-ui.nav-item>
 
                 @canany(['agenda.gerenciar', 'agenda.visualizar_propria', 'pdv.operar', 'horarios.visualizar_propria'])
-                    <p class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">{{ __('painel.categoria_operacao') }}</p>
+                    <p class="mt-4 flex items-center gap-1.5 border-t border-slate-800/60 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                            <rect x="3" y="4" width="14" height="13" rx="2" />
+                            <line x1="3" y1="8" x2="17" y2="8" />
+                            <line x1="7" y1="2.5" x2="7" y2="5.5" />
+                            <line x1="13" y1="2.5" x2="13" y2="5.5" />
+                        </svg>
+                        {{ __('painel.categoria_operacao') }}
+                    </p>
                     @can('agenda.gerenciar')
                         <x-ui.nav-item :href="route('admin.agenda')" :active="request()->routeIs('admin.agenda')">{{ __('painel.agenda') }}</x-ui.nav-item>
                     @elsecan('agenda.visualizar_propria')
@@ -40,8 +50,13 @@
                     @endcan
                 @endcanany
 
-                @canany(['barbeiros.gerenciar', 'servicos.gerenciar', 'produtos.gerenciar', 'clientes.gerenciar', 'usuarios.gerenciar', 'barbearia.gerenciar'])
-                    <p class="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">{{ __('painel.categoria_gestao') }}</p>
+                @canany(['barbeiros.gerenciar', 'servicos.gerenciar', 'produtos.gerenciar', 'clientes.gerenciar'])
+                    <p class="mt-4 flex items-center gap-1.5 border-t border-slate-800/60 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                            <path d="M3 6a2 2 0 0 1 2-2h3.5l1.5 2H15a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z" />
+                        </svg>
+                        {{ __('painel.categoria_cadastros') }}
+                    </p>
                     @can('barbeiros.gerenciar')
                         <x-ui.nav-item :href="route('admin.barbeiros')" :active="request()->routeIs('admin.barbeiros*')">{{ __('painel.barberos') }}</x-ui.nav-item>
                     @endcan
@@ -54,27 +69,56 @@
                     @can('clientes.gerenciar')
                         <x-ui.nav-item :href="route('admin.clientes')" :active="request()->routeIs('admin.clientes')">{{ __('painel.clientes') }}</x-ui.nav-item>
                     @endcan
-                    @can('usuarios.gerenciar')
-                        <x-ui.nav-item :href="route('admin.usuarios')" :active="request()->routeIs('admin.usuarios')">{{ __('painel.usuarios') }}</x-ui.nav-item>
-                        <x-ui.nav-item :href="route('admin.permissoes')" :active="request()->routeIs('admin.permissoes')">{{ __('painel.permissoes') }}</x-ui.nav-item>
-                    @endcan
-                    @can('barbearia.gerenciar')
-                        <x-ui.nav-item :href="route('admin.configuracoes')" :active="request()->routeIs('admin.configuracoes')">{{ __('painel.ajustes') }}</x-ui.nav-item>
-                    @endcan
                 @endcanany
 
-                @canany(['barbearia.gerenciar', 'financeiro.visualizar', 'comissoes.visualizar_propria'])
-                    <p class="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wider text-slate-600">{{ __('painel.categoria_financeiro') }}</p>
-                    @can('barbearia.gerenciar')
-                        <x-ui.nav-item :href="route('admin.mercadopago')" :active="request()->routeIs('admin.mercadopago')">{{ __('painel.mp_titulo') }}</x-ui.nav-item>
-                        <x-ui.nav-item :href="route('admin.whatsapp')" :active="request()->routeIs('admin.whatsapp')">{{ __('painel.whatsapp_titulo') }}</x-ui.nav-item>
+                @can('usuarios.gerenciar')
+                    <p class="mt-4 flex items-center gap-1.5 border-t border-slate-800/60 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                            <path d="M10 2.5 16 4.5v4.8c0 4-2.6 6.8-6 8.2-3.4-1.4-6-4.2-6-8.2V4.5L10 2.5Z" />
+                        </svg>
+                        {{ __('painel.categoria_acesso') }}
+                    </p>
+                    <x-ui.nav-item :href="route('admin.usuarios')" :active="request()->routeIs('admin.usuarios')">{{ __('painel.usuarios') }}</x-ui.nav-item>
+                    <x-ui.nav-item :href="route('admin.permissoes')" :active="request()->routeIs('admin.permissoes')">{{ __('painel.permissoes') }}</x-ui.nav-item>
+                @endcan
+
+                @canany(['financeiro.visualizar', 'comissoes.visualizar_propria'])
+                    <p class="mt-4 flex items-center gap-1.5 border-t border-slate-800/60 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                            <rect x="2.5" y="6" width="15" height="8" rx="1.5" />
+                            <circle cx="10" cy="10" r="2" />
+                        </svg>
+                        {{ __('painel.categoria_financeiro') }}
+                    </p>
+                    @can('financeiro.gerenciar')
+                        <x-ui.nav-item :href="route('admin.despesas')" :active="request()->routeIs('admin.despesas')">{{ __('painel.despesas') }}</x-ui.nav-item>
                     @endcan
                     @can('financeiro.visualizar')
+                        <x-ui.nav-item :href="route('admin.relatorios.despesas')" :active="request()->routeIs('admin.relatorios.despesas')">{{ __('painel.relatorio_despesas') }}</x-ui.nav-item>
                         <x-ui.nav-item :href="route('admin.relatorios.comissoes')" :active="request()->routeIs('admin.relatorios.comissoes')">{{ __('painel.comisiones') }}</x-ui.nav-item>
                     @elsecan('comissoes.visualizar_propria')
                         <x-ui.nav-item :href="route('barbeiro.minhas-comissoes')" :active="request()->routeIs('barbeiro.minhas-comissoes')">{{ __('painel.comisiones') }}</x-ui.nav-item>
                     @endcan
                 @endcanany
+
+                @can('barbearia.gerenciar')
+                    <p class="mt-4 flex items-center gap-1.5 border-t border-slate-800/60 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
+                            <line x1="6" y1="3" x2="6" y2="17" />
+                            <circle cx="6" cy="7" r="1.6" />
+                            <line x1="10.5" y1="3" x2="10.5" y2="17" />
+                            <circle cx="10.5" cy="13" r="1.6" />
+                            <line x1="15" y1="3" x2="15" y2="17" />
+                            <circle cx="15" cy="9" r="1.6" />
+                        </svg>
+                        {{ __('painel.categoria_configuracoes') }}
+                    </p>
+                    <x-ui.nav-item :href="route('admin.filiais')" :active="request()->routeIs('admin.filiais')">{{ __('painel.filiais') }}</x-ui.nav-item>
+                    <x-ui.nav-item :href="route('admin.mercadopago')" :active="request()->routeIs('admin.mercadopago')">{{ __('painel.mp_titulo') }}</x-ui.nav-item>
+                    <x-ui.nav-item :href="route('admin.whatsapp')" :active="request()->routeIs('admin.whatsapp')">{{ __('painel.whatsapp_titulo') }}</x-ui.nav-item>
+                    <x-ui.nav-item :href="route('admin.configuracoes')" :active="request()->routeIs('admin.configuracoes')">{{ __('painel.ajustes') }}</x-ui.nav-item>
+                    <x-ui.nav-item :href="route('admin.assinatura')" :active="request()->routeIs('admin.assinatura')">{{ __('painel.assinatura_titulo') }}</x-ui.nav-item>
+                @endcan
             </nav>
 
             <div class="relative border-t border-slate-800 px-2 pt-3" x-data="{ open: false }">
@@ -115,6 +159,7 @@
                     </svg>
                 </button>
                 <div class="flex items-center gap-2">
+                    <livewire:filial-switcher />
                     <livewire:notificacoes-bell />
                     <livewire:theme-toggle />
                     <livewire:language-switcher />

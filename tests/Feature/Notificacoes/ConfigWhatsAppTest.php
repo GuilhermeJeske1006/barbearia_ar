@@ -8,6 +8,7 @@ use App\Models\Barbearia;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -15,7 +16,7 @@ use Tests\TestCase;
 
 class ConfigWhatsAppTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -39,6 +40,7 @@ class ConfigWhatsAppTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_dono_inicia_pareamento_e_recebe_qr_code(): void
@@ -130,6 +132,7 @@ class ConfigWhatsAppTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

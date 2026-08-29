@@ -11,6 +11,7 @@ use App\Models\Servico;
 use App\Services\MercadoPagoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -18,7 +19,7 @@ use Tests\TestCase;
 
 class AgendamentoComPagamentoTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private Barbearia $barbearia;
 
@@ -41,6 +42,7 @@ class AgendamentoComPagamentoTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->servico = Servico::create([
             'barbearia_id' => $this->barbearia->id,
@@ -106,6 +108,28 @@ class AgendamentoComPagamentoTest extends TestCase
         ]);
     }
 
+    public function test_pagamento_exigido_e_forcado_mesmo_se_metodo_pagamento_for_adulterado_para_local(): void
+    {
+        $this->mock(MercadoPagoService::class, function ($mock) {
+            $mock->shouldReceive('criarPreferencia')
+                ->once()
+                ->andReturn(['id' => 'pref-123', 'init_point' => 'https://mercadopago.com.ar/checkout/pref-123']);
+        });
+
+        // metodoPagamento é uma prop pública do Livewire — nada impede um
+        // payload adulterado de mandar 'local' mesmo com
+        // exige_pagamento_antecipado=true (setUp desta classe). O servidor
+        // precisa ignorar isso e cobrar de qualquer forma.
+        $this->preencherAteEtapa5()
+            ->set('dispositivoMovel', true)
+            ->set('metodoPagamento', 'local')
+            ->call('confirmar')
+            ->assertRedirect('https://mercadopago.com.ar/checkout/pref-123');
+
+        $agendamento = Agendamento::firstOrFail();
+        $this->assertSame('pendente', $agendamento->status);
+    }
+
     public function test_barbearia_com_pagamento_exigido_no_desktop_mostra_qr_code_em_vez_de_redirecionar(): void
     {
         $this->mock(MercadoPagoService::class, function ($mock) {
@@ -139,11 +163,11 @@ class AgendamentoComPagamentoTest extends TestCase
         $agendamento->update(['status' => 'confirmado']);
 
         $component->call('verificarPagamentoQrCode')
-            ->assertSet('etapa', 6)
+            ->assertSet('etapa', 8)
             ->assertSet('mostrarQrCode', false);
     }
 
-    public function test_falha_ao_criar_preferencia_mostra_erro_e_mantem_na_etapa_5(): void
+    public function test_falha_ao_criar_preferencia_mostra_erro_e_mantem_na_etapa_6(): void
     {
         $this->mock(MercadoPagoService::class, function ($mock) {
             $mock->shouldReceive('criarPreferencia')
@@ -153,10 +177,12 @@ class AgendamentoComPagamentoTest extends TestCase
 
         $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 5)
+            ->assertSet('etapa', 6)
             ->assertSet('erroConfirmacao', __('agendamento.erro_pagamento'));
 
-        $this->assertSame('pendente', Agendamento::firstOrFail()->status);
+        // Reserva cancelada, não deixada 'pendente' pra sempre — senão o
+        // horário fica travado e nem o próprio cliente consegue reagendar.
+        $this->assertSame('cancelado', Agendamento::firstOrFail()->status);
     }
 
     public function test_barbearia_nao_conectada_ao_mp_ignora_exigencia_e_confirma_direto(): void
@@ -169,7 +195,7 @@ class AgendamentoComPagamentoTest extends TestCase
 
         $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 6);
+            ->assertSet('etapa', 8);
 
         $agendamento = Agendamento::firstOrFail();
         $this->assertSame('confirmado', $agendamento->status);
@@ -186,7 +212,7 @@ class AgendamentoComPagamentoTest extends TestCase
 
         $this->preencherAteEtapa5()
             ->call('confirmar')
-            ->assertSet('etapa', 6);
+            ->assertSet('etapa', 8);
 
         $this->assertSame('confirmado', Agendamento::firstOrFail()->status);
     }

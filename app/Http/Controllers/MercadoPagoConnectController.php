@@ -38,8 +38,19 @@ class MercadoPagoConnectController extends Controller
             return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
         }
 
-        $barbearia = Barbearia::withoutGlobalScopes()->findOrFail(session('mp_oauth_barbearia_id'));
+        $barbeariaOAuthId = session('mp_oauth_barbearia_id');
         session()->forget(['mp_oauth_state', 'mp_oauth_barbearia_id']);
+
+        // Quem completa o fluxo precisa ser o mesmo usuário (da mesma
+        // barbearia) que o iniciou — sem isso, um usuário que trocou de
+        // barbearia atual (ou cuja sessão foi sequestrada) entre o redirect
+        // e o callback acabaria conectando o Mercado Pago de uma barbearia
+        // que não é mais a sua.
+        if ((int) $barbeariaOAuthId !== (int) $request->user()->barbearia_atual_id) {
+            abort(403);
+        }
+
+        $barbearia = Barbearia::withoutGlobalScopes()->findOrFail($barbeariaOAuthId);
 
         $token = $mercadoPago->trocarCodigoPorToken($request->query('code'), route('mercadopago.callback'));
 

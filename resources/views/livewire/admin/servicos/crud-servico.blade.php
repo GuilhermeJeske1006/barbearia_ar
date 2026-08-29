@@ -6,17 +6,36 @@
         @endcan
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_servico') }}" onClose="cancelar">
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_servico') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_servico') }}" autofocus />
 
             <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_servico') }}" rows="2" />
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <x-ui.input label="{{ __('painel.duracao_minutos') }}" id="duracaoMinutos" name="duracaoMinutos" type="number" min="1" wire:model="duracaoMinutos" placeholder="{{ __('painel.placeholder_duracao') }}" suffix="min" />
                 <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" />
                 <div class="flex items-center pt-6">
                     <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
+                </div>
+            </div>
+
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('painel.produtos_consumidos') }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('painel.produtos_consumidos_ajuda') }}</p>
+                <div class="mt-2 grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                    @foreach ($this->produtosDisponiveis() as $produto)
+                        <div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm">
+                            <span class="truncate">{{ $produto->nome }}</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" wire:click="decrementarProdutoConsumo({{ $produto->id }})"
+                                    class="h-7 w-7 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">−</button>
+                                <span class="w-4 text-center font-semibold">{{ $produtosConsumo[$produto->id] ?? 0 }}</span>
+                                <button type="button" wire:click="incrementarProdutoConsumo({{ $produto->id }})"
+                                    class="h-7 w-7 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">+</button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -35,7 +54,7 @@
         </div>
     </x-ui.modal>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
@@ -58,10 +77,10 @@
                         </td>
                         <td class="px-4 py-2.5 text-right">
                             @can('servicos.gerenciar')
-                                <x-ui.button variant="link" wire:click="editar({{ $servico->id }})">{{ __('painel.editar') }}</x-ui.button>
-                                <x-ui.button variant="link-danger" wire:click="confirmarRemocao({{ $servico->id }})" class="ml-3">
-                                    {{ __('painel.remover') }}
-                                </x-ui.button>
+                                <div class="flex items-center justify-end gap-1">
+                                    <x-ui.icon-button icon="pencil" tooltip="{{ __('painel.editar') }}" wire:click="editar({{ $servico->id }})" />
+                                    <x-ui.icon-button icon="trash" variant="danger" tooltip="{{ __('painel.remover') }}" wire:click="confirmarRemocao({{ $servico->id }})" />
+                                </div>
                             @endcan
                         </td>
                     </tr>

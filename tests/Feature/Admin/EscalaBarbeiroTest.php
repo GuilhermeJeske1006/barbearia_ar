@@ -4,19 +4,24 @@ namespace Tests\Feature\Admin;
 
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
 use App\Livewire\Admin\Barbeiros\EscalaBarbeiro;
+use App\Models\Agendamento;
 use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\BarbeiroHorario;
+use App\Models\Cliente;
+use App\Models\Servico;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class EscalaBarbeiroTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -37,6 +42,7 @@ class EscalaBarbeiroTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->barbeiro = Barbeiro::create([
             'barbearia_id' => $this->barbearia->id,
@@ -125,14 +131,89 @@ class EscalaBarbeiroTest extends TestCase
     public function test_nao_acessa_horario_de_barbeiro_de_outra_barbearia(): void
     {
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+
+        // BelongsToBarbearia sobrescreve barbearia_id com o tenant bindado;
+        // pra criar um registro de outro tenant precisamos bindar nele.
+        app()->instance('barbearia.id', $outra->id);
         $barbeiroAlheio = Barbeiro::create([
             'barbearia_id' => $outra->id,
             'nome' => 'Barbeiro Norte',
             'percentual_comissao' => 50,
         ]);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         $this->actingAs($this->dono)
             ->get(route('admin.barbeiros.horarios', $barbeiroAlheio))
             ->assertNotFound();
+    }
+
+    public function test_barbeiro_sem_permissao_nao_acessa_a_rota(): void
+    {
+        $barbeiroUser = User::create([
+            'name' => 'Barbeiro User',
+            'email' => 'barbeiro@example.com',
+            'password' => bcrypt('senha-forte-123'),
+            'tipo' => 'barbeiro',
+            'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
+        ]);
+
+        app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $barbeiroUser->assignRole('barbeiro');
+
+        $this->actingAs($barbeiroUser)
+            ->get(route('admin.barbeiros.horarios', $this->barbeiro))
+            ->assertForbidden();
+    }
+
+    public function test_encurtar_horario_com_agendamento_confirmado_fora_da_nova_escala_e_bloqueado(): void
+    {
+        BarbeiroHorario::create([
+            'barbeiro_id' => $this->barbeiro->id,
+            'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => 1,
+            'hora_inicio' => '09:00',
+            'hora_fim' => '20:00',
+        ]);
+
+        $servico = Servico::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Corte',
+            'duracao_minutos' => 30,
+            'preco' => 5000,
+        ]);
+
+        $cliente = Cliente::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Maria',
+            'telefone' => '111',
+        ]);
+
+        $inicio = Carbon::parse('next monday 17:00');
+
+        $agendamento = Agendamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'barbeiro_id' => $this->barbeiro->id,
+            'cliente_id' => $cliente->id,
+            'criado_por' => 'atendente',
+            'data_hora_inicio' => $inicio,
+            'data_hora_fim' => $inicio->copy()->addMinutes(30),
+            'status' => 'confirmado',
+        ]);
+        $agendamento->servicos()->attach($servico->id, ['preco_cobrado' => 5000, 'percentual_comissao_aplicado' => 50]);
+
+        Livewire::actingAs($this->dono)
+            ->test(EscalaBarbeiro::class, ['barbeiro' => $this->barbeiro])
+            ->set('dias.1.hora_fim', '16:00')
+            ->call('salvar')
+            ->assertSet('erro', fn ($erro) => ! empty($erro));
+
+        // Não deve ter salvo: continua 20:00.
+        $this->assertDatabaseHas('barbeiro_horarios', [
+            'barbeiro_id' => $this->barbeiro->id,
+            'dia_semana' => 1,
+            'hora_fim' => '20:00',
+        ]);
+        $this->assertSame('confirmado', $agendamento->fresh()->status);
     }
 }

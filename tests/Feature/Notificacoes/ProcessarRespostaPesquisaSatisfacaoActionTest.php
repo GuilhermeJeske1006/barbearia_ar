@@ -10,16 +10,18 @@ use App\Models\Cliente;
 use App\Models\PesquisaSatisfacao;
 use App\Models\Servico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class ProcessarRespostaPesquisaSatisfacaoActionTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private function criarPesquisaPendente(string $telefoneCliente): array
     {
         $barbearia = Barbearia::create(['nome' => 'Central', 'slug' => 'central']);
         app()->instance('barbearia.id', $barbearia->id);
+        $this->criarEBindarFilial($barbearia);
 
         $barbeiro = Barbeiro::create(['barbearia_id' => $barbearia->id, 'nome' => 'Pedro', 'percentual_comissao' => 50]);
         $cliente = Cliente::create(['barbearia_id' => $barbearia->id, 'nome' => 'María', 'telefone' => $telefoneCliente]);

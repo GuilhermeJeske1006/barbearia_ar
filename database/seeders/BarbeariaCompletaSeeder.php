@@ -9,6 +9,7 @@ use App\Models\BarbeiroBloqueio;
 use App\Models\BarbeiroHorario;
 use App\Models\Cliente;
 use App\Models\Comissao;
+use App\Models\Filial;
 use App\Models\Pagamento;
 use App\Models\PesquisaSatisfacao;
 use App\Models\Produto;
@@ -33,6 +34,8 @@ use Spatie\Permission\PermissionRegistrar;
 class BarbeariaCompletaSeeder extends Seeder
 {
     private Barbearia $barbearia;
+
+    private Filial $filial;
 
     private const PALETA = [
         '1e3a5f', '7c2d12', '14532d', '581c87', '9a3412', '1e293b', '831843', '0f766e',
@@ -154,6 +157,19 @@ class BarbeariaCompletaSeeder extends Seeder
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
 
+        $this->filial = Filial::firstOrCreate(
+            ['barbearia_id' => $this->barbearia->id, 'nome' => 'Matriz'],
+            [
+                'endereco' => $this->barbearia->endereco,
+                'cidade' => $this->barbearia->cidade,
+                'provincia' => $this->barbearia->provincia,
+                'telefone' => $this->barbearia->telefone,
+                'ativo' => true,
+            ]
+        );
+        app()->instance('filial.id', $this->filial->id);
+        app()->instance('filial', $this->filial);
+
         $this->criarUsuario('admin@gmail.com', 'Guilherme Jeske', 'dono', 'dono');
         $atendente = $this->criarUsuario('atendente@barberiaelpunto.com.ar', $this->um(self::NOMES_ATENDENTE), 'atendente', 'atendente');
 
@@ -178,6 +194,7 @@ class BarbeariaCompletaSeeder extends Seeder
     private function criarUsuario(string $email, string $nome, string $tipo, string $role): User
     {
         $barbeariaId = $tipo === 'cliente' ? null : $this->barbearia->id;
+        $filialId = $tipo === 'cliente' ? null : $this->filial->id;
 
         $user = User::updateOrCreate(
             ['email' => $email],
@@ -187,6 +204,7 @@ class BarbeariaCompletaSeeder extends Seeder
                 'telefone' => $this->telefoneAleatorio(),
                 'tipo' => $tipo,
                 'barbearia_atual_id' => $barbeariaId,
+                'filial_atual_id' => $filialId,
                 'idioma' => 'es',
                 'email_verified_at' => now(),
             ]

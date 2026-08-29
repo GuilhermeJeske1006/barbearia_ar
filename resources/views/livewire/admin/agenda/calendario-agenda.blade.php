@@ -14,7 +14,11 @@
         </div>
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ __('painel.novo_agendamento') }}" onClose="fecharForm" maxWidth="lg">
+    @if ($erroTransicao)
+        <x-ui.alert tone="danger" class="mt-3">{{ $erroTransicao }}</x-ui.alert>
+    @endif
+
+    <x-ui.modal :show="$mostrarForm" title="{{ __('painel.novo_agendamento') }}" onClose="fecharForm" maxWidth="xl">
         <form wire:submit="salvarNovo" class="space-y-4">
             @if ($erroForm)
                 <x-ui.alert tone="danger">{{ $erroForm }}</x-ui.alert>
@@ -37,7 +41,7 @@
                         <x-ui.input label="{{ __('painel.cliente') }}" id="buscaCliente" name="buscaCliente" wire:model.live.debounce.400ms="buscaCliente" placeholder="{{ __('painel.buscar_cliente') }}" autofocus autocomplete="off" />
 
                         @if ($this->clientesEncontrados()->isNotEmpty())
-                            <div class="absolute left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-card">
+                            <div class="absolute left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 shadow-card">
                                 @foreach ($this->clientesEncontrados() as $clienteEncontrado)
                                     <button type="button" wire:click="selecionarCliente({{ $clienteEncontrado->id }})"
                                         class="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60">
@@ -49,8 +53,8 @@
                         @endif
                     </div>
 
-                    <div class="mt-3 grid grid-cols-3 gap-4">
-                        <x-ui.input label="{{ __('painel.nome') }}" id="novoClienteNome" name="novoClienteNome" wire:model="novoClienteNome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" class="col-span-2" />
+                    <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <x-ui.input label="{{ __('painel.nome') }}" id="novoClienteNome" name="novoClienteNome" wire:model="novoClienteNome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" class="sm:col-span-2" />
                         <x-ui.input label="{{ __('painel.telefone') }}" id="novoClienteTelefone" name="novoClienteTelefone" type="tel" wire:model="novoClienteTelefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
                     </div>
                 @endif
@@ -95,7 +99,7 @@
         </form>
     </x-ui.modal>
 
-    <x-ui.modal :show="$mostrarPagamento" title="{{ __('painel.registrar_pagamento') }}" onClose="fecharPagamento" maxWidth="lg">
+    <x-ui.modal :show="$mostrarPagamento" title="{{ __('painel.registrar_pagamento') }}" onClose="fecharPagamento" maxWidth="xl">
         <form wire:submit="confirmarPagamento" class="space-y-4">
             @if ($erroPagamento)
                 <x-ui.alert tone="danger">{{ $erroPagamento }}</x-ui.alert>
@@ -154,7 +158,7 @@
             ->values();
     @endphp
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
         @if ($barbeiros->isEmpty())
             <x-ui.empty-state icon="✂️" :title="__('painel.nenhum_registro')" />
         @elseif ($horarios->isEmpty())
@@ -180,21 +184,23 @@
                                 <div class="relative border-l border-slate-100 dark:border-slate-800 p-1.5">
                                     @if ($agendamento)
                                         @php
-                                            $corEvento = match ($agendamento->status) {
-                                                'pendente', 'confirmado' => 'bg-amber-500',
-                                                'em_atendimento' => 'bg-brand-600',
-                                                'concluido' => 'bg-green-600',
-                                                default => 'bg-red-500',
+                                            [$corEvento, $iconeEvento] = match ($agendamento->status) {
+                                                'pendente', 'confirmado' => ['bg-amber-500', '⏳'],
+                                                'em_atendimento' => ['bg-brand-600', '✂️'],
+                                                'concluido' => ['bg-green-600', '✓'],
+                                                default => ['bg-red-500', '✕'],
                                             };
                                         @endphp
                                         <div x-data="{ open: false }" class="relative" wire:key="evt-{{ $agendamento->id }}">
                                             <button type="button" @click="open = !open"
                                                 class="{{ $corEvento }} w-full rounded-md px-2 py-1 text-left text-[10.5px] font-bold text-white">
+                                                <span class="sr-only">{{ __("painel.status_{$agendamento->status}") }} — </span>
+                                                <span aria-hidden="true">{{ $iconeEvento }}</span>
                                                 {{ $agendamento->data_hora_fim->format('H:i') }} · {{ $agendamento->cliente->nome }}
                                             </button>
 
                                             <div x-show="open" @click.outside="open = false" x-cloak
-                                                class="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-card">
+                                                class="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-3 shadow-card">
                                                 <div class="flex items-center justify-between">
                                                     <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $agendamento->cliente->nome }}</span>
                                                     <x-ui.status-agendamento :status="$agendamento->status" />

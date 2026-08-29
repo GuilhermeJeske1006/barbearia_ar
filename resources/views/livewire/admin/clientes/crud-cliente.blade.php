@@ -10,15 +10,15 @@
         <x-ui.input type="search" id="busca" wire:model.live.debounce.400ms="busca" placeholder="{{ __('painel.buscar_cliente') }}" class="max-w-sm" />
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_cliente') }}" onClose="cancelar">
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_cliente') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus class="col-span-2" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus class="sm:col-span-2" />
                 <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
-                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="col-span-2" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="sm:col-span-2" />
                 <x-ui.input label="{{ __('painel.dni') }}" id="dni" name="dni" wire:model="dni" placeholder="{{ __('painel.placeholder_dni') }}" x-mask="{{ \App\Support\InputMasks::documentoPessoal() }}" />
             </div>
 
@@ -39,7 +39,7 @@
         </div>
     </x-ui.modal>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
@@ -58,10 +58,10 @@
                         <td class="px-4 py-2.5">{{ $cliente->email ?? '—' }}</td>
                         <td class="px-4 py-2.5 text-right">
                             @can('clientes.gerenciar')
-                                <x-ui.button variant="link" wire:click="editar({{ $cliente->id }})">{{ __('painel.editar') }}</x-ui.button>
-                                <x-ui.button variant="link-danger" wire:click="confirmarRemocao({{ $cliente->id }})" class="ml-3">
-                                    {{ __('painel.remover') }}
-                                </x-ui.button>
+                                <div class="flex items-center justify-end gap-1">
+                                    <x-ui.icon-button icon="pencil" tooltip="{{ __('painel.editar') }}" wire:click="editar({{ $cliente->id }})" />
+                                    <x-ui.icon-button icon="trash" variant="danger" tooltip="{{ __('painel.remover') }}" wire:click="confirmarRemocao({{ $cliente->id }})" />
+                                </div>
                             @endcan
                         </td>
                     </tr>

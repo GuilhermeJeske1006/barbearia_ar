@@ -4,30 +4,31 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? config('app.name') }}</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
     <div class="flex min-h-screen">
-        <div class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-linear-to-br from-brand-500 via-brand-600 to-brand-700 p-12 text-white lg:flex">
-            <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10"></div>
-            <div class="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-white/5"></div>
+        <div class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-12 text-white lg:flex">
+            <div class="barber-stripe pointer-events-none absolute -right-32 -top-32 h-96 w-96 rotate-12 opacity-20"></div>
 
-            <div class="relative flex items-center gap-2 text-lg font-extrabold">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm font-extrabold">
+            <div class="relative flex items-center gap-2 font-display text-xl tracking-wide">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-extrabold">
                     {{ mb_strtoupper(mb_substr(config('app.name'), 0, 1)) }}
                 </div>
                 {{ config('app.name') }}
             </div>
 
             <div class="relative max-w-md">
-                <h2 class="text-3xl font-extrabold leading-tight">{{ __('painel.auth_painel_titulo') }}</h2>
-                <p class="mt-4 text-brand-100">{{ __('painel.auth_painel_subtitulo') }}</p>
+                <h2 class="font-display text-4xl leading-tight tracking-wide">{{ __('painel.auth_painel_titulo') }}</h2>
+                <p class="mt-4 text-slate-300">{{ __('painel.auth_painel_subtitulo') }}</p>
 
                 <ul class="mt-8 space-y-3 text-sm">
                     @foreach (['auth_beneficio_agenda', 'auth_beneficio_comissoes', 'auth_beneficio_pagamentos'] as $beneficio)
                         <li class="flex items-center gap-3">
-                            <svg class="h-5 w-5 shrink-0 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <svg class="h-5 w-5 shrink-0 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
                             {{ __("painel.$beneficio") }}
@@ -36,7 +37,7 @@
                 </ul>
             </div>
 
-            <p class="relative text-xs text-brand-100/70">&copy; {{ date('Y') }} {{ config('app.name') }}</p>
+            <p class="relative text-xs text-slate-500">&copy; {{ date('Y') }} {{ config('app.name') }}</p>
         </div>
 
         <div class="relative flex flex-1 flex-col">
@@ -51,10 +52,10 @@
                         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-extrabold text-white">
                             {{ mb_strtoupper(mb_substr(config('app.name'), 0, 1)) }}
                         </div>
-                        <span class="font-extrabold text-slate-900 dark:text-white">{{ config('app.name') }}</span>
+                        <span class="font-display text-lg tracking-wide text-slate-900 dark:text-white">{{ config('app.name') }}</span>
                     </div>
 
-                    <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-card dark:border-slate-800 dark:bg-slate-900">
+                    <div class="rounded-xl border border-slate-200 bg-ivory p-8 shadow-card dark:border-slate-800 dark:bg-slate-900">
                         {{ $slot }}
                     </div>
                 </div>
@@ -62,5 +63,6 @@
         </div>
     </div>
     @livewireScripts
+    @stack('scripts')
 </body>
 </html>

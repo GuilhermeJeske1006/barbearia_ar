@@ -15,11 +15,12 @@ use MercadoPago\Net\MPDefaultHttpClient;
 use MercadoPago\Net\MPHttpClient;
 use MercadoPago\Net\MPRequest;
 use MercadoPago\Net\MPResponse;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class MercadoPagoServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private Barbearia $barbearia;
 
@@ -34,6 +35,7 @@ class MercadoPagoServiceTest extends TestCase
             'slug' => 'central',
             'mp_access_token' => 'APP_USR-token-atual',
         ]);
+        $this->criarEBindarFilial($this->barbearia);
 
         $servico = Servico::create([
             'barbearia_id' => $this->barbearia->id,

@@ -11,6 +11,7 @@ use App\Notifications\AgendamentoConfirmado;
 use App\Notifications\AgendamentoLembrete;
 use App\Notifications\AgendamentoPesquisaSatisfacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 /**
@@ -31,12 +32,13 @@ use Tests\TestCase;
  */
 class NotificacaoSerializacaoTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private function criarAgendamentoComRelacoesCarregadas(): Agendamento
     {
         $barbearia = Barbearia::create(['nome' => 'Central', 'slug' => 'central']);
         app()->instance('barbearia.id', $barbearia->id);
+        $this->criarEBindarFilial($barbearia);
 
         $barbeiro = Barbeiro::create(['barbearia_id' => $barbearia->id, 'nome' => 'Pedro', 'percentual_comissao' => 50]);
         $cliente = Cliente::create(['barbearia_id' => $barbearia->id, 'nome' => 'María', 'telefone' => '111', 'email' => 'maria@example.com']);

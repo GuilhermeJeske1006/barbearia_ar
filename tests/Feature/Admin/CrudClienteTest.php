@@ -9,13 +9,14 @@ use App\Models\Cliente;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class CrudClienteTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -34,6 +35,7 @@ class CrudClienteTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_dono_pode_criar_editar_e_remover_cliente(): void
@@ -55,7 +57,7 @@ class CrudClienteTest extends TestCase
         $this->assertDatabaseHas('clientes', ['id' => $cliente->id, 'email' => 'maria@example.com']);
 
         $component->call('confirmarRemocao', $cliente->id)->call('remover');
-        $this->assertDatabaseMissing('clientes', ['id' => $cliente->id]);
+        $this->assertSoftDeleted('clientes', ['id' => $cliente->id]);
     }
 
     public function test_busca_filtra_por_nome_ou_telefone_sem_vazar_outro_tenant(): void
@@ -81,6 +83,7 @@ class CrudClienteTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

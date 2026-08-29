@@ -5,7 +5,7 @@
         <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
     @endif
 
-    <div class="mt-4 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+    <div class="mt-4 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-4">
         <x-ui.input label="{{ __('painel.data_inicio') }}" id="dataInicio" name="dataInicio" type="date" wire:model.live="dataInicio" />
         <x-ui.input label="{{ __('painel.data_fim') }}" id="dataFim" name="dataFim" type="date" wire:model.live="dataFim" />
 
@@ -32,7 +32,7 @@
         <x-ui.kpi :label="__('painel.status_pago')" value="{{ \App\Support\Money::format($totais['pago']) }}" />
     </div>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
@@ -67,5 +67,9 @@
             </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="mt-4">
+        {{ $comissoes->links() }}
     </div>
 </div>

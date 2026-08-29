@@ -23,8 +23,9 @@ class CriarUsuarioBarbeariaAction
         string $telefone,
         string $role,
         ?string $percentualComissao = null,
+        ?int $filialId = null,
     ): User {
-        return DB::transaction(function () use ($barbeariaId, $nome, $email, $senha, $telefone, $role, $percentualComissao) {
+        return DB::transaction(function () use ($barbeariaId, $nome, $email, $senha, $telefone, $role, $percentualComissao, $filialId) {
             $user = User::create([
                 'name' => $nome,
                 'email' => $email,
@@ -32,6 +33,7 @@ class CriarUsuarioBarbeariaAction
                 'telefone' => $telefone,
                 'tipo' => $role,
                 'barbearia_atual_id' => $barbeariaId,
+                'filial_atual_id' => $filialId,
                 'ativo' => true,
             ]);
 
@@ -41,6 +43,7 @@ class CriarUsuarioBarbeariaAction
             if ($role === 'barbeiro') {
                 Barbeiro::create([
                     'barbearia_id' => $barbeariaId,
+                    'filial_id' => $filialId,
                     'user_id' => $user->id,
                     'nome' => $nome,
                     'percentual_comissao' => $percentualComissao ?? 0,

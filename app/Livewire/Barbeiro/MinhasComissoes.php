@@ -47,7 +47,9 @@ class MinhasComissoes extends Component
         $comissoes = $this->comissoes();
 
         return [
-            'total' => $comissoes->sum('valor'),
+            // Estornado não conta em "total": comissão de um pagamento
+            // devolvido não é dinheiro que o barbeiro vai receber.
+            'total' => $comissoes->whereNotIn('status', ['estornado'])->sum('valor'),
             'pendente' => $comissoes->where('status', 'pendente')->sum('valor'),
             'pago' => $comissoes->where('status', 'pago')->sum('valor'),
         ];

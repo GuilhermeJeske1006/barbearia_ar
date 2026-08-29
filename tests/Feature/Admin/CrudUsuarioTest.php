@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
 use App\Livewire\Admin\Usuarios\CrudUsuario;
 use App\Models\Barbearia;
+use App\Models\Filial;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +34,10 @@ class CrudUsuarioTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+
+        $filial = Filial::where('barbearia_id', $this->barbearia->id)->firstOrFail();
+        app()->instance('filial.id', $filial->id);
+        app()->instance('filial', $filial);
     }
 
     public function test_dono_pode_criar_atendente(): void
@@ -110,12 +115,15 @@ class CrudUsuarioTest extends TestCase
         ]);
         $usuario->assignRole('atendente');
 
+        $filial = Filial::where('barbearia_id', $this->barbearia->id)->firstOrFail();
+
         Livewire::actingAs($this->dono)
             ->test(CrudUsuario::class)
             ->call('editar', $usuario->id)
             ->set('nome', 'Maria Editada')
             ->set('role', 'barbeiro')
             ->set('percentualComissao', '30')
+            ->set('filialId', (string) $filial->id)
             ->call('salvar')
             ->assertHasNoErrors();
 

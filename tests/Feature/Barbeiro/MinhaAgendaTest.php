@@ -13,13 +13,14 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class MinhaAgendaTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private Barbearia $barbearia;
 
@@ -42,6 +43,7 @@ class MinhaAgendaTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->barbeiroUser = User::create([
             'name' => 'Pedro',
@@ -49,6 +51,7 @@ class MinhaAgendaTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
         $this->barbeiroUser->assignRole('barbeiro');
 
@@ -127,6 +130,7 @@ class MinhaAgendaTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
         $atendente->assignRole('atendente');
 
@@ -143,6 +147,7 @@ class MinhaAgendaTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'cliente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
         $cliente->assignRole('cliente');
 

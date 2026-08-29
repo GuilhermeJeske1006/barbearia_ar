@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? __('pdv.titulo') }}</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -36,12 +38,13 @@
                     <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" class="h-9 w-9 shrink-0 rounded-full object-cover">
                 @endif
                 <div>
-                    <p class="text-sm font-extrabold leading-tight">{{ $barbeariaAtual?->nome ?? config('app.name') }}</p>
+                    <p class="font-display text-lg leading-tight tracking-wide">{{ $barbeariaAtual?->nome ?? config('app.name') }}</p>
                     <p class="text-[11px] text-slate-400">{{ __('pdv.titulo') }}</p>
                 </div>
             </div>
-            <span class="text-[11px] text-slate-400" x-text="hora"></span>
+            <span class="font-display text-lg tracking-wide text-slate-400" x-text="hora"></span>
         </header>
+        <div class="barber-stripe h-1 w-full"></div>
 
         <main class="mx-auto w-full max-w-[100rem] flex-1 px-6 py-6 lg:px-10 lg:py-8">
             {{ $slot }}

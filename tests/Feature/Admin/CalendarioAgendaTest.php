@@ -16,6 +16,7 @@ use App\Notifications\AgendamentoPesquisaSatisfacao;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -23,7 +24,7 @@ use Tests\TestCase;
 
 class CalendarioAgendaTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -46,6 +47,7 @@ class CalendarioAgendaTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->barbeiro = Barbeiro::create([
             'barbearia_id' => $this->barbearia->id,
@@ -143,20 +145,37 @@ class CalendarioAgendaTest extends TestCase
         $this->assertNull($this->agendamento->fresh()->pesquisa_enviada_em);
     }
 
-    public function test_transicao_nao_permitida_e_ignorada(): void
+    public function test_transicao_nao_permitida_e_ignorada_mas_mostra_erro(): void
     {
         $this->agendamento->update(['status' => 'concluido']);
 
         Livewire::actingAs($this->dono)
             ->test(CalendarioAgenda::class)
-            ->call('transicionar', $this->agendamento->id, 'pendente');
+            ->call('transicionar', $this->agendamento->id, 'pendente')
+            ->assertSet('erroTransicao', fn ($erro) => ! empty($erro));
 
         $this->assertSame('concluido', $this->agendamento->fresh()->status);
+    }
+
+    public function test_abrir_pagamento_com_transicao_invalida_mostra_erro(): void
+    {
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->assertSet('erroTransicao', fn ($erro) => ! empty($erro))
+            ->assertSet('mostrarPagamento', false);
     }
 
     public function test_nao_mostra_agendamento_de_outra_barbearia(): void
     {
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+
+        // Bind temporariamente no tenant "Norte" pra criar os registros
+        // alheios: BelongsToBarbearia agora sobrescreve barbearia_id com o
+        // tenant bindado (proteção contra o caller informar outro id à
+        // força), então não dá mais pra criar dado de outro tenant com o
+        // tenant "Central" ainda bindado.
+        app()->instance('barbearia.id', $outra->id);
         $barbeiroOutro = Barbeiro::create(['barbearia_id' => $outra->id, 'nome' => 'Barbeiro Norte', 'percentual_comissao' => 50]);
         $clienteOutro = Cliente::create(['barbearia_id' => $outra->id, 'nome' => 'Cliente Norte', 'telefone' => '222']);
 
@@ -169,6 +188,7 @@ class CalendarioAgendaTest extends TestCase
             'data_hora_fim' => Carbon::today()->setTime(11, 30),
             'status' => 'confirmado',
         ]);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         Livewire::actingAs($this->dono)
             ->test(CalendarioAgenda::class)
@@ -217,6 +237,46 @@ class CalendarioAgendaTest extends TestCase
         $this->assertSame('confirmado', $criado->status);
         $this->assertSame('atendente', $criado->criado_por);
         $this->assertSame('Cliente Novo', $criado->cliente->nome);
+    }
+
+    public function test_admin_cria_novo_agendamento_notifica_cliente(): void
+    {
+        Notification::fake();
+
+        $servicoNovo = Servico::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Barba',
+            'duracao_minutos' => 30,
+            'preco' => 3000,
+        ]);
+
+        $barbeiro2 = Barbeiro::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Lucas',
+            'percentual_comissao' => 50,
+        ]);
+
+        BarbeiroHorario::create([
+            'barbeiro_id' => $barbeiro2->id,
+            'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => Carbon::today()->dayOfWeek,
+            'hora_inicio' => '09:00',
+            'hora_fim' => '18:00',
+        ]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->set('novoClienteNome', 'Cliente Novo')
+            ->set('novoClienteTelefone', '999888')
+            ->set('novoBarbeiroId', $barbeiro2->id)
+            ->set('novoServicosSelecionados', [$servicoNovo->id])
+            ->set('novoData', Carbon::today()->toDateString())
+            ->set('novoHorario', '09:00')
+            ->call('salvarNovo');
+
+        $criado = Agendamento::where('barbeiro_id', $barbeiro2->id)->first();
+        Notification::assertSentTo($criado->cliente, \App\Notifications\AgendamentoConfirmado::class);
     }
 
     public function test_grade_mostra_todos_horarios_do_expediente_mesmo_sem_agendamento(): void
@@ -410,6 +470,50 @@ class CalendarioAgendaTest extends TestCase
         $this->assertEquals(4000, $pagamento->valor_barbearia);
     }
 
+    public function test_confirmar_pagamento_debita_insumo_da_receita_do_servico(): void
+    {
+        $pomada = Produto::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Pomada',
+            'preco' => 1500,
+            'estoque_qtd' => 10,
+            'ativo' => true,
+        ]);
+
+        $this->agendamento->servicos->first()->produtosConsumidos()->attach($pomada->id, ['quantidade_consumida' => 2]);
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->call('confirmarPagamento');
+
+        $this->assertDatabaseHas('produtos', ['id' => $pomada->id, 'estoque_qtd' => 8]);
+        $this->assertDatabaseHas('movimentacoes_estoque', [
+            'produto_id' => $pomada->id, 'tipo' => 'consumo_servico', 'quantidade' => -2,
+            'agendamento_id' => $this->agendamento->id,
+        ]);
+    }
+
+    public function test_produto_apenas_insumo_nao_aparece_pra_venda_no_balcao(): void
+    {
+        Produto::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Talco (insumo)',
+            'preco' => 0,
+            'estoque_qtd' => 20,
+            'apenas_insumo' => true,
+            'ativo' => true,
+        ]);
+
+        $this->agendamento->update(['status' => 'em_atendimento']);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirPagamento', $this->agendamento->id)
+            ->assertDontSee('Talco (insumo)');
+    }
+
     public function test_confirmar_pagamento_exige_ao_menos_um_servico(): void
     {
         $this->agendamento->update(['status' => 'em_atendimento']);
@@ -432,6 +536,7 @@ class CalendarioAgendaTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

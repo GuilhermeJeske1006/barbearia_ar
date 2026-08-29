@@ -76,6 +76,28 @@ class LoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_usuario_desativado_durante_a_sessao_e_deslogado_no_proximo_acesso(): void
+    {
+        $barbearia = Barbearia::create(['nome' => 'Central', 'slug' => 'central']);
+        $user = User::create([
+            'name' => 'Juan',
+            'email' => 'juan@example.com',
+            'password' => Hash::make('senha-forte-123'),
+            'tipo' => 'dono',
+            'barbearia_atual_id' => $barbearia->id,
+            'ativo' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/painel')
+            ->assertStatus(200);
+
+        $user->update(['ativo' => false]);
+
+        $this->get('/painel')->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
     public function test_usuario_autenticado_pode_ver_painel_da_propria_barbearia_e_deslogar(): void
     {
         $barbearia = Barbearia::create(['nome' => 'Central', 'slug' => 'central']);
@@ -85,6 +107,7 @@ class LoginTest extends TestCase
             'password' => Hash::make('senha-forte-123'),
             'tipo' => 'dono',
             'barbearia_atual_id' => $barbearia->id,
+            'ativo' => true,
         ]);
 
         $this->actingAs($user)

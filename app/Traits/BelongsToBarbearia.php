@@ -24,7 +24,11 @@ trait BelongsToBarbearia
         });
 
         static::creating(function ($model) {
-            if (! $model->barbearia_id && app()->bound('barbearia.id')) {
+            // Sempre sobrescreve com o tenant resolvido quando há um
+            // bindado — nunca confia em um barbearia_id vindo do caller
+            // (mass assignment, payload de request, etc.), que poderia
+            // apontar pra outro tenant. Ver docs/adr/0001.
+            if (app()->bound('barbearia.id')) {
                 $model->barbearia_id = app('barbearia.id');
             }
         });

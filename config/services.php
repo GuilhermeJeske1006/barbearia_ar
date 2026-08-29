@@ -63,4 +63,15 @@ return [
         'sandbox' => env('MP_SANDBOX', false),
     ],
 
+    // Assinatura SaaS do dono da barbearia (plano único), separada do MP
+    // acima — que é o Connect/marketplace usado pelo CLIENTE FINAL pra pagar
+    // a barbearia. Checkout transparente: PaymentElement embutido na tela de
+    // onboarding, nunca redireciona pro Stripe. Ver App\Services\StripeService.
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'price_id' => env('STRIPE_PRICE_ID'),
+    ],
+
 ];

@@ -17,6 +17,7 @@ class RoleAndPermissionSeeder extends Seeder
 {
     private const PERMISSOES = [
         'barbearia.gerenciar',
+        'filiais.gerenciar',
         'barbeiros.gerenciar',
         'servicos.gerenciar',
         'produtos.gerenciar',
@@ -25,6 +26,7 @@ class RoleAndPermissionSeeder extends Seeder
         'pdv.operar',
         'clientes.gerenciar',
         'financeiro.visualizar',
+        'financeiro.gerenciar',
         'comissoes.visualizar_propria',
         'horarios.visualizar_propria',
         'usuarios.gerenciar',

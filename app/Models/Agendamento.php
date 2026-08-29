@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToBarbearia;
+use App\Traits\BelongsToFilial;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,10 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Agendamento extends Model
 {
-    use BelongsToBarbearia, HasFactory;
+    use BelongsToBarbearia, BelongsToFilial, HasFactory;
 
     protected $fillable = [
-        'barbearia_id', 'barbeiro_id', 'cliente_id', 'criado_por', 'data_hora_inicio',
+        'barbearia_id', 'filial_id', 'barbeiro_id', 'cliente_id', 'criado_por', 'data_hora_inicio',
         'data_hora_fim', 'status', 'origem_pdv', 'observacoes', 'pagamento_id',
         'created_by', 'updated_by', 'lembrete_enviado_em', 'pesquisa_enviada_em',
     ];
@@ -30,12 +31,14 @@ class Agendamento extends Model
 
     public function barbeiro(): BelongsTo
     {
-        return $this->belongsTo(Barbeiro::class);
+        // withTrashed: agendamento é registro histórico — um barbeiro ou
+        // cliente desligado (soft-deleted) não pode sumir do histórico.
+        return $this->belongsTo(Barbeiro::class)->withTrashed();
     }
 
     public function cliente(): BelongsTo
     {
-        return $this->belongsTo(Cliente::class);
+        return $this->belongsTo(Cliente::class)->withTrashed();
     }
 
     public function pagamento(): BelongsTo

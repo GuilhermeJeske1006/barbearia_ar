@@ -8,7 +8,11 @@
         <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
     @endif
 
-    <form wire:submit="salvar" class="mt-4 space-y-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+    @if ($erro)
+        <x-ui.alert tone="danger" class="mt-4">{{ $erro }}</x-ui.alert>
+    @endif
+
+    <form wire:submit="salvar" class="mt-4 space-y-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-4">
         @foreach ($dias as $dia => $config)
             <div class="flex flex-wrap items-center gap-4 border-b border-slate-100 dark:border-slate-800 py-3 last:border-0">
                 <x-ui.checkbox wire:model.live="dias.{{ $dia }}.ativo" class="w-32 font-semibold">

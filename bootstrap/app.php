@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Middleware\ResolveFilial;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\ResolveTheme;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\VerificarAssinaturaAtiva;
+use App\Http\Middleware\VerificarUsuarioAtivo;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -38,8 +41,13 @@ return Application::configure(basePath: dirname(__DIR__))
             | Request::HEADER_X_FORWARDED_PORT
             | Request::HEADER_X_FORWARDED_PROTO);
         $middleware->appendToGroup('web', [SetLocale::class, ResolveTheme::class]);
-        $middleware->alias(['tenant' => ResolveTenant::class]);
-        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago', 'webhooks/whatsapp/*']);
+        $middleware->alias([
+            'tenant' => ResolveTenant::class,
+            'filial' => ResolveFilial::class,
+            'usuario.ativo' => VerificarUsuarioAtivo::class,
+            'assinatura.ativa' => VerificarAssinaturaAtiva::class,
+        ]);
+        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago', 'webhooks/whatsapp/*', 'webhooks/stripe']);
 
         // ResolveTenant precisa rodar antes de SubstituteBindings: rotas com
         // model binding implícito (ex.: {barbeiro}) resolvem o Eloquent
@@ -55,6 +63,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ThrottleRequests::class,
             AuthenticateSession::class,
             ResolveTenant::class,
+            ResolveFilial::class,
             SubstituteBindings::class,
             Authorize::class,
         ]);

@@ -8,6 +8,7 @@ use App\Models\Barbearia;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -16,7 +17,7 @@ use Tests\TestCase;
 
 class ConfiguracoesBarbeariaTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -35,6 +36,7 @@ class ConfiguracoesBarbeariaTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_carrega_dados_atuais_da_barbearia(): void
@@ -104,6 +106,7 @@ class ConfiguracoesBarbeariaTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

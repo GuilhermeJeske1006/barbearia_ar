@@ -8,27 +8,36 @@
         <x-ui.alert tone="danger" class="mt-4">{{ $message }}</x-ui.alert>
     @enderror
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_usuario') }}" onClose="cancelar">
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_usuario') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
-            <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_completo') }}" autofocus />
-
-            <div class="grid grid-cols-2 gap-4">
-                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" :disabled="(bool) $editandoId" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_completo') }}" autofocus />
                 <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
             @unless ($editandoId)
-                <x-ui.input label="{{ __('painel.senha') }}" id="senha" name="senha" type="password" wire:model="senha" placeholder="{{ __('painel.placeholder_senha') }}" />
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" />
+                    <x-ui.input label="{{ __('painel.senha') }}" id="senha" name="senha" type="password" wire:model="senha" placeholder="{{ __('painel.placeholder_senha') }}" />
+                </div>
+            @else
+                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" disabled />
             @endunless
 
             @if ($role === 'barbeiro')
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
                         <option value="atendente">{{ __('painel.papel_atendente') }}</option>
                         <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
                     </x-ui.select>
                     <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" />
                 </div>
+                <x-ui.select label="{{ __('painel.filial') }}" id="filialId" name="filialId" wire:model="filialId">
+                    <option value="">{{ __('painel.selecione') }}</option>
+                    @foreach ($this->filiaisDisponiveis() as $filial)
+                        <option value="{{ $filial->id }}">{{ $filial->nome }}</option>
+                    @endforeach
+                </x-ui.select>
             @else
                 <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
                     <option value="atendente">{{ __('painel.papel_atendente') }}</option>
@@ -43,7 +52,7 @@
         </form>
     </x-ui.modal>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
@@ -67,10 +76,10 @@
                             <x-ui.badge :tone="$usuario->ativo ? 'green' : 'slate'">{{ $usuario->ativo ? __('painel.sim') : __('painel.nao') }}</x-ui.badge>
                         </td>
                         <td class="px-4 py-2.5 text-right">
-                            <x-ui.button variant="link" wire:click="editar({{ $usuario->id }})">{{ __('painel.editar') }}</x-ui.button>
-                            <x-ui.button variant="{{ $usuario->ativo ? 'link-danger' : 'link' }}" wire:click="alternarAtivo({{ $usuario->id }})" class="ml-3">
-                                {{ $usuario->ativo ? __('painel.desativar') : __('painel.ativar') }}
-                            </x-ui.button>
+                            <div class="flex items-center justify-end gap-1">
+                                <x-ui.icon-button icon="pencil" tooltip="{{ __('painel.editar') }}" wire:click="editar({{ $usuario->id }})" />
+                                <x-ui.icon-button icon="power" :variant="$usuario->ativo ? 'danger' : 'default'" tooltip="{{ $usuario->ativo ? __('painel.desativar') : __('painel.ativar') }}" wire:click="alternarAtivo({{ $usuario->id }})" />
+                            </div>
                         </td>
                     </tr>
                 @empty

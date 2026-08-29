@@ -84,9 +84,22 @@ class DisponibilidadeService
      * Re-checked with a row lock immediately before confirming a booking —
      * the slot list above is only a UI hint and can go stale between two
      * concurrent requests for the same barbeiro/horário.
+     *
+     * $validarExpediente controla se o horário também precisa cair dentro da
+     * escala do barbeiro (fora de bloqueio/intervalo) — true pro wizard
+     * público e pro agendamento manual do admin, já que ali o horário chega
+     * como uma string livre e nunca é reconferido contra a lista de slots
+     * gerada (um payload adulterado poderia mandar qualquer horário). É
+     * desligado pro PDV (origemPdv=true): ali o atendimento já está
+     * acontecendo presencialmente, então não faz sentido recusar o registro
+     * só porque o barbeiro ficou 5 minutos depois do expediente.
      */
-    public function estaLivre(Barbeiro $barbeiro, Carbon $inicio, Carbon $fim): bool
+    public function estaLivre(Barbeiro $barbeiro, Carbon $inicio, Carbon $fim, bool $validarExpediente = true): bool
     {
+        if ($validarExpediente && ! $this->dentroDoExpediente($barbeiro, $inicio, $fim)) {
+            return false;
+        }
+
         return ! Agendamento::query()
             ->where('barbeiro_id', $barbeiro->id)
             ->whereNotIn('status', ['cancelado', 'no_show'])
@@ -94,6 +107,42 @@ class DisponibilidadeService
             ->where('data_hora_fim', '>', $inicio)
             ->lockForUpdate()
             ->exists();
+    }
+
+    private function dentroDoExpediente(Barbeiro $barbeiro, Carbon $inicio, Carbon $fim): bool
+    {
+        $escalas = $barbeiro->horarios()->where('dia_semana', $inicio->dayOfWeek)->get();
+
+        $dentroDeAlgumaEscala = $escalas->contains(function ($escala) use ($inicio, $fim) {
+            $inicioEscala = $inicio->copy()->setTimeFromTimeString($escala->hora_inicio);
+            $fimEscala = $inicio->copy()->setTimeFromTimeString($escala->hora_fim);
+
+            if ($inicio->lt($inicioEscala) || $fim->gt($fimEscala)) {
+                return false;
+            }
+
+            if ($escala->intervalo_inicio && $this->sobrepoe(
+                $inicio, $fim,
+                $inicio->copy()->setTimeFromTimeString($escala->intervalo_inicio),
+                $inicio->copy()->setTimeFromTimeString($escala->intervalo_fim),
+            )) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (! $dentroDeAlgumaEscala) {
+            return false;
+        }
+
+        $bloqueado = $barbeiro->bloqueios()
+            ->whereDate('data_inicio', '<=', $inicio)
+            ->whereDate('data_fim', '>=', $inicio)
+            ->get()
+            ->contains(fn ($b) => $this->sobrepoe($inicio, $fim, $b->data_inicio, $b->data_fim));
+
+        return ! $bloqueado;
     }
 
     private function sobrepoe(Carbon $inicioA, Carbon $fimA, Carbon $inicioB, Carbon $fimB): bool

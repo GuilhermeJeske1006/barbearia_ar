@@ -7,6 +7,7 @@ use App\Models\Barbeiro;
 use App\Models\Cliente;
 use App\Models\Comissao;
 use App\Models\Pagamento;
+use App\Models\Produto;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -42,6 +43,10 @@ class Painel extends Component
             'ticket_medio_hoje' => $agendamentosHoje > 0
                 ? Pagamento::whereDate('pago_em', $hoje)->sum('valor_total') / $agendamentosHoje
                 : 0,
+            'produtos_estoque_baixo' => Produto::whereNotNull('estoque_qtd')
+                ->whereNotNull('estoque_minimo')
+                ->whereColumn('estoque_qtd', '<=', 'estoque_minimo')
+                ->count(),
         ];
     }
 

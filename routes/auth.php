@@ -2,14 +2,20 @@
 
 use App\Http\Controllers\MercadoPagoConnectController;
 use App\Livewire\Admin\Agenda\CalendarioAgenda;
+use App\Livewire\Admin\Barbeiros\BloqueiosBarbeiro;
 use App\Livewire\Admin\Barbeiros\CrudBarbeiro;
 use App\Livewire\Admin\Barbeiros\EscalaBarbeiro;
+use App\Livewire\Admin\Billing\MinhaAssinatura;
 use App\Livewire\Admin\Clientes\CrudCliente;
 use App\Livewire\Admin\Configuracoes\ConfigMercadoPago;
 use App\Livewire\Admin\Configuracoes\ConfiguracoesBarbearia;
 use App\Livewire\Admin\Configuracoes\ConfigWhatsApp;
+use App\Livewire\Admin\Despesas\CrudDespesa;
+use App\Livewire\Admin\Filiais\CrudFilial;
+use App\Livewire\Admin\Produtos\ControleEstoque;
 use App\Livewire\Admin\Produtos\CrudProduto;
 use App\Livewire\Admin\Relatorios\RelatorioComissoes;
+use App\Livewire\Admin\Relatorios\RelatorioDespesas;
 use App\Livewire\Admin\Servicos\CrudServico;
 use App\Livewire\Admin\Usuarios\CrudUsuario;
 use App\Livewire\Admin\Usuarios\Permissoes;
@@ -21,6 +27,7 @@ use App\Livewire\Barbeiro\MinhasComissoes;
 use App\Livewire\Painel;
 use App\Livewire\Pdv\TelaVendaDireta;
 use App\Livewire\Perfil;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,10 +49,12 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', Register::class)->name('register');
 });
 
-Route::middleware(['auth', 'tenant'])->prefix('painel')->group(function () {
+Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativa'])->prefix('painel')->group(function () {
     Route::get('/', Painel::class)->name('painel');
 
     Route::get('/perfil', Perfil::class)->name('perfil');
+
+    Route::get('/assinatura', MinhaAssinatura::class)->name('admin.assinatura');
 
     Route::get('/agenda', CalendarioAgenda::class)
         ->middleware('can:agenda.gerenciar')->name('admin.agenda');
@@ -58,12 +67,17 @@ Route::middleware(['auth', 'tenant'])->prefix('painel')->group(function () {
 
     Route::get('/barbeiros/{barbeiro}/horarios', EscalaBarbeiro::class)
         ->middleware('can:barbeiros.gerenciar')->name('admin.barbeiros.horarios');
+    Route::get('/barbeiros/{barbeiro}/bloqueios', BloqueiosBarbeiro::class)
+        ->middleware('can:barbeiros.gerenciar')->name('admin.barbeiros.bloqueios');
 
     Route::get('/servicos', CrudServico::class)
         ->middleware('can:servicos.gerenciar')->name('admin.servicos');
 
     Route::get('/produtos', CrudProduto::class)
         ->middleware('can:produtos.gerenciar')->name('admin.produtos');
+
+    Route::get('/produtos/estoque', ControleEstoque::class)
+        ->middleware('can:produtos.gerenciar')->name('admin.produtos.estoque');
 
     Route::get('/clientes', CrudCliente::class)
         ->middleware('can:clientes.gerenciar')->name('admin.clientes');
@@ -77,6 +91,9 @@ Route::middleware(['auth', 'tenant'])->prefix('painel')->group(function () {
     Route::get('/configuracoes', ConfiguracoesBarbearia::class)
         ->middleware('can:barbearia.gerenciar')->name('admin.configuracoes');
 
+    Route::get('/filiais', CrudFilial::class)
+        ->middleware('can:filiais.gerenciar')->name('admin.filiais');
+
     Route::get('/mercadopago', ConfigMercadoPago::class)
         ->middleware('can:barbearia.gerenciar')->name('admin.mercadopago');
 
@@ -88,6 +105,12 @@ Route::middleware(['auth', 'tenant'])->prefix('painel')->group(function () {
 
     Route::get('/relatorios/comissoes', RelatorioComissoes::class)
         ->middleware('can:financeiro.visualizar')->name('admin.relatorios.comissoes');
+
+    Route::get('/despesas', CrudDespesa::class)
+        ->middleware('can:financeiro.gerenciar')->name('admin.despesas');
+
+    Route::get('/relatorios/despesas', RelatorioDespesas::class)
+        ->middleware('can:financeiro.visualizar')->name('admin.relatorios.despesas');
 
     Route::get('/minhas-comissoes', MinhasComissoes::class)
         ->middleware('can:comissoes.visualizar_propria')->name('barbeiro.minhas-comissoes');
@@ -106,7 +129,7 @@ Route::middleware('auth')->get('/mercadopago/callback', [MercadoPagoConnectContr
 
 if (app()->environment('local')) {
     Route::get('/_debug-login/{id}', function (int $id) {
-        \Illuminate\Support\Facades\Auth::loginUsingId($id);
+        Auth::loginUsingId($id);
 
         return redirect('/painel/configuracoes');
     })->middleware('web');

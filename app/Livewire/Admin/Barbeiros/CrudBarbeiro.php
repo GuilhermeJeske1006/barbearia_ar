@@ -35,13 +35,16 @@ class CrudBarbeiro extends Component
     /** @var array<int, int> */
     public array $servicosSelecionados = [];
 
+    /** @var array<int, string> servico_id => minutos (vazio = usa duração padrão do serviço) */
+    public array $duracoesOverride = [];
+
     public bool $mostrarForm = false;
 
     public ?int $removendoId = null;
 
     public function criar(): void
     {
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
         $this->ativo = true;
         $this->aceitaOnline = true;
         $this->mostrarForm = true;
@@ -57,7 +60,17 @@ class CrudBarbeiro extends Component
         $this->ativo = $barbeiro->ativo;
         $this->aceitaOnline = $barbeiro->aceita_online;
         $this->foto = null;
-        $this->servicosSelecionados = $barbeiro->servicos()->pluck('servico_id')->all();
+
+        $servicosVinculados = $barbeiro->servicos()->get();
+        $this->servicosSelecionados = $servicosVinculados->pluck('id')->all();
+        $this->duracoesOverride = $servicosVinculados
+            ->mapWithKeys(fn (Servico $servico) => [
+                $servico->id => $servico->pivot->duracao_minutos_override !== null
+                    ? (string) $servico->pivot->duracao_minutos_override
+                    : '',
+            ])
+            ->all();
+
         $this->mostrarForm = true;
     }
 
@@ -80,7 +93,15 @@ class CrudBarbeiro extends Component
             ],
         );
 
-        $barbeiro->servicos()->sync($this->servicosSelecionados);
+        $barbeiro->servicos()->sync(
+            collect($this->servicosSelecionados)->mapWithKeys(function (int $servicoId) {
+                $minutos = trim((string) ($this->duracoesOverride[$servicoId] ?? ''));
+
+                return [$servicoId => [
+                    'duracao_minutos_override' => $minutos !== '' && is_numeric($minutos) ? (int) $minutos : null,
+                ]];
+            })->all()
+        );
 
         if ($this->foto) {
             $caminho = $this->foto->store('barbeiros', 'public');
@@ -93,14 +114,14 @@ class CrudBarbeiro extends Component
         }
 
         $this->mostrarForm = false;
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
     }
 
     public function cancelar(): void
     {
         $this->mostrarForm = false;
         $this->resetValidation();
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados']);
+        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
     }
 
     public function confirmarRemocao(int $id): void

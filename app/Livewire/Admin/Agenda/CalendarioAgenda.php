@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Agenda;
 
 use App\Actions\Agendamento\CalcularSlotsDisponiveisAction;
 use App\Actions\Agendamento\CriarAgendamentoAction;
+use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
 use App\Actions\Notificacoes\NotificarPesquisaSatisfacaoAction;
 use App\Actions\Pagamento\CalcularComissaoAction;
 use App\Models\Agendamento;
@@ -14,8 +15,10 @@ use App\Models\Pagamento;
 use App\Models\Produto;
 use App\Models\Servico;
 use App\Services\ComissaoService;
+use App\Services\EstoqueService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -59,6 +62,8 @@ class CalendarioAgenda extends Component
 
     public ?string $erroForm = null;
 
+    public ?string $erroTransicao = null;
+
     public string $ultimaChecagem;
 
     public bool $mostrarPagamento = false;
@@ -79,7 +84,7 @@ class CalendarioAgenda extends Component
 
     public function mount(): void
     {
-        $this->data = now()->toDateString();
+        $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
         $this->ultimaChecagem = now()->toDateTimeString();
     }
 
@@ -121,7 +126,7 @@ class CalendarioAgenda extends Component
 
     public function hoje(): void
     {
-        $this->data = now()->toDateString();
+        $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
     }
 
     public function abrirForm(): void
@@ -247,7 +252,7 @@ class CalendarioAgenda extends Component
             ->values();
     }
 
-    public function salvarNovo(CriarAgendamentoAction $criarAgendamento): void
+    public function salvarNovo(CriarAgendamentoAction $criarAgendamento, NotificarAgendamentoConfirmadoAction $notificarConfirmado): void
     {
         $this->validate();
 
@@ -264,7 +269,7 @@ class CalendarioAgenda extends Component
         $inicio = Carbon::parse("{$this->novoData} {$this->novoHorario}");
 
         try {
-            $criarAgendamento->handle(
+            $agendamento = $criarAgendamento->handle(
                 $barbeiro,
                 $cliente,
                 $inicio,
@@ -276,6 +281,12 @@ class CalendarioAgenda extends Component
             $this->erroForm = $e->getMessage();
 
             return;
+        }
+
+        try {
+            $notificarConfirmado->handle($agendamento);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         $this->data = $this->novoData;
@@ -338,9 +349,12 @@ class CalendarioAgenda extends Component
         $permitidas = self::TRANSICOES_PERMITIDAS[$agendamento->status] ?? [];
 
         if (! in_array($novoStatus, $permitidas, true)) {
+            $this->erroTransicao = __('painel.transicao_invalida');
+
             return;
         }
 
+        $this->erroTransicao = null;
         $agendamento->update(['status' => $novoStatus]);
 
         if ($novoStatus === 'concluido') {
@@ -361,9 +375,12 @@ class CalendarioAgenda extends Component
         $agendamento = Agendamento::with(['servicos', 'produtos'])->findOrFail($agendamentoId);
 
         if (! in_array('concluido', self::TRANSICOES_PERMITIDAS[$agendamento->status] ?? [], true)) {
+            $this->erroTransicao = __('painel.transicao_invalida');
+
             return;
         }
 
+        $this->erroTransicao = null;
         $this->resetValidation();
         $this->erroPagamento = null;
         $this->agendamentoPagamentoId = $agendamentoId;
@@ -415,7 +432,7 @@ class CalendarioAgenda extends Component
 
     public function produtosParaPagamento(): Collection
     {
-        return Produto::where('ativo', true)->orderBy('nome')->get();
+        return Produto::where('ativo', true)->where('apenas_insumo', false)->orderBy('nome')->get();
     }
 
     public function valorPagamentoTotal(): float
@@ -432,6 +449,7 @@ class CalendarioAgenda extends Component
     public function confirmarPagamento(
         CalcularComissaoAction $calcularComissao,
         ComissaoService $comissaoService,
+        EstoqueService $estoqueService,
         NotificarPesquisaSatisfacaoAction $notificarPesquisa,
     ): void {
         $this->validate([
@@ -452,57 +470,84 @@ class CalendarioAgenda extends Component
             return;
         }
 
-        $servicosExistentes = $agendamento->servicos->keyBy('id');
-        $syncServicos = [];
+        $quantidadesAntigas = $agendamento->produtos
+            ->mapWithKeys(fn (Produto $produto) => [$produto->id => $produto->pivot->quantidade])
+            ->all();
 
-        foreach (Servico::whereIn('id', $this->pagamentoServicosSelecionados)->get() as $servico) {
-            $existente = $servicosExistentes->get($servico->id);
+        try {
+            DB::transaction(function () use ($agendamento, $calcularComissao, $comissaoService, $estoqueService, $quantidadesAntigas) {
+                $servicosExistentes = $agendamento->servicos->keyBy('id');
+                $syncServicos = [];
 
-            $syncServicos[$servico->id] = [
-                'preco_cobrado' => $existente?->pivot->preco_cobrado ?? $servico->preco,
-                'percentual_comissao_aplicado' => $existente?->pivot->percentual_comissao_aplicado
-                    ?? $agendamento->barbeiro->percentualComissaoPara($servico),
-            ];
+                foreach (Servico::whereIn('id', $this->pagamentoServicosSelecionados)->get() as $servico) {
+                    $existente = $servicosExistentes->get($servico->id);
+
+                    $syncServicos[$servico->id] = [
+                        'preco_cobrado' => $existente?->pivot->preco_cobrado ?? $servico->preco,
+                        'percentual_comissao_aplicado' => $existente?->pivot->percentual_comissao_aplicado
+                            ?? $agendamento->barbeiro->percentualComissaoPara($servico),
+                    ];
+                }
+
+                $agendamento->servicos()->sync($syncServicos);
+
+                $produtosExistentes = $agendamento->produtos->keyBy('id');
+                $syncProdutos = [];
+
+                foreach ($this->produtosParaPagamento()->whereIn('id', array_keys($this->pagamentoProdutosSelecionados)) as $produto) {
+                    $existente = $produtosExistentes->get($produto->id);
+
+                    $syncProdutos[$produto->id] = [
+                        'quantidade' => $this->pagamentoProdutosSelecionados[$produto->id],
+                        'preco_cobrado' => $existente?->pivot->preco_cobrado ?? $produto->preco,
+                    ];
+                }
+
+                // Antes de sincronizar: o estoque só sabe da diferença entre o
+                // que já estava reservado nesse agendamento e o que foi
+                // selecionado agora (produto pode ter sido adicionado/removido
+                // na tela de pagamento) — nunca debita a quantidade inteira de
+                // novo. Lança e desfaz a transação se faltar estoque.
+                $estoqueService->ajustar($quantidadesAntigas, $this->pagamentoProdutosSelecionados, origemAgendamento: $agendamento);
+
+                $agendamento->produtos()->sync($syncProdutos);
+                $agendamento->load(['servicos', 'produtos']);
+
+                $estoqueService->debitarConsumoServicos($agendamento, $agendamento->servicos);
+
+                $valorProdutos = $agendamento->produtos->sum(fn (Produto $produto) => $produto->pivot->preco_cobrado * $produto->pivot->quantidade);
+                $valorTotal = round((float) $agendamento->servicos->sum('pivot.preco_cobrado') + $valorProdutos, 2);
+
+                $comissao = $calcularComissao->handle($agendamento, $valorTotal);
+
+                $pagamento = Pagamento::create([
+                    'barbearia_id' => $agendamento->barbearia_id,
+                    'filial_id' => $agendamento->filial_id,
+                    'agendamento_id' => $agendamento->id,
+                    'cliente_id' => $agendamento->cliente_id,
+                    'valor_total' => $valorTotal,
+                    'valor_comissao_barbeiro' => $comissao['comissao'],
+                    'valor_barbearia' => $comissao['barbearia'],
+                    'metodo' => $this->metodoPagamentoManual,
+                    'forma_split' => 'manual',
+                    'pago_em' => now(),
+                ]);
+
+                $agendamento->update(['status' => 'concluido', 'pagamento_id' => $pagamento->id]);
+
+                $comissaoService->registrar($pagamento);
+            });
+        } catch (RuntimeException $e) {
+            $this->erroPagamento = $e->getMessage();
+
+            return;
         }
 
-        $agendamento->servicos()->sync($syncServicos);
-
-        $produtosExistentes = $agendamento->produtos->keyBy('id');
-        $syncProdutos = [];
-
-        foreach ($this->produtosParaPagamento()->whereIn('id', array_keys($this->pagamentoProdutosSelecionados)) as $produto) {
-            $existente = $produtosExistentes->get($produto->id);
-
-            $syncProdutos[$produto->id] = [
-                'quantidade' => $this->pagamentoProdutosSelecionados[$produto->id],
-                'preco_cobrado' => $existente?->pivot->preco_cobrado ?? $produto->preco,
-            ];
+        try {
+            $notificarPesquisa->handle($agendamento->fresh());
+        } catch (\Throwable $e) {
+            report($e);
         }
-
-        $agendamento->produtos()->sync($syncProdutos);
-        $agendamento->load(['servicos', 'produtos']);
-
-        $valorProdutos = $agendamento->produtos->sum(fn (Produto $produto) => $produto->pivot->preco_cobrado * $produto->pivot->quantidade);
-        $valorTotal = round((float) $agendamento->servicos->sum('pivot.preco_cobrado') + $valorProdutos, 2);
-
-        $comissao = $calcularComissao->handle($agendamento, $valorTotal);
-
-        $pagamento = Pagamento::create([
-            'barbearia_id' => $agendamento->barbearia_id,
-            'agendamento_id' => $agendamento->id,
-            'cliente_id' => $agendamento->cliente_id,
-            'valor_total' => $valorTotal,
-            'valor_comissao_barbeiro' => $comissao['comissao'],
-            'valor_barbearia' => $comissao['barbearia'],
-            'metodo' => $this->metodoPagamentoManual,
-            'forma_split' => 'manual',
-            'pago_em' => now(),
-        ]);
-
-        $agendamento->update(['status' => 'concluido', 'pagamento_id' => $pagamento->id]);
-
-        $comissaoService->registrar($pagamento);
-        $notificarPesquisa->handle($agendamento->fresh());
 
         $this->fecharPagamento();
     }

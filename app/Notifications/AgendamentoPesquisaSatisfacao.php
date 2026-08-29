@@ -37,6 +37,7 @@ class AgendamentoPesquisaSatisfacao extends Notification implements ShouldQueue
     public function toWhatsApp(object $notifiable): string
     {
         app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+        app()->instance('filial.id', $this->agendamento->filial_id);
 
         $agendamento = $this->agendamento;
 

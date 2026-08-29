@@ -39,6 +39,7 @@ class AgendamentoLembrete extends Notification implements ShouldQueue
     public function toWhatsApp(object $notifiable): string
     {
         app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+        app()->instance('filial.id', $this->agendamento->filial_id);
 
         $agendamento = $this->agendamento;
 
@@ -55,6 +56,7 @@ class AgendamentoLembrete extends Notification implements ShouldQueue
         // Ver o comentário equivalente em AgendamentoConfirmado::toMail() —
         // isto roda dentro de um queue:work, processo sem tenant bindado.
         app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+        app()->instance('filial.id', $this->agendamento->filial_id);
 
         $agendamento = $this->agendamento;
         $barbearia = $agendamento->barbearia;

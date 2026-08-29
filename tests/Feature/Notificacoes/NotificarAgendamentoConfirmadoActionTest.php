@@ -12,11 +12,12 @@ use App\Notifications\AgendamentoConfirmado;
 use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class NotificarAgendamentoConfirmadoActionTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private function criarAgendamento(?string $emailCliente, ?string $idiomaCliente = null, ?string $idiomaBarbearia = 'es'): Agendamento
     {
@@ -28,6 +29,7 @@ class NotificarAgendamentoConfirmadoActionTest extends TestCase
         // entrada cross-tenant, então não faz o bind ela mesma. O teste
         // precisa simular esse contexto.
         app()->instance('barbearia.id', $barbearia->id);
+        $this->criarEBindarFilial($barbearia);
 
         $barbeiro = Barbeiro::create(['barbearia_id' => $barbearia->id, 'nome' => 'Pedro', 'percentual_comissao' => 50]);
 

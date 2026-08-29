@@ -9,20 +9,16 @@
         <x-ui.card padding="p-6">
             <p class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ __('painel.dados_barbearia') }}</p>
 
-            <div class="mt-4 flex items-center gap-4">
-                @if ($logo)
-                    <img src="{{ $logo->temporaryUrl() }}" class="h-14 w-14 shrink-0 rounded-full object-cover">
-                @elseif ($barbearia->logo_path)
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbearia->logo_path) }}" class="h-14 w-14 shrink-0 rounded-full object-cover">
-                @else
-                    <x-ui.avatar :name="$barbearia->nome" size="lg" />
-                @endif
-
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.logo') }}</label>
-                    <input type="file" wire:model="logo" accept="image/*" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    @error('logo') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
+            <div class="mt-4">
+                <x-ui.upload-foto name="logo" id="logo-barbearia" label="{{ __('painel.logo') }}">
+                    @if ($logo)
+                        <img src="{{ $logo->temporaryUrl() }}" class="h-full w-full object-cover">
+                    @elseif ($barbearia->logo_path)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbearia->logo_path) }}" class="h-full w-full object-cover">
+                    @else
+                        <x-ui.avatar :name="$barbearia->nome" size="lg" />
+                    @endif
+                </x-ui.upload-foto>
             </div>
 
             <div class="mt-4 flex gap-4">

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Public\AgendamentoWizard;
+use App\Livewire\Public\CancelarAgendamento;
 use App\Livewire\Public\RetornoPagamento;
 use Illuminate\Support\Facades\Route;
 
@@ -22,5 +23,12 @@ Route::middleware(['tenant', 'throttle:publico'])->prefix('b/{barbearia}')->grou
     // resolve via binding implícito já filtrado pelo global scope da tenant
     // (BelongsToBarbearia) resolvida acima — um agendamento de outra
     // barbearia dá 404 aqui.
-    Route::get('/agendamento/{agendamento}/retorno', RetornoPagamento::class)->name('public.agendamento.retorno');
+    Route::get('/agendamento/{agendamento}/retorno', RetornoPagamento::class)
+        ->middleware('signed')->name('public.agendamento.retorno');
+
+    // Link de autocancelamento enviado no e-mail/WhatsApp de confirmação —
+    // mesma lógica de acesso do retorno acima: assinatura + tenant resolvido
+    // pela URL, sem exigir login do cliente (Cliente não tem autenticação).
+    Route::get('/agendamento/{agendamento}/cancelar', CancelarAgendamento::class)
+        ->middleware('signed')->name('public.agendamento.cancelar');
 });

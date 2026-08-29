@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Disparada quando um agendamento vira 'confirmado' — tanto no caminho sem
@@ -46,6 +47,7 @@ class AgendamentoConfirmado extends Notification implements ShouldQueue
     public function toWhatsApp(object $notifiable): string
     {
         app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+        app()->instance('filial.id', $this->agendamento->filial_id);
 
         $agendamento = $this->agendamento;
 
@@ -56,6 +58,14 @@ class AgendamentoConfirmado extends Notification implements ShouldQueue
             'hora' => $agendamento->data_hora_inicio->format('H:i'),
             'barbeiro' => $agendamento->barbeiro->nome,
             'servicos' => $agendamento->servicos->pluck('nome')->join(', '),
+        ])."\n\n".__('notificacoes.whatsapp_cancelar_link', ['link' => $this->linkCancelamento()]);
+    }
+
+    private function linkCancelamento(): string
+    {
+        return URL::signedRoute('public.agendamento.cancelar', [
+            'barbearia' => $this->agendamento->barbearia->slug,
+            'agendamento' => $this->agendamento->id,
         ]);
     }
 
@@ -70,6 +80,7 @@ class AgendamentoConfirmado extends Notification implements ShouldQueue
         // fail-closed sem isto. barbearia_id é uma coluna normal, sempre
         // presente, então serve pra rebindar aqui.
         app()->instance('barbearia.id', $this->agendamento->barbearia_id);
+        app()->instance('filial.id', $this->agendamento->filial_id);
 
         $agendamento = $this->agendamento;
         $barbearia = $agendamento->barbearia;
@@ -84,6 +95,7 @@ class AgendamentoConfirmado extends Notification implements ShouldQueue
                 'hora' => $agendamento->data_hora_inicio->format('H:i'),
             ]))
             ->line(__('notificacoes.confirmado_servicos', ['servicos' => $servicos]))
-            ->line(__('notificacoes.confirmado_barbeiro', ['nome' => $agendamento->barbeiro->nome]));
+            ->line(__('notificacoes.confirmado_barbeiro', ['nome' => $agendamento->barbeiro->nome]))
+            ->action(__('notificacoes.cancelar_turno'), $this->linkCancelamento());
     }
 }

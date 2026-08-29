@@ -95,6 +95,34 @@ class MercadoPagoConnectTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_callback_rejeita_quando_usuario_nao_pertence_mais_a_barbearia_do_state(): void
+    {
+        Http::fake();
+
+        $this->actingAs($this->dono)->get(route('mercadopago.conectar'));
+        $state = session('mp_oauth_state');
+
+        // Entre o redirect e o callback o dono trocou de barbearia atual
+        // (ex.: outra sessão, outro tenant) — o state na sessão ainda
+        // aponta pra barbearia original.
+        $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+        $this->dono->update(['barbearia_atual_id' => $outra->id]);
+
+        $response = $this->actingAs($this->dono)->withSession([
+            'mp_oauth_state' => $state,
+            'mp_oauth_barbearia_id' => $this->barbearia->id,
+        ])->get(route('mercadopago.callback', [
+            'code' => 'auth-code-abc',
+            'state' => $state,
+        ]));
+
+        $response->assertForbidden();
+        $this->barbearia->refresh();
+        $this->assertNull($this->barbearia->mp_access_token);
+        Http::assertNothingSent();
+        $this->assertNull(session('mp_oauth_barbearia_id'));
+    }
+
     public function test_atendente_nao_pode_conectar_mercado_pago(): void
     {
         $atendente = User::create([
@@ -103,6 +131,7 @@ class MercadoPagoConnectTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

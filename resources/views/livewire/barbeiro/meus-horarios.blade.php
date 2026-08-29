@@ -4,7 +4,7 @@
     @if (! $barbeiro)
         <x-ui.alert tone="warning" class="mt-4">{{ __('painel.sem_barbeiro_vinculado') }}</x-ui.alert>
     @else
-        <div class="mt-4 space-y-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+        <div class="mt-4 space-y-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-4">
             @foreach ($dias as $dia => $config)
                 <div class="flex flex-wrap items-center gap-4 border-b border-slate-100 dark:border-slate-800 py-3 last:border-0">
                     <span class="w-32 text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __("painel.dia_{$dia}") }}</span>

@@ -4,7 +4,7 @@
     @if (! $barbeiro)
         <x-ui.alert tone="warning" class="mt-4">{{ __('painel.sem_barbeiro_vinculado') }}</x-ui.alert>
     @else
-        <div class="mt-4 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+        <div class="mt-4 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-4">
             <x-ui.input label="{{ __('painel.data_inicio') }}" id="dataInicio" name="dataInicio" type="date" wire:model.live="dataInicio" class="w-40" />
             <x-ui.input label="{{ __('painel.data_fim') }}" id="dataFim" name="dataFim" type="date" wire:model.live="dataFim" class="w-40" />
         </div>

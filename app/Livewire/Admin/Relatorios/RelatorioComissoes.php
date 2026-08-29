@@ -4,15 +4,19 @@ namespace App\Livewire\Admin\Relatorios;
 
 use App\Models\Barbeiro;
 use App\Models\Comissao;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts::app')]
 class RelatorioComissoes extends Component
 {
+    use WithPagination;
+
     public string $dataInicio;
 
     public string $dataFim;
@@ -23,6 +27,21 @@ class RelatorioComissoes extends Component
     {
         $this->dataInicio = now()->startOfMonth()->toDateString();
         $this->dataFim = now()->endOfMonth()->toDateString();
+    }
+
+    public function updatingDataInicio(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDataFim(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingBarbeiroId(): void
+    {
+        $this->resetPage();
     }
 
     public function barbeirosDisponiveis(): Collection
@@ -43,12 +62,19 @@ class RelatorioComissoes extends Component
         return $this->query()->get();
     }
 
+    public function comissoesPaginadas(): LengthAwarePaginator
+    {
+        return $this->query()->paginate(15);
+    }
+
     public function totais(): array
     {
         $comissoes = $this->comissoes();
 
         return [
-            'total' => $comissoes->sum('valor'),
+            // Estornado não conta em "total": comissão de um pagamento
+            // devolvido não é receita nem despesa a acertar.
+            'total' => $comissoes->whereNotIn('status', ['estornado'])->sum('valor'),
             'pendente' => $comissoes->where('status', 'pendente')->sum('valor'),
             'pago' => $comissoes->where('status', 'pago')->sum('valor'),
         ];
@@ -92,7 +118,7 @@ class RelatorioComissoes extends Component
     public function render()
     {
         return view('livewire.admin.relatorios.relatorio-comissoes', [
-            'comissoes' => $this->comissoes(),
+            'comissoes' => $this->comissoesPaginadas(),
             'totais' => $this->totais(),
         ]);
     }

@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('agendamentos:enviar-lembretes')->everyFifteenMinutes();
+Schedule::command('agendamentos:expirar-pendentes')->everyFifteenMinutes();
+Schedule::command('despesas:gerar-recorrentes')->dailyAt('03:00');

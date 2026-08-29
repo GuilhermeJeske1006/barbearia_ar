@@ -2,7 +2,7 @@
     <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.permissoes') }}</h1>
     <p class="mt-0.5 text-sm text-slate-500">{{ __('painel.permissoes_desc') }}</p>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">

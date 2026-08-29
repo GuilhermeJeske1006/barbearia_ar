@@ -7,14 +7,40 @@
         {{ auth()->user()->email }} · {{ auth()->user()->tipo }}
     </p>
 
+    <div class="mt-5">
+        <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.acesso_rapido') }}</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+            @can('agenda.gerenciar')
+                <x-ui.quick-link :href="route('admin.agenda')" icon="calendar">{{ __('painel.agenda') }}</x-ui.quick-link>
+            @elsecan('agenda.visualizar_propria')
+                <x-ui.quick-link :href="route('barbeiro.minha-agenda')" icon="calendar">{{ __('painel.agenda') }}</x-ui.quick-link>
+            @endcan
+            @can('pdv.operar')
+                <x-ui.quick-link :href="route('pdv')" icon="bag">{{ __('pdv.titulo') }}</x-ui.quick-link>
+            @endcan
+            @can('clientes.gerenciar')
+                <x-ui.quick-link :href="route('admin.clientes')" icon="users">{{ __('painel.clientes') }}</x-ui.quick-link>
+            @endcan
+            @can('barbeiros.gerenciar')
+                <x-ui.quick-link :href="route('admin.barbeiros')" icon="scissors">{{ __('painel.barberos') }}</x-ui.quick-link>
+            @endcan
+            @can('financeiro.visualizar')
+                <x-ui.quick-link :href="route('admin.relatorios.comissoes')" icon="banknote">{{ __('painel.comisiones') }}</x-ui.quick-link>
+            @elsecan('comissoes.visualizar_propria')
+                <x-ui.quick-link :href="route('barbeiro.minhas-comissoes')" icon="banknote">{{ __('painel.comisiones') }}</x-ui.quick-link>
+            @endcan
+        </div>
+    </div>
+
     @if ($ehGestor)
-        <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <x-ui.kpi label="{{ __('painel.faturamento_hoje') }}" value="{{ \App\Support\Money::format($metricas['faturamento_hoje']) }}" />
             <x-ui.kpi label="{{ __('painel.turnos_hoje') }}" value="{{ $metricas['agendamentos_hoje'] }}" />
             <x-ui.kpi label="{{ __('painel.aguardando_confirmacao') }}" value="{{ $metricas['aguardando_confirmacao'] }}" />
             <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
             <x-ui.kpi label="{{ __('painel.clientes_novos_mes') }}" value="{{ $metricas['clientes_novos_mes'] }}" />
             <x-ui.kpi label="{{ __('painel.ticket_medio_hoje') }}" value="{{ \App\Support\Money::format($metricas['ticket_medio_hoje']) }}" />
+            <x-ui.kpi label="{{ __('painel.produtos_estoque_baixo') }}" value="{{ $metricas['produtos_estoque_baixo'] }}" />
         </div>
 
         <x-ui.card class="mt-5" padding="p-4">

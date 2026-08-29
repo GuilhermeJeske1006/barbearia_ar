@@ -29,6 +29,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="STRIPE_KEY" value="pk_test_dummy"/>
+        <env name="STRIPE_SECRET" value="sk_test_dummy"/>
+        <env name="STRIPE_WEBHOOK_SECRET" value="whsec_dummy"/>
+        <env name="STRIPE_PRICE_ID" value="price_dummy"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

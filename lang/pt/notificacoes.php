@@ -13,7 +13,13 @@ return [
     'lembrete_linha1' => 'Lembrete do seu agendamento hoje em :barbearia às :hora.',
     'lembrete_barbeiro' => 'Com: :nome.',
 
+    'cancelado_assunto' => 'Agendamento cancelado — :barbearia',
+    'cancelado_linha1' => 'Seu agendamento em :barbearia foi cancelado.',
+    'cancelar_turno' => 'Cancelar meu horário',
+
     'whatsapp_confirmado' => 'Olá :nome! Seu agendamento em :barbearia foi confirmado para :data às :hora com :barbeiro. Serviços: :servicos.',
+    'whatsapp_cancelar_link' => 'Não vai poder comparecer? Cancele por aqui: :link',
+    'whatsapp_cancelado' => 'Olá :nome! Seu agendamento em :barbearia no dia :data às :hora foi cancelado.',
     'whatsapp_lembrete' => 'Olá :nome! Lembrete do seu agendamento hoje em :barbearia às :hora com :barbeiro. Te esperamos!',
     'whatsapp_pesquisa' => 'Olá :nome! Como foi sua experiência hoje em :barbearia? Responda com um número de 1 (muito ruim) a 5 (excelente).',
 

@@ -9,6 +9,7 @@ use App\Models\BarbeiroBloqueio;
 use App\Models\BarbeiroHorario;
 use App\Models\Cliente;
 use App\Models\Comissao;
+use App\Models\Filial;
 use App\Models\Pagamento;
 use App\Models\Produto;
 use App\Models\Servico;
@@ -109,13 +110,27 @@ class DemoDataSeeder extends Seeder
         app()->instance('barbearia', $barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($barbearia->id);
 
-        $dono = $this->criarUsuario($emailDono, $nomeDono, 'dono', $barbearia->id, 'dono');
+        $filial = Filial::firstOrCreate(
+            ['barbearia_id' => $barbearia->id, 'nome' => 'Matriz'],
+            [
+                'endereco' => $barbearia->endereco,
+                'cidade' => $barbearia->cidade,
+                'provincia' => $barbearia->provincia,
+                'telefone' => $barbearia->telefone,
+                'ativo' => true,
+            ]
+        );
+        app()->instance('filial.id', $filial->id);
+        app()->instance('filial', $filial);
+
+        $dono = $this->criarUsuario($emailDono, $nomeDono, 'dono', $barbearia->id, $filial->id, 'dono');
 
         $atendente = $this->criarUsuario(
             Str::before($emailDono, '@').'.atendente@'.Str::after($emailDono, '@'),
             $this->um(self::NOMES_ATENDENTES),
             'atendente',
             $barbearia->id,
+            $filial->id,
             'atendente'
         );
 
@@ -144,11 +159,11 @@ class DemoDataSeeder extends Seeder
         $inicio = crc32($barbearia->slug) % (count(self::NOMES_BARBEIROS) - 2);
         $nomesBarbeiros = collect(array_slice(self::NOMES_BARBEIROS, $inicio, 3));
 
-        $barbeiros = $nomesBarbeiros->map(function (string $nome, int $idx) use ($barbearia, $servicos) {
+        $barbeiros = $nomesBarbeiros->map(function (string $nome, int $idx) use ($barbearia, $filial, $servicos) {
             $i = $idx + 1;
             $email = Str::slug($nome).$i.'.'.$barbearia->slug.'@barbearia.test';
 
-            $user = $this->criarUsuario($email, $nome, 'barbeiro', $barbearia->id, 'barbeiro');
+            $user = $this->criarUsuario($email, $nome, 'barbeiro', $barbearia->id, $filial->id, 'barbeiro');
 
             $barbeiro = Barbeiro::firstOrCreate(
                 ['barbearia_id' => $barbearia->id, 'user_id' => $user->id],
@@ -199,7 +214,7 @@ class DemoDataSeeder extends Seeder
 
             if ($i <= 3) {
                 $email = Str::slug($nome).$i.'.cliente.'.$barbearia->slug.'@barbearia.test';
-                $userId = $this->criarUsuario($email, $nome, 'cliente', null, 'cliente')->id;
+                $userId = $this->criarUsuario($email, $nome, 'cliente', null, null, 'cliente')->id;
             }
 
             return Cliente::firstOrCreate(
@@ -218,7 +233,7 @@ class DemoDataSeeder extends Seeder
         $this->gerarAgendamentos($barbearia, $barbeiros, $clientes, $servicos, $produtos, $dono, $atendente);
     }
 
-    private function criarUsuario(string $email, string $nome, string $tipo, ?int $barbeariaId, string $role): User
+    private function criarUsuario(string $email, string $nome, string $tipo, ?int $barbeariaId, ?int $filialId, string $role): User
     {
         $user = User::updateOrCreate(
             ['email' => $email],
@@ -228,6 +243,7 @@ class DemoDataSeeder extends Seeder
                 'telefone' => $this->telefoneAleatorio(),
                 'tipo' => $tipo,
                 'barbearia_atual_id' => $barbeariaId,
+                'filial_atual_id' => $filialId,
                 'idioma' => 'pt',
                 'email_verified_at' => now(),
             ]

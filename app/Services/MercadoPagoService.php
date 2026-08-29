@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Agendamento;
 use App\Models\Barbearia;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Client\Preference\PreferenceClient;
 use MercadoPago\MercadoPagoConfig;
@@ -94,7 +95,12 @@ class MercadoPagoService
 
         $client = new PreferenceClient;
 
-        $retornoUrl = route('public.agendamento.retorno', ['barbearia' => $barbearia->slug, 'agendamento' => $agendamento->id]);
+        // Assinada: a rota de retorno não tem dono de sessão (o cliente pode
+        // voltar num dispositivo diferente do que iniciou o checkout), então
+        // a única coisa que impede alguém de trocar o {agendamento} da URL e
+        // espiar o agendamento de outro cliente é essa assinatura — ver
+        // middleware 'signed' em routes/public.php.
+        $retornoUrl = URL::signedRoute('public.agendamento.retorno', ['barbearia' => $barbearia->slug, 'agendamento' => $agendamento->id]);
 
         $dadosPreferencia = [
             'items' => [[

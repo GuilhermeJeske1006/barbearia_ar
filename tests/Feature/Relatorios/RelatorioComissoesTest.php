@@ -11,13 +11,14 @@ use App\Models\Pagamento;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class RelatorioComissoesTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -38,6 +39,7 @@ class RelatorioComissoesTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->barbeiro = Barbeiro::create([
             'barbearia_id' => $this->barbearia->id,
@@ -144,9 +146,13 @@ class RelatorioComissoesTest extends TestCase
     public function test_nao_mostra_comissao_de_outra_barbearia(): void
     {
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
-        $barbeiroOutro = Barbeiro::create(['barbearia_id' => $outra->id, 'nome' => 'Barbeiro Norte', 'percentual_comissao' => 50]);
 
+        // BelongsToBarbearia sobrescreve barbearia_id com o tenant bindado;
+        // pra criar registros de outro tenant precisamos bindar nele.
+        app()->instance('barbearia.id', $outra->id);
+        $barbeiroOutro = Barbeiro::create(['barbearia_id' => $outra->id, 'nome' => 'Barbeiro Norte', 'percentual_comissao' => 50]);
         $this->criarComissao('pendente', now()->toDateString(), 9999, $barbeiroOutro);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         $component = Livewire::actingAs($this->dono)->test(RelatorioComissoes::class);
 
@@ -173,6 +179,19 @@ class RelatorioComissoesTest extends TestCase
         $this->assertStringContainsString('pendente', $conteudo);
     }
 
+    public function test_comissao_de_barbeiro_removido_continua_no_relatorio_com_nome(): void
+    {
+        $comissao = $this->criarComissao('pago', now()->toDateString(), 2500);
+
+        $this->barbeiro->delete();
+
+        $this->assertSoftDeleted('barbeiros', ['id' => $this->barbeiro->id]);
+        $this->assertDatabaseHas('comissoes', ['id' => $comissao->id]);
+
+        $component = Livewire::actingAs($this->dono)->test(RelatorioComissoes::class);
+        $component->assertSee('Pedro')->assertSee('2.500,00');
+    }
+
     public function test_atendente_nao_acessa_relatorio_financeiro(): void
     {
         $atendente = User::create([
@@ -181,6 +200,7 @@ class RelatorioComissoesTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'atendente',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

@@ -2,6 +2,7 @@
 
 return [
     'titulo' => 'Reservar turno',
+    'elegir_filial' => 'Elegí la sucursal',
     'elegir_servicio' => 'Elegí el servicio',
     'elegir_barbero' => 'Elegí el barbero',
     'sin_preferencia' => 'Sin preferencia',
@@ -28,7 +29,7 @@ return [
     'confirmado_detalhe' => 'Te esperamos el :data a las :hora.',
     'agendar_outro' => 'Reservar otro turno',
 
-    'paso' => 'Paso :n de 5',
+    'paso' => 'Paso :n de 6',
     'periodo_manana' => 'Mañana',
     'periodo_tarde' => 'Tarde',
     'periodo_noche' => 'Noche',
@@ -39,6 +40,7 @@ return [
     'pagar_agora_desc' => 'Pagá online con Mercado Pago y asegurá tu turno',
     'pagar_local' => 'Pagar en el local',
     'pagar_local_desc' => 'Pagá en la barbería el día del turno',
+    'pagamento_somente_local' => 'Vas a pagar en el local, el día del turno.',
 
     'pago_procesando' => 'Confirmando tu pago',
     'pago_procesando_detalhe' => 'Estamos esperando la confirmación de Mercado Pago. Esto puede tardar unos segundos.',
@@ -51,4 +53,23 @@ return [
     'escanear_qr_detalhe' => 'Usá la cámara de tu celular para escanear y completar el pago de forma segura.',
     'abrir_neste_dispositivo' => 'Abrir el pago en esta computadora',
     'aguardando_pagamento' => 'Esperando la confirmación del pago…',
+
+    'revisar_titulo' => 'Revisá antes de confirmar',
+    'revisar_confirmar_botao' => 'Confirmar reserva',
+
+    'reserva_numero' => 'Reserva #:numero',
+    'agregar_calendario' => 'Agregar al calendario',
+    'ics_descricao' => 'Reserva #:numero',
+    'cancelar_aviso' => '¿No vas a poder venir?',
+    'cancelar_turno' => 'Cancelar mi turno',
+
+    'nao_pode_cancelar' => 'Este turno ya no se puede cancelar desde acá.',
+    'cancelar_pago_contatar' => 'Este turno ya está pago — contactá a la barbería para cancelar o pedir el reembolso.',
+    'cancelar_confirmar_titulo' => '¿Cancelar turno?',
+    'cancelar_confirmar_botao' => 'Sí, cancelar',
+    'cancelado_titulo' => 'Turno cancelado',
+    'cancelado_detalhe' => 'Tu turno fue cancelado. El horario quedó liberado para otros clientes.',
+
+    'tentar_pagar_novamente' => 'Intentar pagar de nuevo',
+    'horario_ja_ocupado_reintentar' => 'Ese horario ya se ocupó mientras tanto. Elegí un nuevo horario.',
 ];

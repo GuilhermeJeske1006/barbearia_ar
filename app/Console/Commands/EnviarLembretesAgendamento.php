@@ -47,6 +47,7 @@ class EnviarLembretesAgendamento extends Command
             // o scope normal funcionando (ex.: outra notificação, outro
             // relacionamento tenant-scoped).
             app()->instance('barbearia.id', $agendamento->barbearia_id);
+            app()->instance('filial.id', $agendamento->filial_id);
 
             $cliente = $agendamento->cliente;
 

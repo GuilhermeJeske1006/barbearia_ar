@@ -8,21 +8,15 @@
 
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_barbeiro') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
-            <div class="flex items-center gap-4">
+            <x-ui.upload-foto name="foto" id="foto-barbeiro" label="{{ __('painel.foto') }}">
                 @if ($foto)
-                    <img src="{{ $foto->temporaryUrl() }}" class="h-14 w-14 shrink-0 rounded-full object-cover">
+                    <img src="{{ $foto->temporaryUrl() }}" class="h-full w-full object-cover">
                 @elseif ($editandoId && ($fotoAtual = \App\Models\Barbeiro::find($editandoId)?->foto_path))
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($fotoAtual) }}" class="h-14 w-14 shrink-0 rounded-full object-cover">
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($fotoAtual) }}" class="h-full w-full object-cover">
                 @else
                     <x-ui.avatar :name="$nome" size="lg" />
                 @endif
-
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.foto') }}</label>
-                    <input type="file" wire:model="foto" accept="image/*" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    @error('foto') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-            </div>
+            </x-ui.upload-foto>
 
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_barbeiro') }}" autofocus />
 
@@ -37,9 +31,19 @@
             <div>
                 <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.servicos') }}</label>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_servicos_barbeiro') }}</p>
-                <div class="mt-2 grid grid-cols-2 gap-2">
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_duracao_override') }}</p>
+                <div class="mt-2 space-y-1.5">
                     @foreach ($this->servicosParaForm() as $servico)
-                        <x-ui.checkbox wire:model="servicosSelecionados" value="{{ $servico->id }}" :label="$servico->nome" />
+                        <div class="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5">
+                            <x-ui.checkbox wire:model="servicosSelecionados" value="{{ $servico->id }}" :label="$servico->nome" class="flex-1" />
+                            <input
+                                type="number" min="1" step="1"
+                                wire:model="duracoesOverride.{{ $servico->id }}"
+                                placeholder="{{ $servico->duracao_minutos }}"
+                                class="w-20 rounded-lg border-slate-300 bg-white text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            >
+                            <span class="text-xs text-slate-400">{{ __('painel.minutos_abrev') }}</span>
+                        </div>
                     @endforeach
                 </div>
                 @error('servicosSelecionados') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
@@ -60,7 +64,7 @@
         </div>
     </x-ui.modal>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
@@ -89,11 +93,12 @@
                         </td>
                         <td class="px-4 py-2.5 text-right">
                             @can('barbeiros.gerenciar')
-                                <x-ui.button variant="link" :href="route('admin.barbeiros.horarios', $barbeiro)">{{ __('painel.horarios_barbero') }}</x-ui.button>
-                                <x-ui.button variant="link" wire:click="editar({{ $barbeiro->id }})" class="ml-3">{{ __('painel.editar') }}</x-ui.button>
-                                <x-ui.button variant="link-danger" wire:click="confirmarRemocao({{ $barbeiro->id }})" class="ml-3">
-                                    {{ __('painel.remover') }}
-                                </x-ui.button>
+                                <div class="flex items-center justify-end gap-1">
+                                    <x-ui.icon-button icon="clock" tooltip="{{ __('painel.horarios_barbero') }}" :href="route('admin.barbeiros.horarios', $barbeiro)" />
+                                    <x-ui.icon-button icon="no-symbol" tooltip="{{ __('painel.bloqueios') }}" :href="route('admin.barbeiros.bloqueios', $barbeiro)" />
+                                    <x-ui.icon-button icon="pencil" tooltip="{{ __('painel.editar') }}" wire:click="editar({{ $barbeiro->id }})" />
+                                    <x-ui.icon-button icon="trash" variant="danger" tooltip="{{ __('painel.remover') }}" wire:click="confirmarRemocao({{ $barbeiro->id }})" />
+                                </div>
                             @endcan
                         </td>
                     </tr>

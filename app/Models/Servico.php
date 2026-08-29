@@ -3,16 +3,17 @@
 namespace App\Models;
 
 use App\Traits\BelongsToBarbearia;
+use App\Traits\BelongsToFilial;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Servico extends Model
 {
-    use BelongsToBarbearia, HasFactory;
+    use BelongsToBarbearia, BelongsToFilial, HasFactory;
 
     protected $fillable = [
-        'barbearia_id', 'nome', 'descricao', 'duracao_minutos', 'preco', 'percentual_comissao_padrao', 'ativo',
+        'barbearia_id', 'filial_id', 'nome', 'descricao', 'duracao_minutos', 'preco', 'percentual_comissao_padrao', 'ativo',
     ];
 
     protected $casts = [
@@ -23,6 +24,13 @@ class Servico extends Model
     {
         return $this->belongsToMany(Barbeiro::class, 'barbeiro_servico')
             ->withPivot('percentual_comissao_override')
+            ->withTimestamps();
+    }
+
+    public function produtosConsumidos(): BelongsToMany
+    {
+        return $this->belongsToMany(Produto::class, 'servico_produto')
+            ->withPivot('quantidade_consumida')
             ->withTimestamps();
     }
 }

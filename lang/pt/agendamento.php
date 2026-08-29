@@ -2,6 +2,7 @@
 
 return [
     'titulo' => 'Agendar horário',
+    'elegir_filial' => 'Escolha a unidade',
     'elegir_servicio' => 'Escolha o serviço',
     'elegir_barbero' => 'Escolha o barbeiro',
     'sin_preferencia' => 'Sem preferência',
@@ -28,7 +29,7 @@ return [
     'confirmado_detalhe' => 'Te esperamos em :data às :hora.',
     'agendar_outro' => 'Agendar outro horário',
 
-    'paso' => 'Passo :n de 5',
+    'paso' => 'Passo :n de 6',
     'periodo_manana' => 'Manhã',
     'periodo_tarde' => 'Tarde',
     'periodo_noche' => 'Noite',
@@ -39,6 +40,7 @@ return [
     'pagar_agora_desc' => 'Pague online com Mercado Pago e garanta seu horário',
     'pagar_local' => 'Pagar no local',
     'pagar_local_desc' => 'Pague na barbearia no dia do atendimento',
+    'pagamento_somente_local' => 'Você vai pagar no local, no dia do atendimento.',
 
     'pago_procesando' => 'Confirmando seu pagamento',
     'pago_procesando_detalhe' => 'Estamos aguardando a confirmação do Mercado Pago. Isso pode levar alguns segundos.',
@@ -51,4 +53,23 @@ return [
     'escanear_qr_detalhe' => 'Use a câmera do seu celular pra escanear e concluir o pagamento com segurança.',
     'abrir_neste_dispositivo' => 'Abrir o pagamento neste computador',
     'aguardando_pagamento' => 'Aguardando a confirmação do pagamento…',
+
+    'revisar_titulo' => 'Revise antes de confirmar',
+    'revisar_confirmar_botao' => 'Confirmar reserva',
+
+    'reserva_numero' => 'Reserva #:numero',
+    'agregar_calendario' => 'Adicionar ao calendário',
+    'ics_descricao' => 'Reserva #:numero',
+    'cancelar_aviso' => 'Não vai poder comparecer?',
+    'cancelar_turno' => 'Cancelar meu horário',
+
+    'nao_pode_cancelar' => 'Este agendamento não pode mais ser cancelado por aqui.',
+    'cancelar_pago_contatar' => 'Este agendamento já está pago — entre em contato com a barbearia para cancelar ou solicitar reembolso.',
+    'cancelar_confirmar_titulo' => 'Cancelar agendamento?',
+    'cancelar_confirmar_botao' => 'Sim, cancelar',
+    'cancelado_titulo' => 'Agendamento cancelado',
+    'cancelado_detalhe' => 'Seu horário foi cancelado. O período foi liberado para outros clientes.',
+
+    'tentar_pagar_novamente' => 'Tentar pagar novamente',
+    'horario_ja_ocupado_reintentar' => 'Esse horário já foi ocupado enquanto isso. Escolha um novo horário.',
 ];

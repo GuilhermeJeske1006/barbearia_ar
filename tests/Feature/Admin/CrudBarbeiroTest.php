@@ -10,13 +10,14 @@ use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class CrudBarbeiroTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -38,6 +39,7 @@ class CrudBarbeiroTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_dono_pode_criar_barbeiro(): void
@@ -103,17 +105,22 @@ class CrudBarbeiroTest extends TestCase
             ->call('confirmarRemocao', $barbeiro->id)
             ->call('remover');
 
-        $this->assertDatabaseMissing('barbeiros', ['id' => $barbeiro->id]);
+        $this->assertSoftDeleted('barbeiros', ['id' => $barbeiro->id]);
     }
 
     public function test_dono_de_uma_barbearia_nao_ve_barbeiro_de_outra(): void
     {
         $outraBarbearia = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+
+        // BelongsToBarbearia sobrescreve barbearia_id com o tenant bindado;
+        // pra criar um registro de outro tenant precisamos bindar nele.
+        app()->instance('barbearia.id', $outraBarbearia->id);
         Barbeiro::create([
             'barbearia_id' => $outraBarbearia->id,
             'nome' => 'Barbeiro Norte',
             'percentual_comissao' => 50,
         ]);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         Barbeiro::create([
             'barbearia_id' => $this->barbearia->id,
@@ -130,11 +137,14 @@ class CrudBarbeiroTest extends TestCase
     public function test_barbeiro_de_outra_barbearia_nao_pode_ser_editado_via_id(): void
     {
         $outraBarbearia = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+
+        app()->instance('barbearia.id', $outraBarbearia->id);
         $barbeiroAlheio = Barbeiro::create([
             'barbearia_id' => $outraBarbearia->id,
             'nome' => 'Barbeiro Norte',
             'percentual_comissao' => 50,
         ]);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         $this->expectException(ModelNotFoundException::class);
 
@@ -151,6 +161,7 @@ class CrudBarbeiroTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

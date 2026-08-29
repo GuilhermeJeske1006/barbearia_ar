@@ -12,6 +12,15 @@
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl text-red-600">✕</div>
         <h2 class="text-lg font-extrabold text-red-800">{{ __('agendamento.pago_rechazado') }}</h2>
         <p class="mx-auto mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">{{ __('agendamento.pago_rechazado_detalhe') }}</p>
+
+        @if ($erro)
+            <x-ui.alert tone="danger" class="mt-4">{{ $erro }}</x-ui.alert>
+        @endif
+
+        <button wire:click="tentarNovamente" wire:loading.attr="disabled"
+            class="mt-4 inline-block w-full rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-500">
+            {{ __('agendamento.tentar_pagar_novamente') }}
+        </button>
     @else
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl text-amber-600">⏳</div>
         <h2 class="text-lg font-extrabold text-amber-800">{{ __('agendamento.pago_procesando') }}</h2>

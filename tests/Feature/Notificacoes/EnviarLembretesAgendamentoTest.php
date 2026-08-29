@@ -6,6 +6,7 @@ use App\Models\Agendamento;
 use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\Cliente;
+use App\Models\Filial;
 use App\Notifications\AgendamentoLembrete;
 use App\Notifications\Channels\WhatsAppChannel;
 use Carbon\Carbon;
@@ -19,6 +20,8 @@ class EnviarLembretesAgendamentoTest extends TestCase
 
     private Barbearia $barbearia;
 
+    private Filial $filial;
+
     private Barbeiro $barbeiro;
 
     protected function setUp(): void
@@ -26,8 +29,10 @@ class EnviarLembretesAgendamentoTest extends TestCase
         parent::setUp();
 
         $this->barbearia = Barbearia::create(['nome' => 'Central', 'slug' => 'central']);
+        $this->filial = Filial::create(['barbearia_id' => $this->barbearia->id, 'nome' => 'Matriz']);
         $this->barbeiro = Barbeiro::create([
             'barbearia_id' => $this->barbearia->id,
+            'filial_id' => $this->filial->id,
             'nome' => 'Pedro',
             'percentual_comissao' => 50,
         ]);
@@ -37,6 +42,7 @@ class EnviarLembretesAgendamentoTest extends TestCase
     {
         $cliente = Cliente::create([
             'barbearia_id' => $this->barbearia->id,
+            'filial_id' => $this->filial->id,
             'nome' => 'María',
             'telefone' => uniqid(),
             'email' => $email,
@@ -44,6 +50,7 @@ class EnviarLembretesAgendamentoTest extends TestCase
 
         return Agendamento::create([
             'barbearia_id' => $this->barbearia->id,
+            'filial_id' => $this->filial->id,
             'barbeiro_id' => $this->barbeiro->id,
             'cliente_id' => $cliente->id,
             'criado_por' => 'cliente_online',
@@ -133,10 +140,12 @@ class EnviarLembretesAgendamentoTest extends TestCase
         Notification::fake();
 
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
-        $barbeiroOutro = Barbeiro::create(['barbearia_id' => $outra->id, 'nome' => 'Ana', 'percentual_comissao' => 40]);
+        $filialOutra = Filial::create(['barbearia_id' => $outra->id, 'nome' => 'Matriz']);
+        $barbeiroOutro = Barbeiro::create(['barbearia_id' => $outra->id, 'filial_id' => $filialOutra->id, 'nome' => 'Ana', 'percentual_comissao' => 40]);
 
         $clienteOutro = Cliente::create([
             'barbearia_id' => $outra->id,
+            'filial_id' => $filialOutra->id,
             'nome' => 'Bruno',
             'telefone' => '222',
             'email' => 'bruno@example.com',
@@ -144,6 +153,7 @@ class EnviarLembretesAgendamentoTest extends TestCase
 
         $agendamentoOutro = Agendamento::create([
             'barbearia_id' => $outra->id,
+            'filial_id' => $filialOutra->id,
             'barbeiro_id' => $barbeiroOutro->id,
             'cliente_id' => $clienteOutro->id,
             'criado_por' => 'cliente_online',

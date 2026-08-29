@@ -23,7 +23,7 @@
         x-cloak
         x-transition
         @click.outside="open = false"
-        class="absolute right-0 top-full z-20 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        class="absolute right-0 top-full z-20 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-ivory shadow-xl dark:border-slate-800 dark:bg-slate-900"
     >
         <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2.5 dark:border-slate-800">
             <p class="text-[12.5px] font-bold text-slate-900 dark:text-white">{{ __('painel.notificacoes') }}</p>

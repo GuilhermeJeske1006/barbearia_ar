@@ -8,13 +8,15 @@ use App\Models\Barbearia;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class PermissoesTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private User $dono;
 
@@ -33,6 +35,7 @@ class PermissoesTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
     }
 
     public function test_mostra_matriz_de_papeis_e_permissoes(): void
@@ -49,8 +52,8 @@ class PermissoesTest extends TestCase
     {
         // 'atendente' tem pdv.operar; 'barbeiro' não tem — confirma que a
         // tela lê do banco (RoleAndPermissionSeeder), não de um mock fixo.
-        $atendenteRole = \Spatie\Permission\Models\Role::findByName('atendente', 'web');
-        $barbeiroRole = \Spatie\Permission\Models\Role::findByName('barbeiro', 'web');
+        $atendenteRole = Role::findByName('atendente', 'web');
+        $barbeiroRole = Role::findByName('barbeiro', 'web');
 
         $this->assertTrue($atendenteRole->hasPermissionTo('pdv.operar'));
         $this->assertFalse($barbeiroRole->hasPermissionTo('pdv.operar'));
@@ -68,6 +71,7 @@ class PermissoesTest extends TestCase
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
             'barbearia_atual_id' => $this->barbearia->id,
+            'ativo' => true,
         ]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);

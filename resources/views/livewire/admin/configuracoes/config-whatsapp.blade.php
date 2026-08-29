@@ -38,7 +38,7 @@
             </x-ui.button>
         @elseif ($qrCodeBase64)
             <div wire:poll.3s="verificarStatus" class="mt-4 flex flex-col items-center gap-3 text-center">
-                <img src="data:image/png;base64,{{ $qrCodeBase64 }}" alt="QR Code WhatsApp" class="h-56 w-56 rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700">
+                <img src="data:image/png;base64,{{ $qrCodeBase64 }}" alt="QR Code WhatsApp" class="h-56 w-56 rounded-xl border border-slate-200 bg-ivory p-2 dark:border-slate-700">
                 <p class="text-sm text-slate-600 dark:text-slate-400">{{ __('painel.whatsapp_escanear_ajuda') }}</p>
             </div>
 

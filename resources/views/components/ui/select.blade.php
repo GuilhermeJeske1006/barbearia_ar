@@ -7,11 +7,11 @@
 
 <div {{ $attributes->only('class') }}>
     @if ($label)
-        <label for="{{ $id }}" class="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $label }}</label>
+        <label for="{{ $id }}" class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ $label }}</label>
     @endif
 
     <select id="{{ $id }}" @if($name) name="{{ $name }}" @endif {{ $attributes->except(['label', 'class'])->merge([
-        'class' => 'block w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100',
+        'class' => 'block w-full rounded-lg border-2 border-slate-300 bg-paper px-3.5 py-2.5 text-sm text-slate-900 transition-colors focus:border-brand-500 focus:bg-ivory focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900',
     ]) }}>
         {{ $slot }}
     </select>

@@ -22,7 +22,7 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="pointer-events-auto flex items-start gap-2.5 rounded-lg border border-brand-100 bg-white px-3.5 py-3 shadow-xl dark:border-brand-500/30 dark:bg-slate-900"
+            class="pointer-events-auto flex items-start gap-2.5 rounded-lg border border-brand-100 bg-ivory px-3.5 py-3 shadow-xl dark:border-brand-500/30 dark:bg-slate-900"
         >
             <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
             <div class="min-w-0 flex-1">

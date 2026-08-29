@@ -9,21 +9,26 @@ use App\Models\Barbeiro;
 use App\Models\Cliente;
 use App\Models\Comissao;
 use App\Models\Pagamento;
+use App\Models\Produto;
 use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
 use App\Notifications\AgendamentoPesquisaSatisfacao;
 use App\Services\MercadoPagoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class ProcessarWebhookMercadoPagoActionTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private Barbearia $barbearia;
 
     private Agendamento $agendamento;
+
+    private Servico $servico;
 
     protected function setUp(): void
     {
@@ -34,8 +39,9 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
             'slug' => 'central',
             'mp_access_token' => 'TEST-token',
         ]);
+        $this->criarEBindarFilial($this->barbearia);
 
-        $servico = Servico::create([
+        $this->servico = $servico = Servico::create([
             'barbearia_id' => $this->barbearia->id,
             'nome' => 'Corte',
             'duracao_minutos' => 30,
@@ -151,7 +157,7 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         $this->assertSame(1, Comissao::count());
     }
 
-    public function test_pagamento_rejeitado_nao_confirma_agendamento_nem_gera_comissao(): void
+    public function test_pagamento_rejeitado_cancela_agendamento_pendente_e_libera_horario(): void
     {
         Pagamento::create([
             'barbearia_id' => $this->barbearia->id,
@@ -168,8 +174,28 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
 
         $this->agendamento->refresh();
-        $this->assertSame('pendente', $this->agendamento->status);
+        $this->assertSame('cancelado', $this->agendamento->status);
         $this->assertSame(0, Comissao::count());
+    }
+
+    public function test_pagamento_pending_nao_cancela_agendamento(): void
+    {
+        Pagamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'agendamento_id' => $this->agendamento->id,
+            'cliente_id' => $this->agendamento->cliente_id,
+            'valor_total' => 5000,
+            'metodo' => 'mp_checkout',
+            'mp_preference_id' => 'pref-123',
+            'mp_status' => 'pending',
+            'forma_split' => 'manual',
+        ]);
+
+        $this->mockPagamentoApi('in_process');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+
+        $this->agendamento->refresh();
+        $this->assertSame('pendente', $this->agendamento->status);
     }
 
     public function test_notifica_cliente_quando_agendamento_online_e_confirmado(): void
@@ -220,8 +246,46 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         Notification::assertSentTo($this->agendamento->cliente, AgendamentoPesquisaSatisfacao::class);
     }
 
+    public function test_pdv_concluido_debita_insumo_da_receita_do_servico(): void
+    {
+        $pomada = Produto::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Pomada',
+            'preco' => 1500,
+            'estoque_qtd' => 10,
+        ]);
+        $this->servico->produtosConsumidos()->attach($pomada->id, ['quantidade_consumida' => 2]);
+
+        $this->agendamento->update(['origem_pdv' => true]);
+
+        Pagamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'agendamento_id' => $this->agendamento->id,
+            'cliente_id' => $this->agendamento->cliente_id,
+            'valor_total' => 5000,
+            'metodo' => 'mp_checkout',
+            'mp_preference_id' => 'pref-123',
+            'mp_status' => 'pending',
+            'forma_split' => 'manual',
+        ]);
+
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+
+        $this->agendamento->refresh();
+        $this->assertSame('concluido', $this->agendamento->status);
+
+        $this->assertDatabaseHas('produtos', ['id' => $pomada->id, 'estoque_qtd' => 8]);
+        $this->assertDatabaseHas('movimentacoes_estoque', [
+            'produto_id' => $pomada->id, 'tipo' => 'consumo_servico', 'quantidade' => -2,
+            'agendamento_id' => $this->agendamento->id,
+        ]);
+    }
+
     public function test_agendamento_inexistente_nao_quebra(): void
     {
+        Log::spy();
+
         $this->mock(MercadoPagoService::class, function ($mock) {
             $mock->shouldReceive('buscarPagamento')->once()->andReturn((object) [
                 'id' => 'mp-999',
@@ -234,5 +298,11 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
 
         $this->assertSame(0, Pagamento::count());
+
+        // Sem isso, um pagamento aprovado sem agendamento correspondente
+        // desaparecia em silêncio — dinheiro cobrado sem nenhum rastro.
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(fn ($mensagem, $contexto) => $contexto['mp_payment_id'] === 'mp-999');
     }
 }

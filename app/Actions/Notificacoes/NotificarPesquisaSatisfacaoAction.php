@@ -32,6 +32,7 @@ class NotificarPesquisaSatisfacaoAction
 
         PesquisaSatisfacao::create([
             'barbearia_id' => $agendamento->barbearia_id,
+            'filial_id' => $agendamento->filial_id,
             'agendamento_id' => $agendamento->id,
             'enviado_em' => $enviadoEm,
         ]);

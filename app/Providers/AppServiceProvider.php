@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\ResolveFilial;
 use App\Http\Middleware\ResolveTenant;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         // has the permission. Adding it here makes it re-run alongside
         // 'auth'/'can' so the team context exists before Authorize checks.
         app(PersistentMiddleware::class)->addPersistentMiddleware(ResolveTenant::class);
+        app(PersistentMiddleware::class)->addPersistentMiddleware(ResolveFilial::class);
 
         // Throttle público (/b/{barbearia}): limita carregamento da página
         // por IP. A ação de criar agendamento (que chama gateway de

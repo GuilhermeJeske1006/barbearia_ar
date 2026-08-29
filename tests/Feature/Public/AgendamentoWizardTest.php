@@ -12,6 +12,7 @@ use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -19,7 +20,7 @@ use Tests\TestCase;
 
 class AgendamentoWizardTest extends TestCase
 {
-    use RefreshDatabase;
+    use CriaFilialParaTeste, RefreshDatabase;
 
     private Barbearia $barbearia;
 
@@ -39,6 +40,7 @@ class AgendamentoWizardTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        $this->criarEBindarFilial($this->barbearia);
 
         $this->servico = Servico::create([
             'barbearia_id' => $this->barbearia->id,
@@ -100,8 +102,13 @@ class AgendamentoWizardTest extends TestCase
             ->set('clienteTelefone', '+54 9 11 5555-5555')
             ->call('irParaEtapa5')
             ->assertSet('etapa', 5)
-            ->call('confirmar')
+            ->call('irParaEtapa6')
             ->assertSet('etapa', 6)
+            ->call('voltar')
+            ->assertSet('etapa', 5)
+            ->call('irParaEtapa6')
+            ->call('confirmar')
+            ->assertSet('etapa', 8)
             ->assertHasNoErrors();
 
         $agendamento = Agendamento::firstOrFail();
@@ -140,7 +147,7 @@ class AgendamentoWizardTest extends TestCase
             ->set('clienteTelefone', '11999998888')
             ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 6);
+            ->assertSet('etapa', 8);
 
         $agendamento = Agendamento::firstOrFail();
         $this->assertSame($this->barbeiro->id, $agendamento->barbeiro_id);
@@ -148,16 +155,25 @@ class AgendamentoWizardTest extends TestCase
 
     public function test_nao_permite_confirmar_sem_selecionar_servico(): void
     {
+        // mount() já avança pra etapa 2 (serviço) sozinho quando só existe
+        // uma filial — é o caso deste fixture (setUp cria uma só via
+        // criarEBindarFilial).
         Livewire::test(AgendamentoWizard::class)
-            ->call('irParaEtapa2')
+            ->assertSet('etapa', 2)
+            ->call('irParaEtapa3')
             ->assertHasErrors(['servicosSelecionados'])
-            ->assertSet('etapa', 1);
+            ->assertSet('etapa', 2);
     }
 
     public function test_nao_mostra_servico_de_outra_barbearia(): void
     {
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
+
+        // BelongsToBarbearia sobrescreve barbearia_id com o tenant bindado;
+        // pra criar um registro de outro tenant precisamos bindar nele.
+        app()->instance('barbearia.id', $outra->id);
         Servico::create(['barbearia_id' => $outra->id, 'nome' => 'Barba Norte', 'duracao_minutos' => 20, 'preco' => 3000]);
+        app()->instance('barbearia.id', $this->barbearia->id);
 
         Livewire::test(AgendamentoWizard::class)
             ->assertSee('Corte')
@@ -220,7 +236,7 @@ class AgendamentoWizardTest extends TestCase
             ->set('clienteTelefone', '+54 9 11 5555-5555')
             ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 6);
+            ->assertSet('etapa', 8);
 
         $this->assertDatabaseCount('clientes', 1);
         Notification::assertSentTo($clienteExistente, AgendamentoConfirmado::class);
@@ -244,10 +260,40 @@ class AgendamentoWizardTest extends TestCase
             ->set('clienteTelefone', '11900001111')
             ->call('irParaEtapa5')
             ->call('confirmar')
-            ->assertSet('etapa', 6);
+            ->assertSet('etapa', 8);
 
         $cliente = Cliente::where('telefone', '11900001111')->firstOrFail();
 
         Notification::assertSentTo($cliente, AgendamentoConfirmado::class);
+    }
+
+    public function test_baixar_ics_retorna_arquivo_de_calendario_apos_confirmar(): void
+    {
+        $data = $this->proximaSegunda();
+
+        $component = Livewire::test(AgendamentoWizard::class)
+            ->set('servicosSelecionados', [$this->servico->id])
+            ->call('irParaEtapa2')
+            ->set('barbeiroSelecionado', (string) $this->barbeiro->id)
+            ->call('irParaEtapa3')
+            ->set('data', $data->toDateString())
+            ->set('horarioSelecionado', '09:00')
+            ->call('irParaEtapa4')
+            ->set('clienteNome', 'María López')
+            ->set('clienteTelefone', '+54 9 11 5555-5555')
+            ->call('irParaEtapa5')
+            ->call('confirmar');
+
+        $agendamento = Agendamento::firstOrFail();
+
+        $component->call('baixarIcs')
+            ->assertFileDownloaded("agendamento-{$agendamento->id}.ics");
+    }
+
+    public function test_baixar_ics_sem_agendamento_confirmado_nao_faz_nada(): void
+    {
+        Livewire::test(AgendamentoWizard::class)
+            ->call('baixarIcs')
+            ->assertNoRedirect();
     }
 }

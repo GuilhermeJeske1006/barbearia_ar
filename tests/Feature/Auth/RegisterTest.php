@@ -2,13 +2,18 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
+use App\Actions\Pagamento\CriarAssinaturaStripeAction;
 use App\Livewire\Auth\Register;
 use App\Models\Barbearia;
 use App\Models\User;
+use App\Services\StripeService;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Livewire;
+use Stripe\Subscription;
 use Tests\TestCase;
 
 class RegisterTest extends TestCase
@@ -21,8 +26,34 @@ class RegisterTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
     }
 
+    /**
+     * Passo 2 (Stripe PaymentElement embutido) roda inteiramente no browser —
+     * aqui simulamos o fim desse passo mockando CriarAssinaturaStripeAction
+     * (chamada em avancarParaPagamento) e StripeService::buscarSubscription
+     * (reconferida em finalizarCadastro antes de criar a conta).
+     */
+    private function mockarAssinaturaStripeAtiva(string $subscriptionId = 'sub_teste123'): void
+    {
+        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) use ($subscriptionId) {
+            $mock->shouldReceive('handle')->once()->andReturn([
+                'customerId' => 'cus_teste123',
+                'subscriptionId' => $subscriptionId,
+                'clientSecret' => 'seti_teste_secret',
+            ]);
+        });
+
+        $this->mock(StripeService::class, function ($mock) use ($subscriptionId) {
+            $mock->shouldReceive('buscarSubscription')
+                ->with($subscriptionId)
+                ->once()
+                ->andReturn(Subscription::constructFrom(['id' => $subscriptionId, 'status' => 'active']));
+        });
+    }
+
     public function test_registra_dono_e_barbearia_com_todos_os_dados(): void
     {
+        $this->mockarAssinaturaStripeAtiva();
+
         Livewire::test(Register::class)
             ->set('nome', 'Maria Souza')
             ->set('email', 'maria@example.com')
@@ -37,7 +68,9 @@ class RegisterTest extends TestCase
             ->set('provinciaBarbearia', 'SP')
             ->set('cuitBarbearia', '00.000.000/0001-00')
             ->set('idiomaPadrao', 'pt')
-            ->call('registrar')
+            ->call('avancarParaPagamento')
+            ->assertSet('step', 'pagamento')
+            ->call('finalizarCadastro')
             ->assertRedirect(route('painel'));
 
         $barbearia = Barbearia::where('slug', 'barbearia-vintage')->firstOrFail();
@@ -48,7 +81,10 @@ class RegisterTest extends TestCase
         $this->assertSame('SP', $barbearia->provincia);
         $this->assertSame('00.000.000/0001-00', $barbearia->cuit);
         $this->assertSame('pt', $barbearia->idioma_padrao);
-        $this->assertSame('trial', $barbearia->status);
+        $this->assertSame('ativa', $barbearia->status);
+        $this->assertSame('cus_teste123', $barbearia->stripe_customer_id);
+        $this->assertSame('sub_teste123', $barbearia->stripe_subscription_id);
+        $this->assertSame('active', $barbearia->subscription_status);
 
         $user = User::where('email', 'maria@example.com')->firstOrFail();
         $this->assertSame('Maria Souza', $user->name);
@@ -63,6 +99,8 @@ class RegisterTest extends TestCase
 
     public function test_campos_opcionais_da_barbearia_podem_ficar_vazios(): void
     {
+        $this->mockarAssinaturaStripeAtiva();
+
         Livewire::test(Register::class)
             ->set('nome', 'Juan Perez')
             ->set('email', 'juan@example.com')
@@ -71,7 +109,8 @@ class RegisterTest extends TestCase
             ->set('nomeBarbearia', 'Central')
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'es')
-            ->call('registrar')
+            ->call('avancarParaPagamento')
+            ->call('finalizarCadastro')
             ->assertRedirect(route('painel'));
 
         $barbearia = Barbearia::where('slug', 'central')->firstOrFail();
@@ -95,13 +134,14 @@ class RegisterTest extends TestCase
             ->set('nomeBarbearia', 'Central')
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'pt')
-            ->call('registrar')
-            ->assertHasErrors(['email']);
+            ->call('avancarParaPagamento')
+            ->assertHasErrors(['email'])
+            ->assertSet('step', 'dados');
     }
 
     public function test_slug_duplicado_falha_na_validacao(): void
     {
-        Barbearia::create(['nome' => 'Existente', 'slug' => 'existente', 'status' => 'trial']);
+        Barbearia::create(['nome' => 'Existente', 'slug' => 'existente', 'status' => 'ativa']);
 
         Livewire::test(Register::class)
             ->set('nome', 'Alguem')
@@ -111,8 +151,139 @@ class RegisterTest extends TestCase
             ->set('nomeBarbearia', 'Existente')
             ->set('slugBarbearia', 'existente')
             ->set('idiomaPadrao', 'pt')
-            ->call('registrar')
+            ->call('avancarParaPagamento')
             ->assertHasErrors(['slugBarbearia']);
+    }
+
+    public function test_finalizar_cadastro_falha_se_assinatura_nao_estiver_ativa(): void
+    {
+        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
+            $mock->shouldReceive('handle')->once()->andReturn([
+                'customerId' => 'cus_teste123',
+                'subscriptionId' => 'sub_teste123',
+                'clientSecret' => 'seti_teste_secret',
+            ]);
+        });
+
+        $this->mock(StripeService::class, function ($mock) {
+            $mock->shouldReceive('buscarSubscription')
+                ->with('sub_teste123')
+                ->once()
+                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'incomplete']));
+        });
+
+        Livewire::test(Register::class)
+            ->set('nome', 'Alguem')
+            ->set('email', 'novo@example.com')
+            ->set('senha', 'senha-forte-123')
+            ->set('senha_confirmation', 'senha-forte-123')
+            ->set('nomeBarbearia', 'Central')
+            ->set('slugBarbearia', 'central')
+            ->set('idiomaPadrao', 'pt')
+            ->call('avancarParaPagamento')
+            ->call('finalizarCadastro')
+            ->assertHasErrors(['pagamento']);
+
+        $this->assertGuest();
+        $this->assertFalse(Barbearia::where('slug', 'central')->exists());
+    }
+
+    public function test_corrida_no_email_entre_pre_check_e_insert_vira_erro_de_validacao(): void
+    {
+        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
+            $mock->shouldReceive('handle')->once()->andReturn([
+                'customerId' => 'cus_teste123',
+                'subscriptionId' => 'sub_teste123',
+                'clientSecret' => 'seti_teste_secret',
+            ]);
+        });
+
+        $this->mock(StripeService::class, function ($mock) {
+            $mock->shouldReceive('buscarSubscription')
+                ->with('sub_teste123')
+                ->once()
+                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'active']));
+
+            $mock->shouldReceive('cancelarSubscription')->with('sub_teste123')->once();
+        });
+
+        $this->mock(RegistrarDonoEBarbeariaAction::class, function ($mock) {
+            $mock->shouldReceive('handle')->once()->andReturnUsing(function () {
+                // Simula outra requisição concorrente que venceu a corrida
+                // e inseriu o mesmo email entre o pré-check (validate()) e
+                // o INSERT dentro da transação da action.
+                User::create([
+                    'name' => 'Concorrente',
+                    'email' => 'corrida@example.com',
+                    'password' => bcrypt('x'),
+                    'tipo' => 'dono',
+                ]);
+
+                throw new QueryException(
+                    'sqlite', 'insert into "users" ...', [], new \Exception('UNIQUE constraint failed: users.email'),
+                );
+            });
+        });
+
+        Livewire::test(Register::class)
+            ->set('nome', 'Alguem')
+            ->set('email', 'corrida@example.com')
+            ->set('senha', 'senha-forte-123')
+            ->set('senha_confirmation', 'senha-forte-123')
+            ->set('nomeBarbearia', 'Central')
+            ->set('slugBarbearia', 'central')
+            ->set('idiomaPadrao', 'pt')
+            ->call('avancarParaPagamento')
+            ->call('finalizarCadastro')
+            ->assertHasErrors(['email'])
+            ->assertSet('step', 'dados');
+
+        $this->assertGuest();
+    }
+
+    public function test_corrida_no_slug_entre_pre_check_e_insert_vira_erro_de_validacao(): void
+    {
+        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
+            $mock->shouldReceive('handle')->once()->andReturn([
+                'customerId' => 'cus_teste123',
+                'subscriptionId' => 'sub_teste123',
+                'clientSecret' => 'seti_teste_secret',
+            ]);
+        });
+
+        $this->mock(StripeService::class, function ($mock) {
+            $mock->shouldReceive('buscarSubscription')
+                ->with('sub_teste123')
+                ->once()
+                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'active']));
+
+            $mock->shouldReceive('cancelarSubscription')->with('sub_teste123')->once();
+        });
+
+        $this->mock(RegistrarDonoEBarbeariaAction::class, function ($mock) {
+            $mock->shouldReceive('handle')->once()->andReturnUsing(function () {
+                Barbearia::create(['nome' => 'Concorrente', 'slug' => 'central', 'status' => 'ativa']);
+
+                throw new QueryException(
+                    'sqlite', 'insert into "barbearias" ...', [], new \Exception('UNIQUE constraint failed: barbearias.slug'),
+                );
+            });
+        });
+
+        Livewire::test(Register::class)
+            ->set('nome', 'Alguem')
+            ->set('email', 'novo@example.com')
+            ->set('senha', 'senha-forte-123')
+            ->set('senha_confirmation', 'senha-forte-123')
+            ->set('nomeBarbearia', 'Central')
+            ->set('slugBarbearia', 'central')
+            ->set('idiomaPadrao', 'pt')
+            ->call('avancarParaPagamento')
+            ->call('finalizarCadastro')
+            ->assertHasErrors(['slugBarbearia'])
+            ->assertSet('step', 'dados');
+
+        $this->assertGuest();
     }
 
     public function test_idioma_padrao_invalido_falha_na_validacao(): void
@@ -125,7 +296,7 @@ class RegisterTest extends TestCase
             ->set('nomeBarbearia', 'Central')
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'en')
-            ->call('registrar')
+            ->call('avancarParaPagamento')
             ->assertHasErrors(['idiomaPadrao']);
     }
 }

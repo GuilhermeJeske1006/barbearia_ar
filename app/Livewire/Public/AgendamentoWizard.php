@@ -8,12 +8,16 @@ use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
 use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
 use App\Models\Barbeiro;
+use App\Models\BarbeiroHorario;
 use App\Models\Cliente;
+use App\Models\Filial;
 use App\Models\Servico;
 use App\Services\DisponibilidadeService;
+use App\Services\IcsGeneratorService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use RuntimeException;
@@ -24,6 +28,8 @@ class AgendamentoWizard extends Component
     private const SEM_PREFERENCIA = 'qualquer';
 
     public int $etapa = 1;
+
+    public string $filialSelecionada = '';
 
     /** @var array<int, int> */
     public array $servicosSelecionados = [];
@@ -59,9 +65,55 @@ class AgendamentoWizard extends Component
 
     public function mount(): void
     {
-        $this->data = now()->toDateString();
+        $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
         $this->dispositivoMovel = (bool) preg_match('/Mobi|Android|iPhone|iPad|iPod/i', request()->userAgent() ?? '');
-        $this->metodoPagamento = app('barbearia')->exige_pagamento_antecipado ? 'agora' : 'local';
+        $barbearia = app('barbearia');
+        $this->metodoPagamento = $barbearia->exige_pagamento_antecipado && $barbearia->conectadaAoMercadoPago()
+            ? 'agora'
+            : 'local';
+
+        // Barbearia de filial única (o caso comum): não faz sentido obrigar
+        // o cliente a "escolher" quando só existe uma opção — pré-seleciona
+        // e pula direto pra escolha de serviço.
+        $filiais = $this->filiaisDisponiveis();
+
+        if ($filiais->count() === 1) {
+            $this->filialSelecionada = (string) $filiais->first()->id;
+            $this->bindFilialSelecionada();
+            $this->etapa = 2;
+        }
+    }
+
+    /**
+     * Roda em toda request do Livewire (inicial e AJAX subsequentes) — ao
+     * contrário de app('barbearia') (bindado por middleware via
+     * PersistentMiddleware, ver AppServiceProvider), a filial é escolhida
+     * dentro do próprio wizard, sem segmento de rota — então o único jeito
+     * de manter app('filial.id') bindado a cada request é reidratar a
+     * partir da propriedade pública já persistida pelo Livewire.
+     */
+    public function boot(): void
+    {
+        $this->bindFilialSelecionada();
+    }
+
+    private function bindFilialSelecionada(): void
+    {
+        if ($this->filialSelecionada === '') {
+            return;
+        }
+
+        $filial = Filial::withoutGlobalScopes()->find($this->filialSelecionada);
+
+        if ($filial && $filial->barbearia_id === app('barbearia')->id) {
+            app()->instance('filial.id', $filial->id);
+            app()->instance('filial', $filial);
+        }
+    }
+
+    public function filiaisDisponiveis(): Collection
+    {
+        return Filial::where('ativo', true)->orderBy('nome')->get();
     }
 
     public function servicosDisponiveis(): Collection
@@ -91,8 +143,8 @@ class AgendamentoWizard extends Component
 
     public function horarioFuncionamentoHoje(): ?string
     {
-        $horarios = \App\Models\BarbeiroHorario::whereIn('barbeiro_id', $this->barbeirosDisponiveis()->pluck('id'))
-            ->where('dia_semana', Carbon::now()->dayOfWeek)
+        $horarios = BarbeiroHorario::whereIn('barbeiro_id', $this->barbeirosDisponiveis()->pluck('id'))
+            ->where('dia_semana', Carbon::now(app('barbearia')->timezone ?? config('app.timezone'))->dayOfWeek)
             ->get();
 
         if ($horarios->isEmpty()) {
@@ -123,17 +175,18 @@ class AgendamentoWizard extends Component
     public function irParaEtapa2(): void
     {
         $this->validate([
-            'servicosSelecionados' => 'required|array|min:1',
-        ], [], ['servicosSelecionados' => __('agendamento.elegir_servicio')]);
+            'filialSelecionada' => 'required|string',
+        ]);
 
+        $this->bindFilialSelecionada();
         $this->etapa = 2;
     }
 
     public function irParaEtapa3(): void
     {
         $this->validate([
-            'barbeiroSelecionado' => 'required|string',
-        ]);
+            'servicosSelecionados' => 'required|array|min:1',
+        ], [], ['servicosSelecionados' => __('agendamento.elegir_servicio')]);
 
         $this->etapa = 3;
     }
@@ -141,7 +194,7 @@ class AgendamentoWizard extends Component
     public function irParaEtapa4(): void
     {
         $this->validate([
-            'horarioSelecionado' => 'required|string',
+            'barbeiroSelecionado' => 'required|string',
         ]);
 
         $this->etapa = 4;
@@ -150,11 +203,25 @@ class AgendamentoWizard extends Component
     public function irParaEtapa5(): void
     {
         $this->validate([
+            'horarioSelecionado' => 'required|string',
+        ]);
+
+        $this->etapa = 5;
+    }
+
+    public function irParaEtapa6(): void
+    {
+        $this->validate([
             'clienteNome' => 'required|string|max:255',
             'clienteTelefone' => 'required|string|max:30',
         ]);
 
-        $this->etapa = 5;
+        $this->etapa = 6;
+    }
+
+    public function irParaEtapa7(): void
+    {
+        $this->etapa = 7;
     }
 
     public function voltar(): void
@@ -231,7 +298,7 @@ class AgendamentoWizard extends Component
 
         if (! $barbeiro) {
             $this->erroConfirmacao = __('agendamento.sin_horarios');
-            $this->etapa = 3;
+            $this->etapa = 4;
 
             return null;
         }
@@ -241,7 +308,14 @@ class AgendamentoWizard extends Component
             ['nome' => $this->clienteNome],
         );
 
-        $pagarAgora = $this->podeEscolherPagamento() && $this->metodoPagamento === 'agora';
+        // exige_pagamento_antecipado é obrigatório, não uma preferência — o
+        // rádio "pagar local" só existe na tela pra quando NÃO é obrigatório.
+        // metodoPagamento é uma prop pública do Livewire, então o cliente
+        // podia mandar 'local' mesmo com o pagamento antecipado exigido; a
+        // decisão final tem que ser recalculada aqui, nunca confiar só no
+        // valor que o wire:model trouxe.
+        $pagarAgora = $this->podeEscolherPagamento()
+            && (app('barbearia')->exige_pagamento_antecipado || $this->metodoPagamento === 'agora');
 
         try {
             $agendamento = $criarAgendamento->handle(
@@ -254,15 +328,20 @@ class AgendamentoWizard extends Component
             );
         } catch (RuntimeException) {
             $this->erroConfirmacao = __('agendamento.sin_horarios');
-            $this->etapa = 3;
+            $this->etapa = 4;
 
             return null;
         }
 
         if (! $pagarAgora) {
-            $notificarConfirmado->handle($agendamento);
+            try {
+                $notificarConfirmado->handle($agendamento);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             $this->agendamentoConfirmado = $agendamento;
-            $this->etapa = 6;
+            $this->etapa = 8;
 
             return null;
         }
@@ -271,8 +350,14 @@ class AgendamentoWizard extends Component
             $resultado = $criarPreferencia->handle($agendamento, $this->precoTotal());
         } catch (\Throwable $e) {
             report($e);
+
+            // Sem isso o agendamento fica 'pendente' pra sempre — ocupando o
+            // horário — e nem o próprio cliente consegue reagendar o mesmo
+            // slot, porque estaLivre() enxerga essa reserva órfã como
+            // conflito. Cancelar libera o horário imediatamente.
+            $agendamento->update(['status' => 'cancelado']);
             $this->erroConfirmacao = __('agendamento.erro_pagamento');
-            $this->etapa = 5;
+            $this->etapa = 6;
 
             return null;
         }
@@ -284,8 +369,8 @@ class AgendamentoWizard extends Component
         // Desktop: o checkout hospedado da MP costuma travar em navegadores
         // desktop (bloqueador de anúncio, DNS local etc. — problema
         // recorrente no CDN deles, fora do nosso controle). Mostra um QR num
-        // modal, sem sair da etapa 4, pro cliente escanear com o celular
-        // (que sempre funciona), e faz polling até o webhook confirmar.
+        // modal, sem sair da etapa 7 (revisão), pro cliente escanear com o
+        // celular (que sempre funciona), e faz polling até o webhook confirmar.
         $this->linkPagamentoQrCode = $resultado['init_point'];
         $this->agendamentoAguardandoPagamentoId = $agendamento->id;
         $this->mostrarQrCode = true;
@@ -305,17 +390,44 @@ class AgendamentoWizard extends Component
         if ($agendamento && in_array($agendamento->status, ['confirmado', 'concluido'], true)) {
             $this->mostrarQrCode = false;
             $this->agendamentoConfirmado = $agendamento;
-            $this->etapa = 6;
+            $this->etapa = 8;
         }
+    }
+
+    public function linkCancelamento(): ?string
+    {
+        if (! $this->agendamentoConfirmado) {
+            return null;
+        }
+
+        return URL::signedRoute('public.agendamento.cancelar', [
+            'barbearia' => app('barbearia')->slug,
+            'agendamento' => $this->agendamentoConfirmado->id,
+        ]);
+    }
+
+    public function baixarIcs(IcsGeneratorService $ics): mixed
+    {
+        if (! $this->agendamentoConfirmado) {
+            return null;
+        }
+
+        return response()->streamDownload(
+            fn () => print($ics->paraAgendamento($this->agendamentoConfirmado)),
+            "agendamento-{$this->agendamentoConfirmado->id}.ics",
+            ['Content-Type' => 'text/calendar; charset=utf-8'],
+        );
     }
 
     private function primeiroBarbeiroLivre(Carbon $inicio, Collection $servicos): ?Barbeiro
     {
-        $fim = $inicio->copy()->addMinutes((int) $servicos->sum('duracao_minutos'));
         $disponibilidade = app(DisponibilidadeService::class);
 
-        return $this->barbeirosDisponiveis()
-            ->first(fn (Barbeiro $barbeiro) => $disponibilidade->estaLivre($barbeiro, $inicio, $fim));
+        return $this->barbeirosDisponiveis()->first(function (Barbeiro $barbeiro) use ($inicio, $servicos, $disponibilidade) {
+            $fim = $inicio->copy()->addMinutes($servicos->sum(fn (Servico $servico) => $barbeiro->duracaoParaServico($servico)));
+
+            return $disponibilidade->estaLivre($barbeiro, $inicio, $fim);
+        });
     }
 
     public function render()

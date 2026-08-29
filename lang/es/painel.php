@@ -16,6 +16,13 @@ return [
     'comisiones' => 'Comisiones',
     'despesas' => 'Gastos',
     'relatorio_despesas' => 'Informe de gastos',
+    'relatorio_lucro' => 'Ganancia',
+    'receita_bruta' => 'Ingresos brutos',
+    'comissoes_periodo' => 'Comisiones del período',
+    'despesas_periodo' => 'Gastos del período',
+    'lucro' => 'Ganancia neta',
+    'margem_lucro' => 'Margen: :percentual%',
+    'tendencia_lucro' => 'Ingresos, gastos y ganancia (últimos 12 meses)',
     'ajustes' => 'Configuración',
     'usuarios' => 'Usuarios',
     'salir' => 'Cerrar sesión',
@@ -249,6 +256,11 @@ return [
     'proximo_atendimento' => 'Próxima atención',
     'comissoes_pagas_mes' => 'Comisiones pagadas este mes',
 
+    'grafico_faturamento_7dias' => 'Facturación (últimos 7 días)',
+    'grafico_status_agendamentos' => 'Turnos por estado (últimos 7 días)',
+    'grafico_atendimentos_7dias' => 'Atenciones (últimos 7 días)',
+    'grafico_comissoes_6meses' => 'Comisiones pagadas (últimos 6 meses)',
+
     'alternar_tema' => 'Cambiar tema claro/oscuro',
 
     'permissoes' => 'Permisos',
@@ -264,6 +276,7 @@ return [
     'permissao_pdv_operar' => 'Operar la venta directa (PDV)',
     'permissao_clientes_gerenciar' => 'Gestionar clientes',
     'permissao_financeiro_visualizar' => 'Ver reportes financieros',
+    'permissao_financeiro_gerenciar' => 'Gestionar gastos',
     'permissao_comissoes_visualizar_propria' => 'Ver las propias comisiones',
     'permissao_horarios_visualizar_propria' => 'Ver el propio horario de trabajo',
     'permissao_usuarios_gerenciar' => 'Gestionar usuarios',

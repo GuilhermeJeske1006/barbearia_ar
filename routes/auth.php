@@ -16,6 +16,7 @@ use App\Livewire\Admin\Produtos\ControleEstoque;
 use App\Livewire\Admin\Produtos\CrudProduto;
 use App\Livewire\Admin\Relatorios\RelatorioComissoes;
 use App\Livewire\Admin\Relatorios\RelatorioDespesas;
+use App\Livewire\Admin\Relatorios\RelatorioLucro;
 use App\Livewire\Admin\Servicos\CrudServico;
 use App\Livewire\Admin\Usuarios\CrudUsuario;
 use App\Livewire\Admin\Usuarios\Permissoes;
@@ -111,6 +112,9 @@ Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativ
 
     Route::get('/relatorios/despesas', RelatorioDespesas::class)
         ->middleware('can:financeiro.visualizar')->name('admin.relatorios.despesas');
+
+    Route::get('/relatorios/lucro', RelatorioLucro::class)
+        ->middleware('can:financeiro.visualizar')->name('admin.relatorios.lucro');
 
     Route::get('/minhas-comissoes', MinhasComissoes::class)
         ->middleware('can:comissoes.visualizar_propria')->name('barbeiro.minhas-comissoes');

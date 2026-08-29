@@ -43,6 +43,37 @@
             <x-ui.kpi label="{{ __('painel.produtos_estoque_baixo') }}" value="{{ $metricas['produtos_estoque_baixo'] }}" />
         </div>
 
+        @php
+            $coresStatus = [
+                'pendente' => '#d97706',
+                'confirmado' => '#2563eb',
+                'em_atendimento' => '#7c3aed',
+                'concluido' => '#16a34a',
+                'cancelado' => '#dc2626',
+                'no_show' => '#64748b',
+            ];
+        @endphp
+        <div
+            wire:ignore
+            x-data="painelChart({
+                faturamentoLabels: @js(array_keys($faturamentoUltimos7Dias)),
+                faturamentoValores: @js(array_values($faturamentoUltimos7Dias)),
+                statusLabels: @js(array_map(fn ($status) => __('painel.status_' . $status), array_keys($agendamentosPorStatus))),
+                statusValores: @js(array_values($agendamentosPorStatus)),
+                statusCores: @js(array_map(fn ($status) => $coresStatus[$status], array_keys($agendamentosPorStatus))),
+            })"
+            class="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2"
+        >
+            <x-ui.card padding="p-4">
+                <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.grafico_faturamento_7dias') }}</p>
+                <div class="relative mt-2 h-64"><canvas x-ref="faturamentoCanvas" role="img" aria-label="{{ __('painel.grafico_faturamento_7dias') }}"></canvas></div>
+            </x-ui.card>
+            <x-ui.card padding="p-4">
+                <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.grafico_status_agendamentos') }}</p>
+                <div class="relative mt-2 h-64"><canvas x-ref="statusCanvas" role="img" aria-label="{{ __('painel.grafico_status_agendamentos') }}"></canvas></div>
+            </x-ui.card>
+        </div>
+
         <x-ui.card class="mt-5" padding="p-4">
             <div class="flex items-center justify-between">
                 <p class="text-sm font-bold text-slate-900 dark:text-white">{{ __('painel.agenda_de_hoje') }}</p>
@@ -76,6 +107,26 @@
             <x-ui.kpi label="{{ __('painel.proximo_atendimento') }}" value="{{ $metricas['proximo_horario']?->format('H:i') ?? '—' }}" />
             <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
             <x-ui.kpi label="{{ __('painel.comissoes_pagas_mes') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pagas_mes']) }}" />
+        </div>
+
+        <div
+            wire:ignore
+            x-data="painelChart({
+                atendimentosLabels: @js(array_keys($atendimentosUltimos7Dias)),
+                atendimentosValores: @js(array_values($atendimentosUltimos7Dias)),
+                comissoesLabels: @js(array_keys($comissoesUltimos6Meses)),
+                comissoesValores: @js(array_values($comissoesUltimos6Meses)),
+            })"
+            class="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2"
+        >
+            <x-ui.card padding="p-4">
+                <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.grafico_atendimentos_7dias') }}</p>
+                <div class="relative mt-2 h-64"><canvas x-ref="atendimentosCanvas" role="img" aria-label="{{ __('painel.grafico_atendimentos_7dias') }}"></canvas></div>
+            </x-ui.card>
+            <x-ui.card padding="p-4">
+                <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.grafico_comissoes_6meses') }}</p>
+                <div class="relative mt-2 h-64"><canvas x-ref="comissoesCanvas" role="img" aria-label="{{ __('painel.grafico_comissoes_6meses') }}"></canvas></div>
+            </x-ui.card>
         </div>
     @endif
 

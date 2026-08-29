@@ -1,4 +1,5 @@
 import mask from '@alpinejs/mask';
+import collapse from '@alpinejs/collapse';
 import QRCode from 'qrcode';
 import despesasChart from './despesas-chart';
 import lucroChart from './lucro-chart';
@@ -9,6 +10,7 @@ window.QRCode = QRCode;
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.plugin(mask);
+    window.Alpine.plugin(collapse);
     window.Alpine.data('stripeCheckout', stripeCheckout);
     window.Alpine.data('despesasChart', despesasChart);
     window.Alpine.data('lucroChart', lucroChart);

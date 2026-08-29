@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
 use App\Livewire\Admin\Usuarios\CrudUsuario;
 use App\Models\Barbearia;
+use App\Models\Barbeiro;
 use App\Models\Filial;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -134,6 +135,29 @@ class CrudUsuarioTest extends TestCase
         $this->assertFalse($usuario->hasRole('atendente'));
     }
 
+    public function test_editar_usuario_sincroniza_nome_no_barbeiro_vinculado(): void
+    {
+        $usuario = User::create([
+            'name' => 'Pedro', 'email' => 'pedro2@example.com', 'password' => bcrypt('x'),
+            'tipo' => 'barbeiro', 'telefone' => '111', 'barbearia_atual_id' => $this->barbearia->id, 'ativo' => true,
+        ]);
+        $usuario->assignRole('barbeiro');
+        $filial = Filial::where('barbearia_id', $this->barbearia->id)->firstOrFail();
+        Barbeiro::create([
+            'user_id' => $usuario->id, 'nome' => 'Pedro', 'filial_id' => $filial->id,
+            'percentual_comissao' => 40, 'ativo' => true, 'aceita_online' => true,
+        ]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CrudUsuario::class)
+            ->call('editar', $usuario->id)
+            ->set('nome', 'Pedro Editado')
+            ->call('salvar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('barbeiros', ['user_id' => $usuario->id, 'nome' => 'Pedro Editado']);
+    }
+
     public function test_dono_pode_desativar_atendente(): void
     {
         $usuario = User::create([
@@ -176,6 +200,39 @@ class CrudUsuarioTest extends TestCase
             ->assertHasErrors(['form']);
 
         $this->assertTrue($this->dono->fresh()->ativo);
+    }
+
+    public function test_dono_pode_alternar_atendimento_proprio_como_barbeiro(): void
+    {
+        $component = Livewire::actingAs($this->dono)->test(CrudUsuario::class);
+
+        $component->call('alternarAtendeComoBarbeiro', $this->dono->id);
+
+        $filial = Filial::where('barbearia_id', $this->barbearia->id)->firstOrFail();
+        $this->assertDatabaseHas('barbeiros', [
+            'user_id' => $this->dono->id,
+            'barbearia_id' => $this->barbearia->id,
+            'filial_id' => $filial->id,
+            'ativo' => true,
+        ]);
+
+        $component->call('alternarAtendeComoBarbeiro', $this->dono->id);
+
+        $this->assertSoftDeleted('barbeiros', ['user_id' => $this->dono->id]);
+    }
+
+    public function test_alternar_atendimento_ignora_usuario_que_nao_e_dono(): void
+    {
+        $atendente = User::create([
+            'name' => 'Ana', 'email' => 'ana@example.com', 'password' => bcrypt('x'),
+            'tipo' => 'atendente', 'telefone' => '111', 'barbearia_atual_id' => $this->barbearia->id, 'ativo' => true,
+        ]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CrudUsuario::class)
+            ->call('alternarAtendeComoBarbeiro', $atendente->id);
+
+        $this->assertDatabaseMissing('barbeiros', ['user_id' => $atendente->id]);
     }
 
     public function test_usuario_sem_permissao_nao_acessa_a_rota(): void

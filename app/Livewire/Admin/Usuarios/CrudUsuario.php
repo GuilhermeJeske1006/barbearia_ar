@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Usuarios;
 
 use App\Actions\Usuarios\AtualizarUsuarioBarbeariaAction;
 use App\Actions\Usuarios\CriarUsuarioBarbeariaAction;
+use App\Models\Barbeiro;
 use App\Models\Filial;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -140,6 +141,50 @@ class CrudUsuario extends Component
         }
 
         $user->update(['ativo' => ! $user->ativo]);
+    }
+
+    public function donoAtendeComoBarbeiro(int $userId): bool
+    {
+        return Barbeiro::where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Dono também pode atender clientes como barbeiro — cria/remove o
+     * Barbeiro vinculado ao próprio usuário na filial atualmente ativa do
+     * admin (BelongsToFilial cuida do barbearia_id/filial_id automático).
+     * Um dono que atende em mais de uma filial troca a filial ativa e
+     * alterna de novo aqui pra gerar o registro correspondente.
+     */
+    public function alternarAtendeComoBarbeiro(int $id): void
+    {
+        $user = User::doTenantAtual()->findOrFail($id);
+
+        if ($user->tipo !== 'dono') {
+            return;
+        }
+
+        $barbeiro = Barbeiro::withTrashed()->where('user_id', $user->id)->first();
+
+        if ($barbeiro && ! $barbeiro->trashed()) {
+            $barbeiro->delete();
+
+            return;
+        }
+
+        if ($barbeiro && $barbeiro->trashed()) {
+            $barbeiro->restore();
+            $barbeiro->update(['ativo' => true]);
+
+            return;
+        }
+
+        Barbeiro::create([
+            'user_id' => $user->id,
+            'nome' => $user->name,
+            'percentual_comissao' => 0,
+            'ativo' => true,
+            'aceita_online' => true,
+        ]);
     }
 
     public function render()

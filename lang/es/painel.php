@@ -51,6 +51,8 @@ return [
     'papel_barbeiro' => 'Barbero',
     'ativar' => 'Activar',
     'desativar' => 'Desactivar',
+    'dono_atende_como_barbeiro' => 'Atiende como barbero',
+    'dono_nao_atende' => 'No atiende',
     'nao_pode_alterar_a_si_mesmo' => 'No podés modificar tu propio acceso.',
     'nao_pode_desativar_ultimo_dono' => 'No es posible desactivar al último dueño activo de la barbería.',
     'duracao_minutos' => 'Duración (min)',

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Barbeiro;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\Validator;
@@ -41,6 +42,11 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'email' => $input['email'],
             ])->save();
         }
+
+        // withoutGlobalScopes: dono/barbeiro pode ter um Barbeiro por
+        // filial (BelongsToFilial escopa pela filial ativa), então o nome
+        // de exibição precisa ficar em sincronia em todas elas.
+        Barbeiro::withoutGlobalScopes()->where('user_id', $user->id)->update(['nome' => $input['name']]);
     }
 
     /**

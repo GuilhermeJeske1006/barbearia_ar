@@ -72,4 +72,14 @@ return [
 
     'tentar_pagar_novamente' => 'Tentar pagar novamente',
     'horario_ja_ocupado_reintentar' => 'Esse horário já foi ocupado enquanto isso. Escolha um novo horário.',
+
+    'minhas_reservas_titulo' => 'Minhas reservas',
+    'minhas_reservas_telefone_label' => 'Digite seu telefone',
+    'minhas_reservas_buscar_botao' => 'Buscar meus agendamentos',
+    'minhas_reservas_enviado_titulo' => 'Pronto',
+    'minhas_reservas_enviado_detalhe' => 'Se você tem agendamentos com esse número, enviamos um link por WhatsApp ou e-mail.',
+    'minhas_reservas_vazio_titulo' => 'Você não tem agendamentos',
+    'minhas_reservas_vazio_detalhe' => 'Você ainda não fez nenhuma reserva com este telefone.',
+    'minhas_reservas_proximos' => 'Próximos',
+    'minhas_reservas_pasados' => 'Anteriores',
 ];

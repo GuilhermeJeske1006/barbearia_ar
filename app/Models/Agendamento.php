@@ -69,4 +69,19 @@ class Agendamento extends Model
     {
         return $this->hasOne(PesquisaSatisfacao::class);
     }
+
+    /**
+     * Cancelamento self-service só é permitido pra reservas ainda futuras,
+     * num status não-terminal e sem pagamento aprovado — reembolso é decisão
+     * de negócio, não algo pra automatizar num endpoint público sem
+     * autenticação mexendo em gateway de pagamento real. Usado tanto pelo
+     * botão de ação (CancelarAgendamento) quanto pela visibilidade do botão
+     * por linha (MinhasReservasLista).
+     */
+    public function podeCancelar(): bool
+    {
+        return in_array($this->status, ['pendente', 'confirmado'], true)
+            && $this->data_hora_inicio->isFuture()
+            && $this->pagamento_id === null;
+    }
 }

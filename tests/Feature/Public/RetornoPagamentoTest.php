@@ -13,11 +13,15 @@ use App\Models\Servico;
 use App\Services\MercadoPagoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\URL;
 use Livewire\Livewire;
 use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
+/**
+ * Testes em nível de componente (Livewire::test, nunca pelo roteamento real)
+ * — ver o comentário equivalente em CancelarAgendamentoTest. Cobertura via
+ * rota HTTP real está em RetornoPagamentoHttpTest.
+ */
 class RetornoPagamentoTest extends TestCase
 {
     use CriaFilialParaTeste, RefreshDatabase;
@@ -93,7 +97,7 @@ class RetornoPagamentoTest extends TestCase
         $this->criarPagamento('approved');
         $this->agendamento->update(['status' => 'confirmado']);
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->assertSee(__('agendamento.turno_confirmado'))
             ->assertDontSee(__('agendamento.pago_procesando'));
     }
@@ -102,7 +106,7 @@ class RetornoPagamentoTest extends TestCase
     {
         $this->criarPagamento('pending');
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->assertSee(__('agendamento.pago_procesando'));
     }
 
@@ -110,40 +114,8 @@ class RetornoPagamentoTest extends TestCase
     {
         $this->criarPagamento('rejected');
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->assertSee(__('agendamento.pago_rechazado'));
-    }
-
-    public function test_rota_completa_renderiza_via_http(): void
-    {
-        $this->criarPagamento('approved');
-        $this->agendamento->update(['status' => 'confirmado']);
-
-        $this->get(URL::signedRoute('public.agendamento.retorno', [
-            'barbearia' => $this->barbearia->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertOk()->assertSee(__('agendamento.turno_confirmado'));
-    }
-
-    public function test_url_sem_assinatura_valida_e_recusada(): void
-    {
-        $this->criarPagamento('approved');
-        $this->agendamento->update(['status' => 'confirmado']);
-
-        $this->get(route('public.agendamento.retorno', [
-            'barbearia' => $this->barbearia->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertForbidden();
-    }
-
-    public function test_agendamento_de_outra_barbearia_da_404(): void
-    {
-        $outra = Barbearia::create(['nome' => 'Outra', 'slug' => 'outra']);
-
-        $this->get(URL::signedRoute('public.agendamento.retorno', [
-            'barbearia' => $outra->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertNotFound();
     }
 
     public function test_tentar_novamente_gera_nova_preferencia_e_redireciona(): void
@@ -166,7 +138,7 @@ class RetornoPagamentoTest extends TestCase
                 ->andReturn(['id' => 'pref-456', 'init_point' => 'https://mercadopago.com.ar/checkout/pref-456']);
         });
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->call('tentarNovamente')
             ->assertRedirect('https://mercadopago.com.ar/checkout/pref-456');
 
@@ -196,7 +168,7 @@ class RetornoPagamentoTest extends TestCase
             $mock->shouldNotReceive('criarPreferencia');
         });
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->call('tentarNovamente')
             ->assertSet('erro', fn ($erro) => ! empty($erro));
 
@@ -212,7 +184,7 @@ class RetornoPagamentoTest extends TestCase
             $mock->shouldNotReceive('criarPreferencia');
         });
 
-        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
             ->call('tentarNovamente');
 
         $this->assertSame('pendente', $this->agendamento->fresh()->status);

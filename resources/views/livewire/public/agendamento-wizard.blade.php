@@ -399,7 +399,7 @@
                         @elseif ($etapa === 5)
                             <x-ui.button size="lg" wire:click="irParaEtapa6">{{ __('agendamento.continuar') }} →</x-ui.button>
                         @elseif ($etapa === 6)
-                            <x-ui.button size="lg" type="submit" form="confirmar-form" wire:loading.attr="disabled">
+                            <x-ui.button size="lg" wire:click="irParaEtapa7" wire:loading.attr="disabled">
                                 {{ ($this->podeEscolherPagamento() && $metodoPagamento === 'agora') ? __('agendamento.pagar_y_confirmar') : __('agendamento.confirmar') }}
                             </x-ui.button>
                         @endif

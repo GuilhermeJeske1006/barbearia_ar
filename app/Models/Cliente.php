@@ -40,8 +40,19 @@ class Cliente extends Model
             return null;
         }
 
-        $digitos = preg_replace('/\D/', '', $this->telefone);
+        $digitos = static::normalizarTelefone($this->telefone);
 
         return $digitos !== '' ? $digitos : null;
+    }
+
+    /**
+     * Só dígitos — usado pra casar telefones digitados de formas diferentes
+     * (com/sem espaço, parênteses, hífen) contra o valor cru salvo em
+     * `telefone` (o wizard/PDV não normaliza na escrita, então o mesmo
+     * cliente pode ter variações salvas).
+     */
+    public static function normalizarTelefone(string $telefone): string
+    {
+        return preg_replace('/\D/', '', $telefone) ?? '';
     }
 }

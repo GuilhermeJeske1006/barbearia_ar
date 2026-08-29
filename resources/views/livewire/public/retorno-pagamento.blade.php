@@ -4,8 +4,8 @@
         <h2 class="text-lg font-extrabold text-green-800">{{ __('agendamento.turno_confirmado') }}</h2>
         <p class="mx-auto mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">
             {{ __('agendamento.confirmado_detalhe', [
-                'data' => $agendamento->data_hora_inicio->translatedFormat('d/m/Y'),
-                'hora' => $agendamento->data_hora_inicio->format('H:i'),
+                'data' => $reserva->data_hora_inicio->translatedFormat('d/m/Y'),
+                'hora' => $reserva->data_hora_inicio->format('H:i'),
             ]) }}
         </p>
     @elseif ($this->statusPagamento() === 'rejeitado')

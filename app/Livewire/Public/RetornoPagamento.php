@@ -18,22 +18,51 @@ use Livewire\Component;
 #[Layout('layouts::publico')]
 class RetornoPagamento extends Component
 {
-    public Agendamento $agendamento;
+    /**
+     * Nome de propósito diferente do segmento de rota {agendamento} — ver o
+     * comentário completo em CancelarAgendamento::$reserva. Livewire
+     * auto-hidrata qualquer propriedade pública cujo nome bata com um
+     * parâmetro de rota, tipada ou não, dentro de __invoke() (depois de todo
+     * middleware) — e filial.id nunca é bindado em rota pública anônima, então
+     * uma propriedade chamada `$agendamento` sempre dava valor errado antes
+     * de mount() sequer rodar.
+     *
+     * @var Agendamento
+     */
+    public $reserva;
 
     public ?string $erro = null;
 
-    public function mount(Agendamento $agendamento): void
+    /**
+     * $agendamento (parâmetro) chega cru de propósito — resolvido manualmente
+     * aqui dentro, depois de todo middleware já ter passado (inclusive
+     * ResolveTenant, que já deixou barbearia.id certo), só falta bypassar o
+     * scope 'filial' — 'barbearia' continua ativo.
+     */
+    public function mount(string $agendamento): void
     {
-        $this->agendamento = $agendamento->load(['pagamentos', 'servicos', 'barbeiro']);
+        $registro = Agendamento::withoutGlobalScope('filial')->findOrFail($agendamento);
+
+        app()->instance('filial.id', $registro->filial_id);
+
+        $this->reserva = $registro->load(['pagamentos', 'servicos', 'barbeiro']);
+    }
+
+    /** Ver CancelarAgendamento::boot() — mesmo motivo (rebind por request). */
+    public function boot(): void
+    {
+        if (isset($this->reserva) && $this->reserva->exists) {
+            app()->instance('filial.id', $this->reserva->filial_id);
+        }
     }
 
     public function statusPagamento(): string
     {
-        if (in_array($this->agendamento->status, ['confirmado', 'concluido'], true)) {
+        if (in_array($this->reserva->status, ['confirmado', 'concluido'], true)) {
             return 'aprovado';
         }
 
-        $ultimoPagamento = $this->agendamento->pagamentos->sortByDesc('id')->first();
+        $ultimoPagamento = $this->reserva->pagamentos->sortByDesc('id')->first();
 
         return match ($ultimoPagamento?->mp_status) {
             'rejected', 'cancelled' => 'rejeitado',
@@ -52,7 +81,7 @@ class RetornoPagamento extends Component
         CriarPreferenciaMercadoPagoAction $criarPreferencia,
         DisponibilidadeService $disponibilidade,
     ): mixed {
-        if ($this->agendamento->status !== 'cancelado') {
+        if ($this->reserva->status !== 'cancelado') {
             return null;
         }
 
@@ -60,16 +89,16 @@ class RetornoPagamento extends Component
         // entre a recusa e o retry — sem essa checagem, reabrir como
         // 'pendente' e gerar uma preferência nova podia dar origem a um
         // double-booking.
-        if (! $disponibilidade->estaLivre($this->agendamento->barbeiro, $this->agendamento->data_hora_inicio, $this->agendamento->data_hora_fim)) {
+        if (! $disponibilidade->estaLivre($this->reserva->barbeiro, $this->reserva->data_hora_inicio, $this->reserva->data_hora_fim)) {
             $this->erro = __('agendamento.horario_ja_ocupado_reintentar');
 
             return null;
         }
 
-        $this->agendamento->update(['status' => 'pendente']);
+        $this->reserva->update(['status' => 'pendente']);
 
-        $valorTotal = (float) $this->agendamento->servicos->sum('pivot.preco_cobrado');
-        $resultado = $criarPreferencia->handle($this->agendamento, $valorTotal);
+        $valorTotal = (float) $this->reserva->servicos->sum('pivot.preco_cobrado');
+        $resultado = $criarPreferencia->handle($this->reserva, $valorTotal);
 
         return $this->redirect($resultado['init_point']);
     }

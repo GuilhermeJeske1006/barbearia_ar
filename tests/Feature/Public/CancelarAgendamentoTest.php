@@ -13,11 +13,18 @@ use App\Notifications\AgendamentoCancelado;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\URL;
 use Livewire\Livewire;
 use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
+/**
+ * Testes em nível de componente: passam direto pelo construtor do Livewire
+ * (Livewire::test), nunca pelo roteamento/middleware real — por isso
+ * app()->instance('barbearia.id'|'filial.id', ...) aqui em setUp() é
+ * legítimo (não há request de verdade cujo comportamento isso possa
+ * mascarar). Cobertura do binding via rota real está em
+ * CancelarAgendamentoHttpTest.
+ */
 class CancelarAgendamentoTest extends TestCase
 {
     use CriaFilialParaTeste, RefreshDatabase;
@@ -75,7 +82,7 @@ class CancelarAgendamentoTest extends TestCase
     {
         Notification::fake();
 
-        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento->id])
             ->call('confirmarCancelamento')
             ->assertSet('cancelado', true);
 
@@ -96,10 +103,10 @@ class CancelarAgendamentoTest extends TestCase
         ]);
         $this->agendamento->update(['pagamento_id' => $pagamento->id]);
 
-        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento->id])
             ->assertSet('cancelado', false);
 
-        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento->id])
             ->call('confirmarCancelamento')
             ->assertSet('cancelado', false)
             ->assertSet('erro', fn ($erro) => ! empty($erro));
@@ -111,7 +118,7 @@ class CancelarAgendamentoTest extends TestCase
     {
         $this->agendamento->update(['status' => 'concluido']);
 
-        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento->id])
             ->call('confirmarCancelamento')
             ->assertSet('cancelado', false);
 
@@ -125,36 +132,10 @@ class CancelarAgendamentoTest extends TestCase
             'data_hora_fim' => Carbon::yesterday()->setTime(10, 30),
         ]);
 
-        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento])
+        Livewire::test(CancelarAgendamento::class, ['agendamento' => $this->agendamento->id])
             ->call('confirmarCancelamento')
             ->assertSet('cancelado', false);
 
         $this->assertSame('confirmado', $this->agendamento->fresh()->status);
-    }
-
-    public function test_url_sem_assinatura_valida_e_recusada(): void
-    {
-        $this->get(route('public.agendamento.cancelar', [
-            'barbearia' => $this->barbearia->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertForbidden();
-    }
-
-    public function test_agendamento_de_outra_barbearia_da_404(): void
-    {
-        $outra = Barbearia::create(['nome' => 'Outra', 'slug' => 'outra']);
-
-        $this->get(URL::signedRoute('public.agendamento.cancelar', [
-            'barbearia' => $outra->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertNotFound();
-    }
-
-    public function test_rota_completa_renderiza_via_http(): void
-    {
-        $this->get(URL::signedRoute('public.agendamento.cancelar', [
-            'barbearia' => $this->barbearia->slug,
-            'agendamento' => $this->agendamento->id,
-        ]))->assertOk()->assertSee(__('agendamento.cancelar_confirmar_titulo'));
     }
 }

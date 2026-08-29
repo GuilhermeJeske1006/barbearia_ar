@@ -25,4 +25,9 @@ return [
 
     'toast_novo_titulo' => 'Nuevo turno',
     'toast_novo_mensagem' => ':cliente a las :hora',
+
+    'minhas_reservas_assunto' => 'Tus reservas — :barbearia',
+    'minhas_reservas_linha1' => 'Acá está el enlace para ver y gestionar tus turnos en :barbearia.',
+    'ver_minhas_reservas' => 'Ver mis reservas',
+    'whatsapp_minhas_reservas' => '¡Hola :nome! Mirá tus turnos en :barbearia acá: :link',
 ];

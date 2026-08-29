@@ -25,4 +25,9 @@ return [
 
     'toast_novo_titulo' => 'Novo agendamento',
     'toast_novo_mensagem' => ':cliente às :hora',
+
+    'minhas_reservas_assunto' => 'Suas reservas — :barbearia',
+    'minhas_reservas_linha1' => 'Aqui está o link para ver e gerenciar seus agendamentos em :barbearia.',
+    'ver_minhas_reservas' => 'Ver minhas reservas',
+    'whatsapp_minhas_reservas' => 'Olá :nome! Veja seus agendamentos em :barbearia aqui: :link',
 ];

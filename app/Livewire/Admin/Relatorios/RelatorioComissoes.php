@@ -100,7 +100,7 @@ class RelatorioComissoes extends Component
 
         return response()->streamDownload(function () use ($comissoes) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Data', 'Barbeiro', 'Valor', 'Status']);
+            fputcsv($out, [__('painel.data'), __('painel.barbeiro'), __('painel.valor'), __('painel.status')]);
 
             foreach ($comissoes as $comissao) {
                 fputcsv($out, [

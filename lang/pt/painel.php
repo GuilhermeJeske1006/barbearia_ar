@@ -116,6 +116,7 @@ return [
     'whatsapp_conectar' => 'Conectar WhatsApp',
     'whatsapp_conectando' => 'Conectando…',
     'whatsapp_gerar_novo_qr' => 'Gerar novo QR code',
+    'whatsapp_qr_code_alt' => 'Código QR do WhatsApp',
     'whatsapp_escanear_ajuda' => 'No WhatsApp do número da barbearia: Aparelhos conectados → Conectar um aparelho, e escaneie o código acima.',
     'whatsapp_erro_criar_sessao' => 'Não foi possível criar a sessão no wuzapi. Tente novamente.',
     'whatsapp_notificacoes_titulo' => 'Notificações por WhatsApp',

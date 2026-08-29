@@ -152,7 +152,7 @@ class RelatorioDespesas extends Component
 
         return response()->streamDownload(function () use ($despesas) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Data', 'Categoria', 'Descrição', 'Barbeiro', 'Valor']);
+            fputcsv($out, [__('painel.data'), __('despesas.categoria'), __('painel.descricao'), __('painel.barbeiro'), __('painel.valor')]);
 
             foreach ($despesas as $despesa) {
                 fputcsv($out, [

@@ -235,6 +235,43 @@ class CrudUsuarioTest extends TestCase
         $this->assertDatabaseMissing('barbeiros', ['user_id' => $atendente->id]);
     }
 
+    public function test_com_mais_de_uma_filial_exige_filial_para_atendente(): void
+    {
+        Filial::create(['barbearia_id' => $this->barbearia->id, 'nome' => 'Outra Filial', 'ativo' => true]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CrudUsuario::class)
+            ->call('criar')
+            ->set('nome', 'Maria')
+            ->set('email', 'maria@example.com')
+            ->set('senha', 'senha-forte-123')
+            ->set('telefone', '11999998888')
+            ->set('role', 'atendente')
+            ->set('filialId', '')
+            ->call('salvar')
+            ->assertHasErrors(['filialId']);
+    }
+
+    public function test_com_mais_de_uma_filial_vincula_atendente_a_filial_escolhida(): void
+    {
+        $outraFilial = Filial::create(['barbearia_id' => $this->barbearia->id, 'nome' => 'Outra Filial', 'ativo' => true]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CrudUsuario::class)
+            ->call('criar')
+            ->set('nome', 'Maria')
+            ->set('email', 'maria@example.com')
+            ->set('senha', 'senha-forte-123')
+            ->set('telefone', '11999998888')
+            ->set('role', 'atendente')
+            ->set('filialId', (string) $outraFilial->id)
+            ->call('salvar')
+            ->assertHasNoErrors();
+
+        $usuario = User::where('email', 'maria@example.com')->firstOrFail();
+        $this->assertSame($outraFilial->id, $usuario->filial_atual_id);
+    }
+
     public function test_usuario_sem_permissao_nao_acessa_a_rota(): void
     {
         $atendente = User::create([

@@ -32,16 +32,19 @@
                     </x-ui.select>
                     <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" />
                 </div>
+            @else
+                <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
+                    <option value="atendente">{{ __('painel.papel_atendente') }}</option>
+                    <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
+                </x-ui.select>
+            @endif
+
+            @if ($role === 'barbeiro' || $this->temMultiplasFiliais())
                 <x-ui.select label="{{ __('painel.filial') }}" id="filialId" name="filialId" wire:model="filialId">
                     <option value="">{{ __('painel.selecione') }}</option>
                     @foreach ($this->filiaisDisponiveis() as $filial)
                         <option value="{{ $filial->id }}">{{ $filial->nome }}</option>
                     @endforeach
-                </x-ui.select>
-            @else
-                <x-ui.select label="{{ __('painel.papel') }}" id="role" name="role" wire:model.live="role">
-                    <option value="atendente">{{ __('painel.papel_atendente') }}</option>
-                    <option value="barbeiro">{{ __('painel.papel_barbeiro') }}</option>
                 </x-ui.select>
             @endif
 

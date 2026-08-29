@@ -51,13 +51,23 @@ class CrudUsuario extends Component
             'telefone' => ['required', 'string', 'max:30'],
             'role' => ['required', Rule::in(self::ROLES_ATRIBUIVEIS)],
             'percentualComissao' => [$this->role === 'barbeiro' ? 'required' : 'nullable', 'numeric', 'min:0', 'max:100'],
-            'filialId' => [$this->role === 'barbeiro' ? 'required' : 'nullable', 'integer'],
+            'filialId' => [($this->role === 'barbeiro' || $this->temMultiplasFiliais()) ? 'required' : 'nullable', 'integer'],
         ];
     }
 
     public function filiaisDisponiveis(): Collection
     {
         return Filial::where('ativo', true)->orderBy('nome')->get();
+    }
+
+    /**
+     * Com mais de uma filial ativa, a filial do usuário deixa de ter um
+     * default óbvio — o dono precisa escolher explicitamente, não importa
+     * o papel (atendente também é escopado por filial via BelongsToFilial).
+     */
+    public function temMultiplasFiliais(): bool
+    {
+        return Filial::where('ativo', true)->count() > 1;
     }
 
     public function criar(): void
@@ -80,7 +90,8 @@ class CrudUsuario extends Component
         $this->role = $user->tipo;
         $barbeiro = $user->barbeiro()->first();
         $this->percentualComissao = (string) $barbeiro?->percentual_comissao;
-        $this->filialId = $barbeiro?->filial_id ? (string) $barbeiro->filial_id : '';
+        $filialId = $user->filial_atual_id ?? $barbeiro?->filial_id;
+        $this->filialId = $filialId ? (string) $filialId : '';
         $this->mostrarForm = true;
     }
 
@@ -94,6 +105,7 @@ class CrudUsuario extends Component
                 $this->nome,
                 $this->telefone,
                 $this->role,
+                $this->filialId !== '' ? (int) $this->filialId : null,
             );
         } else {
             $criar->handle(

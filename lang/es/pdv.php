@@ -2,6 +2,9 @@
 
 return [
     'titulo' => 'Venta directa',
+    'bem_vindo' => '¡Bienvenido!',
+    'bem_vindo_desc' => 'Tocá la pantalla para empezar una nueva atención.',
+    'comecar' => 'Empezar',
     'dados_cliente' => 'Datos del cliente',
     'ajuda_telefone' => 'Usamos el teléfono para reconocer clientes que ya vinieron antes y para mandar recordatorio del turno.',
     'cliente_reconhecido' => 'Cliente reconocido',

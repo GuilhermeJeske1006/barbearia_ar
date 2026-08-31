@@ -1,4 +1,21 @@
 <div>
+    @if (! $iniciado)
+        <div class="flex min-h-[calc(100vh-62px)] flex-col items-center justify-center px-6 py-16 text-center lg:min-h-screen">
+            @if (app()->bound('barbearia') && app('barbearia')->logo_url)
+                <img src="{{ app('barbearia')->logo_url }}" class="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-lg" alt="{{ app('barbearia')->nome }}">
+            @else
+                <div class="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-brand-500 font-display text-4xl text-white shadow-lg">
+                    {{ mb_strtoupper(mb_substr(app()->bound('barbearia') ? app('barbearia')->nome : config('app.name'), 0, 1)) }}
+                </div>
+            @endif
+
+            <h1 class="mt-6 font-display text-3xl leading-tight tracking-wide">{{ __('agendamento.bem_vindo') }}</h1>
+            <p class="mt-1.5 text-lg font-semibold text-slate-600 dark:text-slate-300">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</p>
+            <p class="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">{{ __('agendamento.bem_vindo_desc') }}</p>
+
+            <x-ui.button size="lg" wire:click="iniciar" class="mt-8">{{ __('agendamento.comecar') }} →</x-ui.button>
+        </div>
+    @else
     <div class="lg:grid lg:grid-cols-[.86fr_1.5fr] lg:items-stretch">
         {{-- Painel de marca + resumo persistente (desktop) --}}
         @if ($etapa < 7)
@@ -143,7 +160,15 @@
                         @else
                             <x-ui.avatar :name="$barbeiro->nome" />
                         @endif
-                        <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ $barbeiro->nome }}</span>
+                        <span class="min-w-0">
+                            <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ $barbeiro->nome }}</span>
+                            @if ($barbeiro->pais)
+                                <span class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ $barbeiro->pais_bandeira }} {{ $barbeiro->pais_nome }}</span>
+                            @endif
+                            @if ($barbeiro->descricao)
+                                <span class="block truncate text-[11px] text-slate-500 dark:text-slate-400">{{ $barbeiro->descricao }}</span>
+                            @endif
+                        </span>
                     </label>
                 @endforeach
             </div>
@@ -408,4 +433,5 @@
             @endif
         </div>
     </div>
+    @endif
 </div>

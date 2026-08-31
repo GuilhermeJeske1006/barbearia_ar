@@ -1,4 +1,22 @@
 <div>
+    @if (! $iniciado)
+        @php $barbeariaAtual = app()->bound('barbearia') ? app('barbearia') : null; @endphp
+        <div class="flex min-h-[calc(100vh-140px)] flex-col items-center justify-center py-16 text-center">
+            @if ($barbeariaAtual?->logo_path)
+                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" class="h-28 w-28 rounded-2xl object-cover shadow-lg">
+            @else
+                <div class="flex h-28 w-28 items-center justify-center rounded-2xl bg-brand-500 font-display text-5xl shadow-lg">
+                    {{ mb_strtoupper(mb_substr($barbeariaAtual?->nome ?? config('app.name'), 0, 1)) }}
+                </div>
+            @endif
+
+            <h1 class="mt-7 font-display text-4xl leading-tight tracking-wide">{{ __('pdv.bem_vindo') }}</h1>
+            <p class="mt-2 text-xl font-semibold text-slate-300">{{ $barbeariaAtual?->nome ?? config('app.name') }}</p>
+            <p class="mt-2 max-w-xs text-sm text-slate-500">{{ __('pdv.bem_vindo_desc') }}</p>
+
+            <x-ui.button size="lg" wire:click="iniciar" class="mt-10">{{ __('pdv.comecar') }} →</x-ui.button>
+        </div>
+    @else
     @if (in_array($etapa, [1, 2, 3, 4]))
         <div class="mb-5 flex items-center gap-4">
             <div class="flex flex-1 gap-1.5" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="{{ $etapa }}" aria-label="{{ __('pdv.passo', ['n' => $etapa]) }}">
@@ -521,5 +539,6 @@
                 {{ __('pdv.cancelar_espera') }}
             </button>
         </div>
+    @endif
     @endif
 </div>

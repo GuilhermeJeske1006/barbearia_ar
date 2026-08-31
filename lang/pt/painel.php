@@ -36,6 +36,8 @@ return [
     'criar_barbearia' => 'Cadastre sua barbearia',
 
     'nome' => 'Nome',
+    'pais' => 'País',
+    'selecionar_pais' => 'Selecione o país',
     'percentual_comissao' => 'Comissão (%)',
     'ativo' => 'Ativo',
     'aceita_online' => 'Aceita agendamento online',
@@ -224,6 +226,8 @@ return [
     'hint_percentual_comissao' => 'Percentual repassado ao barbeiro por atendimento realizado.',
     'hint_servicos_barbeiro' => 'Marque os serviços que este barbeiro realiza. Nem todo barbeiro faz todos os serviços.',
     'hint_duracao_override' => 'Se este barbeiro leva um tempo diferente para algum serviço, informe os minutos ao lado. Em branco usa a duração padrão do serviço.',
+    'placeholder_descricao_barbeiro' => 'Conte um pouco sobre a experiência e o estilo deste barbeiro...',
+    'hint_descricao_barbeiro' => 'Aparece no perfil do barbeiro quando ele é apresentado ao cliente.',
     'minutos_abrev' => 'min',
     'placeholder_nome_completo' => 'Ex: Maria Souza',
     'placeholder_nome_barbearia' => 'Ex: Barbearia Vintage',

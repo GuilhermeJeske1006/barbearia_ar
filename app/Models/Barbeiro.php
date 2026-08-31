@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Paises;
 use App\Traits\BelongsToBarbearia;
 use App\Traits\BelongsToFilial;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ class Barbeiro extends Model
     use BelongsToBarbearia, BelongsToFilial, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'user_id', 'barbearia_id', 'filial_id', 'nome', 'foto_path', 'percentual_comissao',
+        'user_id', 'barbearia_id', 'filial_id', 'nome', 'foto_path', 'pais', 'descricao', 'percentual_comissao',
         'mp_user_id', 'mp_access_token', 'mp_refresh_token', 'ativo', 'aceita_online',
     ];
 
@@ -26,6 +27,16 @@ class Barbeiro extends Model
         'ativo' => 'boolean',
         'aceita_online' => 'boolean',
     ];
+
+    public function getPaisNomeAttribute(): ?string
+    {
+        return Paises::nome($this->pais);
+    }
+
+    public function getPaisBandeiraAttribute(): ?string
+    {
+        return Paises::bandeira($this->pais);
+    }
 
     public function user(): BelongsTo
     {

@@ -2,6 +2,9 @@
 
 return [
     'titulo' => 'Reservar turno',
+    'bem_vindo' => '¡Bienvenido!',
+    'bem_vindo_desc' => 'Tocá para empezar tu reserva.',
+    'comecar' => 'Empezar',
     'elegir_filial' => 'Elegí la sucursal',
     'elegir_servicio' => 'Elegí el servicio',
     'elegir_barbero' => 'Elegí el barbero',

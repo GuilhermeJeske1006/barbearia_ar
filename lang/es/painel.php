@@ -36,6 +36,8 @@ return [
     'criar_barbearia' => 'Registrá tu barbería',
 
     'nome' => 'Nombre',
+    'pais' => 'País',
+    'selecionar_pais' => 'Seleccioná el país',
     'percentual_comissao' => 'Comisión (%)',
     'ativo' => 'Activo',
     'aceita_online' => 'Acepta reservas online',
@@ -224,6 +226,8 @@ return [
     'hint_percentual_comissao' => 'Porcentaje que recibe el barbero por cada atención.',
     'hint_servicos_barbeiro' => 'Marcá los servicios que realiza este barbero. No todos los barberos hacen todos los servicios.',
     'hint_duracao_override' => 'Si este barbero tarda un tiempo distinto en algún servicio, indicá los minutos al lado. Vacío usa la duración estándar del servicio.',
+    'placeholder_descricao_barbeiro' => 'Contá un poco sobre la experiencia y el estilo de este barbero...',
+    'hint_descricao_barbeiro' => 'Aparece en el perfil del barbero cuando se le presenta al cliente.',
     'minutos_abrev' => 'min',
     'placeholder_nome_completo' => 'Ej: María González',
     'placeholder_nome_barbearia' => 'Ej: Barbería Vintage',

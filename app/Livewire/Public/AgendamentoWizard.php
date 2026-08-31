@@ -27,6 +27,8 @@ class AgendamentoWizard extends Component
 {
     private const SEM_PREFERENCIA = 'qualquer';
 
+    public bool $iniciado = false;
+
     public int $etapa = 1;
 
     public string $filialSelecionada = '';
@@ -62,6 +64,11 @@ class AgendamentoWizard extends Component
      * Livewire, não confiável pra reler o header a cada uma.
      */
     public bool $dispositivoMovel = false;
+
+    public function iniciar(): void
+    {
+        $this->iniciado = true;
+    }
 
     public function mount(): void
     {

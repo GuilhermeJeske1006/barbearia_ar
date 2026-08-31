@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Barbeiros;
 
 use App\Models\Barbeiro;
 use App\Models\Servico;
+use App\Support\Paises;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
@@ -21,6 +22,12 @@ class CrudBarbeiro extends Component
 
     #[Validate('required|string|max:255')]
     public string $nome = '';
+
+    #[Validate('nullable|string|size:2')]
+    public string $pais = '';
+
+    #[Validate('nullable|string|max:1000')]
+    public string $descricao = '';
 
     #[Validate('required|numeric|min:0|max:100')]
     public string $percentualComissao = '';
@@ -44,7 +51,7 @@ class CrudBarbeiro extends Component
 
     public function criar(): void
     {
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
+        $this->reset(['editandoId', 'nome', 'pais', 'descricao', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
         $this->ativo = true;
         $this->aceitaOnline = true;
         $this->mostrarForm = true;
@@ -56,6 +63,8 @@ class CrudBarbeiro extends Component
 
         $this->editandoId = $barbeiro->id;
         $this->nome = $barbeiro->nome;
+        $this->pais = $barbeiro->pais ?? '';
+        $this->descricao = $barbeiro->descricao ?? '';
         $this->percentualComissao = (string) $barbeiro->percentual_comissao;
         $this->ativo = $barbeiro->ativo;
         $this->aceitaOnline = $barbeiro->aceita_online;
@@ -79,6 +88,12 @@ class CrudBarbeiro extends Component
         return Servico::where('ativo', true)->orderBy('nome')->get();
     }
 
+    /** @return array<string, string> código => nome, pro select de país */
+    public function paisesParaForm(): array
+    {
+        return Paises::lista();
+    }
+
     public function salvar(): void
     {
         $this->validate();
@@ -87,6 +102,8 @@ class CrudBarbeiro extends Component
             ['id' => $this->editandoId],
             [
                 'nome' => $this->nome,
+                'pais' => $this->pais !== '' ? $this->pais : null,
+                'descricao' => $this->descricao !== '' ? $this->descricao : null,
                 'percentual_comissao' => $this->percentualComissao,
                 'ativo' => $this->ativo,
                 'aceita_online' => $this->aceitaOnline,
@@ -114,14 +131,14 @@ class CrudBarbeiro extends Component
         }
 
         $this->mostrarForm = false;
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
+        $this->reset(['editandoId', 'nome', 'pais', 'descricao', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
     }
 
     public function cancelar(): void
     {
         $this->mostrarForm = false;
         $this->resetValidation();
-        $this->reset(['editandoId', 'nome', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
+        $this->reset(['editandoId', 'nome', 'pais', 'descricao', 'percentualComissao', 'ativo', 'aceitaOnline', 'foto', 'servicosSelecionados', 'duracoesOverride']);
     }
 
     public function confirmarRemocao(int $id): void

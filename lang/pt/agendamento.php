@@ -2,6 +2,9 @@
 
 return [
     'titulo' => 'Agendar horário',
+    'bem_vindo' => 'Bem-vindo!',
+    'bem_vindo_desc' => 'Toque para começar seu agendamento.',
+    'comecar' => 'Começar',
     'elegir_filial' => 'Escolha a unidade',
     'elegir_servicio' => 'Escolha o serviço',
     'elegir_barbero' => 'Escolha o barbeiro',

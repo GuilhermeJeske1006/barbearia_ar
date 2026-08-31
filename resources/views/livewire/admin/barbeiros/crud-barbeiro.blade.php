@@ -6,43 +6,62 @@
         @endcan
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_barbeiro') }}" onClose="cancelar" maxWidth="lg">
-        <form wire:submit="salvar" class="space-y-4">
-            <x-ui.upload-foto name="foto" id="foto-barbeiro" label="{{ __('painel.foto') }}">
-                @if ($foto)
-                    <img src="{{ $foto->temporaryUrl() }}" class="h-full w-full object-cover">
-                @elseif ($editandoId && ($fotoAtual = \App\Models\Barbeiro::find($editandoId)?->foto_path))
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($fotoAtual) }}" class="h-full w-full object-cover">
-                @else
-                    <x-ui.avatar :name="$nome" size="lg" />
-                @endif
-            </x-ui.upload-foto>
-
-            <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_barbeiro') }}" autofocus />
-
-            <div class="grid grid-cols-2 gap-4">
-                <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" hint="{{ __('painel.hint_percentual_comissao') }}" />
-                <div class="flex flex-col justify-center gap-2">
-                    <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
-                    <x-ui.checkbox wire:model="aceitaOnline" :label="__('painel.aceita_online')" />
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_barbeiro') }}" onClose="cancelar" maxWidth="2xl">
+        <form wire:submit="salvar" class="space-y-5">
+            <div class="flex flex-wrap gap-4 md:flex-nowrap">
+                <div class="shrink-0">
+                    <x-ui.upload-foto name="foto" id="foto-barbeiro" label="{{ __('painel.foto') }}">
+                        @if ($foto)
+                            <img src="{{ $foto->temporaryUrl() }}" class="h-full w-full object-cover">
+                        @elseif ($editandoId && ($fotoAtual = \App\Models\Barbeiro::find($editandoId)?->foto_path))
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($fotoAtual) }}" class="h-full w-full object-cover">
+                        @else
+                            <x-ui.avatar :name="$nome" size="lg" />
+                        @endif
+                    </x-ui.upload-foto>
                 </div>
+
+                <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_barbeiro') }}" autofocus class="sm:col-span-2" />
+
+                    <x-ui.select label="{{ __('painel.pais') }}" id="pais" name="pais" wire:model="pais">
+                        <option value="">{{ __('painel.selecionar_pais') }}</option>
+                        @foreach ($this->paisesParaForm() as $codigo => $nomePais)
+                            <option value="{{ $codigo }}">{{ \App\Support\Paises::bandeira($codigo) }} {{ $nomePais }}</option>
+                        @endforeach
+                    </x-ui.select>
+
+                    <x-ui.input label="{{ __('painel.percentual_comissao') }}" id="percentualComissao" name="percentualComissao" type="number" step="0.01" min="0" max="100" wire:model="percentualComissao" placeholder="{{ __('painel.placeholder_percentual_comissao') }}" suffix="%" hint="{{ __('painel.hint_percentual_comissao') }}" />
+                </div>
+            </div>
+
+            <div>
+                <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_barbeiro') }}" rows="2" />
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_descricao_barbeiro') }}</p>
+            </div>
+
+            <div class="flex gap-6">
+                <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
+                <x-ui.checkbox wire:model="aceitaOnline" :label="__('painel.aceita_online')" />
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.servicos') }}</label>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_servicos_barbeiro') }}</p>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ __('painel.hint_duracao_override') }}</p>
-                <div class="mt-2 space-y-1.5">
+                <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
                     @foreach ($this->servicosParaForm() as $servico)
-                        <div class="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5">
-                            <x-ui.checkbox wire:model="servicosSelecionados" value="{{ $servico->id }}" :label="$servico->nome" class="flex-1" />
-                            <input
-                                type="number" min="1" step="1"
-                                wire:model="duracoesOverride.{{ $servico->id }}"
-                                placeholder="{{ $servico->duracao_minutos }}"
-                                class="w-20 rounded-lg border-slate-300 bg-white text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                            >
-                            <span class="text-xs text-slate-400">{{ __('painel.minutos_abrev') }}</span>
+                        <div class="flex items-center gap-3 rounded-lg border-2 border-slate-200 px-3 py-2 transition-colors has-checked:border-brand-300 has-checked:bg-brand-50/60 dark:border-slate-800 dark:has-checked:border-brand-500/30 dark:has-checked:bg-brand-500/10">
+                            <x-ui.checkbox wire:model="servicosSelecionados" value="{{ $servico->id }}" :label="$servico->nome" class="min-w-0 flex-1" />
+                            <div class="flex shrink-0 items-center gap-1.5 rounded-lg border-2 border-slate-300 bg-paper pl-2.5 pr-3 transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/25 dark:border-slate-700 dark:bg-slate-950">
+                                <input
+                                    type="number" min="1" step="1"
+                                    wire:model="duracoesOverride.{{ $servico->id }}"
+                                    placeholder="{{ $servico->duracao_minutos }}"
+                                    class="w-14 border-0 bg-transparent py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 dark:text-slate-100 dark:placeholder:text-slate-500"
+                                >
+                                <span class="text-xs text-slate-400">{{ __('painel.minutos_abrev') }}</span>
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -86,7 +105,7 @@
                                 <x-ui.avatar :name="$barbeiro->nome" size="sm" />
                             @endif
                         </td>
-                        <td class="px-4 py-2.5">{{ $barbeiro->nome }}</td>
+                        <td class="px-4 py-2.5">{{ $barbeiro->nome }} @if($barbeiro->pais){{ $barbeiro->pais_bandeira }}@endif</td>
                         <td class="px-4 py-2.5">{{ $barbeiro->percentual_comissao }}%</td>
                         <td class="px-4 py-2.5">
                             <x-ui.badge :tone="$barbeiro->ativo ? 'green' : 'slate'">{{ $barbeiro->ativo ? __('painel.sim') : __('painel.nao') }}</x-ui.badge>

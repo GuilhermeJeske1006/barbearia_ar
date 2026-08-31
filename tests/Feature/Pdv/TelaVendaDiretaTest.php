@@ -250,6 +250,7 @@ class TelaVendaDiretaTest extends TestCase
     {
         $component = Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
+            ->call('iniciar')
             ->assertSet('modoInicial', 'menu')
             ->assertSee(__('pdv.ja_possui_agendamento'))
             ->assertSee(__('pdv.verificar_horario'))
@@ -287,6 +288,7 @@ class TelaVendaDiretaTest extends TestCase
 
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
+            ->call('iniciar')
             ->call('novaVendaAvulsa')
             ->assertSee('Pomada')
             ->assertDontSee('Talco (insumo)');
@@ -304,6 +306,7 @@ class TelaVendaDiretaTest extends TestCase
 
         Livewire::actingAs($this->dono)
             ->test(TelaVendaDireta::class)
+            ->call('iniciar')
             ->call('novaVendaAvulsa')
             ->assertSee('Corte')
             ->assertDontSee('Barba Norte');

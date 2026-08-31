@@ -38,6 +38,8 @@ class TelaVendaDireta extends Component
     /** Duração usada só pra sondar horário livre, sem serviço escolhido ainda. */
     private const DURACAO_PADRAO_SLOT_MINUTOS = 30;
 
+    public bool $iniciado = false;
+
     public int $etapa = 0;
 
     /** Sub-tela da etapa 0: 'menu' (cards iniciais), 'busca' ou 'agenda'. */
@@ -75,6 +77,11 @@ class TelaVendaDireta extends Component
     public ?string $erro = null;
 
     public string $categoriaFiltro = 'todos';
+
+    public function iniciar(): void
+    {
+        $this->iniciado = true;
+    }
 
     public function confirmarCliente(): void
     {
@@ -705,7 +712,7 @@ class TelaVendaDireta extends Component
     public function novaVenda(): void
     {
         $this->reset([
-            'etapa', 'modoInicial', 'abaVerificar', 'buscaTermo', 'agendamentoVinculadoId', 'agendamentoJaPago',
+            'iniciado', 'etapa', 'modoInicial', 'abaVerificar', 'buscaTermo', 'agendamentoVinculadoId', 'agendamentoJaPago',
             'barbeiroId', 'servicosSelecionados', 'produtosSelecionados',
             'clienteTelefone', 'clienteNome', 'metodoPagamento', 'vendaConcluida',
             'mpInitPoint', 'agendamentoAguardandoId', 'erro', 'categoriaFiltro',

@@ -176,6 +176,7 @@ class AgendamentoWizardTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
 
         Livewire::test(AgendamentoWizard::class)
+            ->call('iniciar')
             ->assertSee('Corte')
             ->assertDontSee('Barba Norte');
     }

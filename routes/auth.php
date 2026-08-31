@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ComprovanteDownloadController;
 use App\Http\Controllers\MercadoPagoConnectController;
 use App\Livewire\Admin\Agenda\CalendarioAgenda;
 use App\Livewire\Admin\Barbeiros\BloqueiosBarbeiro;
@@ -7,11 +8,12 @@ use App\Livewire\Admin\Barbeiros\CrudBarbeiro;
 use App\Livewire\Admin\Barbeiros\EscalaBarbeiro;
 use App\Livewire\Admin\Billing\MinhaAssinatura;
 use App\Livewire\Admin\Clientes\CrudCliente;
-use App\Livewire\Admin\Configuracoes\ConfigMercadoPago;
+use App\Livewire\Admin\Configuracoes\ConfigPagamentos;
 use App\Livewire\Admin\Configuracoes\ConfiguracoesBarbearia;
 use App\Livewire\Admin\Configuracoes\ConfigWhatsApp;
 use App\Livewire\Admin\Despesas\CrudDespesa;
 use App\Livewire\Admin\Filiais\CrudFilial;
+use App\Livewire\Admin\Pagamentos\PagamentosPendentes;
 use App\Livewire\Admin\Produtos\ControleEstoque;
 use App\Livewire\Admin\Produtos\CrudProduto;
 use App\Livewire\Admin\Relatorios\RelatorioComissoes;
@@ -95,11 +97,20 @@ Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativ
     Route::get('/filiais', CrudFilial::class)
         ->middleware('can:filiais.gerenciar')->name('admin.filiais');
 
-    Route::get('/mercadopago', ConfigMercadoPago::class)
-        ->middleware('can:barbearia.gerenciar')->name('admin.mercadopago');
+    Route::get('/configuracoes/pagamentos', ConfigPagamentos::class)
+        ->middleware('can:barbearia.gerenciar')->name('admin.pagamentos');
 
     Route::get('/mercadopago/conectar', [MercadoPagoConnectController::class, 'redirecionar'])
         ->middleware('can:barbearia.gerenciar')->name('mercadopago.conectar');
+
+    // Reaproveita 'financeiro.gerenciar' (já usada por despesas) em vez de
+    // criar uma permissão só pra isto — confirmar/recusar pagamento é uma
+    // decisão financeira do mesmo tipo, e o dono é quem já tem esse acesso.
+    Route::get('/pagamentos-pendentes', PagamentosPendentes::class)
+        ->middleware('can:financeiro.gerenciar')->name('admin.pagamentos-pendentes');
+
+    Route::get('/pagamentos/{pagamento}/comprovante', ComprovanteDownloadController::class)
+        ->middleware('can:financeiro.gerenciar')->name('admin.pagamentos.comprovante');
 
     Route::get('/whatsapp', ConfigWhatsApp::class)
         ->middleware('can:barbearia.gerenciar')->name('admin.whatsapp');

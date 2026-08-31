@@ -199,37 +199,56 @@
                                                 {{ $agendamento->data_hora_fim->format('H:i') }} · {{ $agendamento->cliente->nome }}
                                             </button>
 
-                                            <div x-show="open" @click.outside="open = false" x-cloak
-                                                class="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-3 shadow-card">
-                                                <div class="flex items-center justify-between">
-                                                    <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $agendamento->cliente->nome }}</span>
-                                                    <x-ui.status-agendamento :status="$agendamento->status" />
-                                                </div>
-                                                <p class="mt-1 text-xs text-slate-400">{{ $agendamento->servicos->pluck('nome')->join(', ') }}</p>
-                                                <p class="text-xs text-slate-400">{{ $agendamento->data_hora_inicio->format('H:i') }}–{{ $agendamento->data_hora_fim->format('H:i') }}</p>
+                                            <div x-show="open" x-cloak
+                                                class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" x-on:keydown.escape.window="open = false">
+                                                <div class="fixed inset-0 bg-slate-900/50" @click="open = false"></div>
 
-                                                @php $acoes = match ($agendamento->status) {
-                                                    'pendente', 'confirmado' => ['em_atendimento' => 'painel.iniciar_atendimento', 'no_show' => 'painel.marcar_no_show', 'cancelado' => 'painel.cancelar'],
-                                                    'em_atendimento' => ['cancelado' => 'painel.cancelar'],
-                                                    default => [],
-                                                }; @endphp
+                                                <div class="relative w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-3 shadow-xl">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $agendamento->cliente->nome }}</span>
+                                                        <x-ui.status-agendamento :status="$agendamento->status" />
+                                                    </div>
+                                                    <p class="mt-1 text-xs text-slate-400">{{ $agendamento->servicos->pluck('nome')->join(', ') }}</p>
+                                                    <p class="text-xs text-slate-400">{{ $agendamento->data_hora_inicio->format('H:i') }}–{{ $agendamento->data_hora_fim->format('H:i') }}</p>
 
-                                                <div class="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-100 dark:border-slate-800 pt-2.5">
-                                                    @if ($agendamento->status === 'em_atendimento')
-                                                        <button type="button"
-                                                            wire:click="abrirPagamento({{ $agendamento->id }})"
-                                                            class="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                                                            {{ __('painel.marcar_pago') }}
-                                                        </button>
+                                                    @php
+                                                        $acoes = match ($agendamento->status) {
+                                                            'pendente', 'confirmado' => ['em_atendimento' => 'painel.iniciar_atendimento', 'no_show' => 'painel.marcar_no_show', 'cancelado' => 'painel.cancelar'],
+                                                            'em_atendimento' => ['cancelado' => 'painel.cancelar'],
+                                                            default => [],
+                                                        };
+                                                        $pagamentoTransferenciaPendente = $agendamento->pagamentos->first();
+                                                    @endphp
+
+                                                    @if ($pagamentoTransferenciaPendente)
+                                                        <div class="mt-2.5 flex items-center justify-between gap-2 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-2 py-1.5">
+                                                            <span class="text-[11px] font-semibold text-amber-700 dark:text-amber-400">{{ __('painel.pagamento_aguardando_confirmacao') }}</span>
+                                                            <button type="button"
+                                                                wire:click="confirmarPagamentoTransferencia({{ $pagamentoTransferenciaPendente->id }})"
+                                                                wire:loading.attr="disabled"
+                                                                class="rounded-md bg-amber-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60">
+                                                                {{ __('painel.pagamento_confirmar') }}
+                                                            </button>
+                                                        </div>
                                                     @endif
-                                                    @foreach ($acoes as $novoStatus => $label)
-                                                        <button type="button"
-                                                            wire:click="transicionar({{ $agendamento->id }}, '{{ $novoStatus }}')"
-                                                            @if(in_array($novoStatus, ['cancelado', 'no_show'])) wire:confirm="{{ __('painel.confirmar_remocao') }}" @endif
-                                                            class="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                                                            {{ __($label) }}
-                                                        </button>
-                                                    @endforeach
+
+                                                    <div class="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-100 dark:border-slate-800 pt-2.5">
+                                                        @if ($agendamento->status === 'em_atendimento')
+                                                            <button type="button"
+                                                                wire:click="abrirPagamento({{ $agendamento->id }})"
+                                                                class="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                                                {{ __('painel.marcar_pago') }}
+                                                            </button>
+                                                        @endif
+                                                        @foreach ($acoes as $novoStatus => $label)
+                                                            <button type="button"
+                                                                wire:click="transicionar({{ $agendamento->id }}, '{{ $novoStatus }}')"
+                                                                @if(in_array($novoStatus, ['cancelado', 'no_show'])) wire:confirm="{{ __('painel.confirmar_remocao') }}" @endif
+                                                                class="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                                                {{ __($label) }}
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

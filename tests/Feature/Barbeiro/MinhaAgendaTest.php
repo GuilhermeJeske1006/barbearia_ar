@@ -155,4 +155,25 @@ class MinhaAgendaTest extends TestCase
             ->get(route('barbeiro.minha-agenda'))
             ->assertForbidden();
     }
+
+    public function test_verificar_novos_agendamentos_dispara_toast_so_pro_proprio_barbeiro(): void
+    {
+        $component = Livewire::actingAs($this->barbeiroUser)
+            ->test(MinhaAgenda::class)
+            ->set('ultimaChecagem', Carbon::now()->subMinute()->toDateTimeString());
+
+        $outroBarbeiro = Barbeiro::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Ana',
+            'percentual_comissao' => 40,
+        ]);
+        $this->criarAgendamento($outroBarbeiro, Carbon::today()->setTime(11, 0));
+        $this->criarAgendamento($this->barbeiro, Carbon::today()->setTime(16, 0));
+
+        $component->call('verificarNovosAgendamentos')
+            ->assertDispatched('agendamento-toast', titulo: __('notificacoes.toast_novo_titulo'), mensagem: __('notificacoes.toast_novo_mensagem', [
+                'cliente' => 'María',
+                'hora' => '16:00',
+            ]));
+    }
 }

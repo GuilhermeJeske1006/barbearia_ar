@@ -30,4 +30,7 @@ return [
     'minhas_reservas_linha1' => 'Aqui está o link para ver e gerenciar seus agendamentos em :barbearia.',
     'ver_minhas_reservas' => 'Ver minhas reservas',
     'whatsapp_minhas_reservas' => 'Olá :nome! Veja seus agendamentos em :barbearia aqui: :link',
+
+    'pagamento_transferencia_titulo' => 'Novo comprovante de transferência',
+    'pagamento_transferencia_mensagem' => ':nome enviou um comprovante. Revise em pagamentos pendentes.',
 ];

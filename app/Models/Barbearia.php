@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Barbearia extends Model
 {
@@ -83,7 +84,7 @@ class Barbearia extends Model
     public function getLogoUrlAttribute(): ?string
     {
         return $this->logo_path
-            ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->logo_path)
+            ? Storage::disk('public')->url($this->logo_path)
             : null;
     }
 
@@ -120,5 +121,18 @@ class Barbearia extends Model
     public function pagamentos(): HasMany
     {
         return $this->hasMany(Pagamento::class);
+    }
+
+    public function metodosPagamentoManuais(): HasMany
+    {
+        return $this->hasMany(MetodoPagamentoManual::class);
+    }
+
+    public function metodoTransferenciaAtivo(): ?MetodoPagamentoManual
+    {
+        return $this->metodosPagamentoManuais()
+            ->where('tipo', MetodoPagamentoManual::TIPO_TRANSFERENCIA_ALIAS)
+            ->where('ativo', true)
+            ->first();
     }
 }

@@ -546,4 +546,44 @@ class CalendarioAgendaTest extends TestCase
             ->get(route('admin.agenda'))
             ->assertForbidden();
     }
+
+    public function test_verificar_novos_agendamentos_dispara_toast_para_cada_criado_desde_a_ultima_checagem(): void
+    {
+        $component = Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->set('ultimaChecagem', Carbon::now()->subMinute()->toDateTimeString());
+
+        $cliente = Cliente::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Novo Cliente',
+            'telefone' => '333',
+        ]);
+
+        Agendamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'barbeiro_id' => $this->barbeiro->id,
+            'cliente_id' => $cliente->id,
+            'criado_por' => 'cliente_online',
+            'data_hora_inicio' => Carbon::today()->setTime(15, 0),
+            'data_hora_fim' => Carbon::today()->setTime(15, 30),
+            'status' => 'confirmado',
+        ]);
+
+        $component->call('verificarNovosAgendamentos')
+            ->assertDispatched('agendamento-toast', titulo: __('notificacoes.toast_novo_titulo'), mensagem: __('notificacoes.toast_novo_mensagem', [
+                'cliente' => 'Novo Cliente',
+                'hora' => '15:00',
+            ]));
+    }
+
+    public function test_verificar_novos_agendamentos_nao_dispara_toast_de_novo_pro_mesmo_agendamento(): void
+    {
+        $component = Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->set('ultimaChecagem', Carbon::now()->subMinute()->toDateTimeString())
+            ->call('verificarNovosAgendamentos');
+
+        $component->call('verificarNovosAgendamentos')
+            ->assertNotDispatched('agendamento-toast');
+    }
 }

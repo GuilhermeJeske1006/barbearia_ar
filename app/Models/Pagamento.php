@@ -17,16 +17,28 @@ class Pagamento extends Model
         'barbearia_id', 'filial_id', 'agendamento_id', 'cliente_id', 'valor_total', 'valor_comissao_barbeiro',
         'valor_barbearia', 'metodo', 'mp_payment_id', 'mp_preference_id', 'mp_status',
         'mp_split_status', 'forma_split', 'pago_em', 'raw_payload',
+        'status', 'decidido_por_id', 'decidido_em', 'motivo_recusa',
     ];
 
     protected $casts = [
         'pago_em' => 'datetime',
         'raw_payload' => 'array',
+        'decidido_em' => 'datetime',
     ];
 
     public function agendamento(): BelongsTo
     {
         return $this->belongsTo(Agendamento::class);
+    }
+
+    public function comprovantes(): HasMany
+    {
+        return $this->hasMany(ComprovantePagamento::class);
+    }
+
+    public function decididoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'decidido_por_id');
     }
 
     public function cliente(): BelongsTo

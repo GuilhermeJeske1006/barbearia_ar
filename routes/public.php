@@ -2,6 +2,7 @@
 
 use App\Livewire\Public\AgendamentoWizard;
 use App\Livewire\Public\CancelarAgendamento;
+use App\Livewire\Public\EnviarComprovanteTransferencia;
 use App\Livewire\Public\MinhasReservasBusca;
 use App\Livewire\Public\MinhasReservasLista;
 use App\Livewire\Public\RetornoPagamento;
@@ -33,6 +34,14 @@ Route::middleware(['tenant', 'throttle:publico'])->prefix('b/{barbearia}')->grou
     // pela URL, sem exigir login do cliente (Cliente não tem autenticação).
     Route::get('/agendamento/{agendamento}/cancelar', CancelarAgendamento::class)
         ->middleware('signed')->name('public.agendamento.cancelar');
+
+    // Tela de instruções de transferência + upload de comprovante. Mesma
+    // lógica de acesso das rotas acima: assinatura + tenant pela URL, sem
+    // login do cliente — {pagamento} não vai na URL de propósito (não é
+    // sequencial adivinhável), só {agendamento}, resolvido manualmente
+    // dentro do componente (ver EnviarComprovanteTransferencia::mount).
+    Route::get('/agendamento/{agendamento}/comprovante', EnviarComprovanteTransferencia::class)
+        ->middleware('signed')->name('public.agendamento.comprovante');
 
     // "Minhas reservas": cliente digita o telefone, recebe (por e-mail e/ou
     // WhatsApp) um link assinado listando todas as reservas casadas com

@@ -65,6 +65,32 @@ return [
             'report' => false,
         ],
 
+        'comprovantes' => [
+            // Comprovante de pagamento é documento financeiro — nunca pode
+            // acabar num bucket público. Segue o mesmo gatilho por
+            // FILESYSTEM_DISK do disco 'public' (local em dev, S3/R2 em
+            // ambiente multi-instância — sem isso o arquivo some ao trocar
+            // de instância), mas aponta pra um bucket PRÓPRIO
+            // (AWS_BUCKET_COMPROVANTES), nunca o mesmo bucket do disco
+            // 'public': no R2, visibilidade é decidida no nível do bucket
+            // inteiro (ver comentário no disco 'public' acima), então
+            // reaproveitar aquele bucket tornaria o comprovante público
+            // igual ao logo. Em produção (FILESYSTEM_DISK=s3), esse bucket
+            // precisa existir e estar marcado como privado antes do deploy
+            // — ver docs/adr sobre esta feature.
+            'driver' => env('FILESYSTEM_DISK', 'local') === 's3' ? 's3' : 'local',
+            'root' => storage_path('app/private/comprovantes'),
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET_COMPROVANTES'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

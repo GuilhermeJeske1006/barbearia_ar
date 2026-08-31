@@ -9,6 +9,7 @@ use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
 use App\Models\Barbeiro;
 use App\Models\Cliente;
+use App\Models\MetodoPagamentoManual;
 use App\Models\Pagamento;
 use App\Models\Produto;
 use App\Models\Servico;
@@ -67,6 +68,39 @@ class TelaVendaDireta extends Component
     public string $clienteNome = '';
 
     public string $metodoPagamento = 'dinheiro';
+
+    /**
+     * PDV é presencial — atendente já está vendo o comprovante na hora, ao
+     * contrário do checkout online (AgendamentoWizard), onde a confirmação
+     * fica assíncrona a cargo do dono. Por isso transferência aqui se
+     * comporta como dinheiro: conclui na hora, nunca cria
+     * 'aguardando_confirmacao'.
+     */
+    public function podeEscolherTransferencia(): bool
+    {
+        return app('barbearia')->metodoTransferenciaAtivo() !== null;
+    }
+
+    /**
+     * Dados de Alias/titular/banco pra exibir na tela assim que o atendente
+     * escolhe "Transferência" — sem isso o atendente não tem como mostrar o
+     * Alias ao cliente no balcão.
+     */
+    public function metodoTransferenciaConfig(): ?MetodoPagamentoManual
+    {
+        return app('barbearia')->metodoTransferenciaAtivo();
+    }
+
+    private function metodoManualAtual(): string
+    {
+        // Recalcula igual ao wizard público: 'metodoPagamento' é prop
+        // pública do Livewire, então nunca confia nela sozinha — só aceita
+        // 'transferencia_alias' se a barbearia realmente tiver o método
+        // ativo, senão cai pro único método manual sempre disponível.
+        return $this->metodoPagamento === 'transferencia' && $this->podeEscolherTransferencia()
+            ? 'transferencia_alias'
+            : 'dinheiro';
+    }
 
     public ?Agendamento $vendaConcluida = null;
 
@@ -378,7 +412,7 @@ class TelaVendaDireta extends Component
             ['nome' => $this->clienteNome],
         );
 
-        $ehDinheiro = $this->metodoPagamento === 'dinheiro';
+        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia'], true);
 
         try {
             $agendamento = $criarAgendamento->handle(
@@ -388,7 +422,7 @@ class TelaVendaDireta extends Component
                 $this->servicosSelecionadosCollection(),
                 'pdv',
                 origemPdv: true,
-                status: $ehDinheiro ? 'concluido' : 'pendente',
+                status: $ehMetodoManual ? 'concluido' : 'pendente',
                 produtosComQuantidade: $this->produtosSelecionados,
             );
         } catch (RuntimeException $e) {
@@ -397,8 +431,8 @@ class TelaVendaDireta extends Component
             return;
         }
 
-        if ($ehDinheiro) {
-            $this->registrarPagamentoEmDinheiro($agendamento, $estoqueService);
+        if ($ehMetodoManual) {
+            $this->registrarPagamentoManual($agendamento, $estoqueService);
 
             // Notificação nunca pode derrubar uma venda já commitada — se
             // falhar aqui e a exception subir, o caixa vê erro numa venda
@@ -431,7 +465,7 @@ class TelaVendaDireta extends Component
         $this->etapa = 6;
     }
 
-    private function registrarPagamentoEmDinheiro(Agendamento $agendamento, EstoqueService $estoqueService): void
+    private function registrarPagamentoManual(Agendamento $agendamento, EstoqueService $estoqueService): void
     {
         DB::transaction(function () use ($agendamento, $estoqueService) {
             $comissao = app(CalcularComissaoAction::class)->handle($agendamento, $this->totalGeral());
@@ -444,7 +478,7 @@ class TelaVendaDireta extends Component
                 'valor_total' => $this->totalGeral(),
                 'valor_comissao_barbeiro' => $comissao['comissao'],
                 'valor_barbearia' => $comissao['barbearia'],
-                'metodo' => 'dinheiro',
+                'metodo' => $this->metodoManualAtual(),
                 'forma_split' => 'manual',
                 'pago_em' => now(),
             ]);
@@ -483,7 +517,7 @@ class TelaVendaDireta extends Component
             ->all();
 
         $statusAnterior = $agendamento->status;
-        $ehDinheiro = $this->metodoPagamento === 'dinheiro';
+        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia'], true);
 
         try {
             DB::transaction(function () use ($agendamento, $quantidadesAntigas, $estoqueService) {
@@ -531,7 +565,7 @@ class TelaVendaDireta extends Component
             2
         );
 
-        if ($ehDinheiro) {
+        if ($ehMetodoManual) {
             DB::transaction(function () use ($agendamento, $valorTotal, $calcularComissao, $estoqueService) {
                 $comissao = $calcularComissao->handle($agendamento, $valorTotal);
 
@@ -543,7 +577,7 @@ class TelaVendaDireta extends Component
                     'valor_total' => $valorTotal,
                     'valor_comissao_barbeiro' => $comissao['comissao'],
                     'valor_barbearia' => $comissao['barbearia'],
-                    'metodo' => 'dinheiro',
+                    'metodo' => $this->metodoManualAtual(),
                     'forma_split' => 'manual',
                     'pago_em' => now(),
                 ]);
@@ -589,9 +623,10 @@ class TelaVendaDireta extends Component
     /**
      * Agendamento já estava pago e o cliente quis algo a mais — não mexe no
      * pagamento original, só lança um segundo Pagamento (mesmo agendamento)
-     * com o valor do que foi adicionado agora. Por isso só aceita dinheiro:
-     * abrir uma segunda cobrança MP em cima de um agendamento já concluído
-     * pisaria no ciclo de status pensado pro fluxo de pagamento único.
+     * com o valor do que foi adicionado agora. Por isso só aceita método
+     * manual (dinheiro/transferência), nunca Mercado Pago: abrir uma segunda
+     * cobrança MP em cima de um agendamento já concluído pisaria no ciclo de
+     * status pensado pro fluxo de pagamento único.
      */
     private function finalizarItensExtras(
         EstoqueService $estoqueService,
@@ -669,7 +704,7 @@ class TelaVendaDireta extends Component
                     'valor_total' => $valorTotal,
                     'valor_comissao_barbeiro' => $comissaoExtra,
                     'valor_barbearia' => round($valorTotal - $comissaoExtra, 2),
-                    'metodo' => 'dinheiro',
+                    'metodo' => $this->metodoManualAtual(),
                     'forma_split' => 'manual',
                     'pago_em' => now(),
                 ]);

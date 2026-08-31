@@ -7,6 +7,7 @@ use App\Actions\Agendamento\CriarAgendamentoAction;
 use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
 use App\Actions\Notificacoes\NotificarPesquisaSatisfacaoAction;
 use App\Actions\Pagamento\CalcularComissaoAction;
+use App\Actions\Pagamento\ConfirmarPagamentoTransferenciaAction;
 use App\Models\Agendamento;
 use App\Models\Barbeiro;
 use App\Models\BarbeiroHorario;
@@ -18,6 +19,7 @@ use App\Services\ComissaoService;
 use App\Services\EstoqueService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -303,7 +305,9 @@ class CalendarioAgenda extends Component
             ->orderBy('nome')
             ->with(['agendamentos' => function ($query) {
                 $query->whereDate('data_hora_inicio', $this->data)
-                    ->with(['cliente', 'servicos'])
+                    ->with(['cliente', 'servicos', 'pagamentos' => function ($query) {
+                        $query->where('metodo', 'transferencia_alias')->where('status', 'aguardando_confirmacao');
+                    }])
                     ->orderBy('data_hora_inicio');
             }])
             ->get();
@@ -391,6 +395,27 @@ class CalendarioAgenda extends Component
             ->all();
         $this->metodoPagamentoManual = 'dinheiro';
         $this->mostrarPagamento = true;
+    }
+
+    /**
+     * Confirma um pagamento por transferência (Alias/CBU-CVU) que o cliente
+     * já enviou o comprovante e está aguardando revisão — mesmo caminho de
+     * PagamentosPendentes::confirmar(), acessível direto do card do
+     * agendamento pra não precisar sair da agenda.
+     */
+    public function confirmarPagamentoTransferencia(int $pagamentoId, ConfirmarPagamentoTransferenciaAction $action): void
+    {
+        $pagamento = Pagamento::where('metodo', 'transferencia_alias')->findOrFail($pagamentoId);
+
+        try {
+            $action->handle($pagamento, Auth::user());
+        } catch (RuntimeException $e) {
+            $this->erroTransicao = $e->getMessage();
+
+            return;
+        }
+
+        $this->erroTransicao = null;
     }
 
     public function fecharPagamento(): void

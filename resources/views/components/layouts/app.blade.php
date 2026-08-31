@@ -134,6 +134,9 @@
                             @elsecan('comissoes.visualizar_propria')
                                 <x-ui.nav-item :href="route('barbeiro.minhas-comissoes')" :active="request()->routeIs('barbeiro.minhas-comissoes')">{{ __('painel.comisiones') }}</x-ui.nav-item>
                             @endcan
+                            @can('financeiro.gerenciar')
+                                <x-ui.nav-item :href="route('admin.pagamentos-pendentes')" :active="request()->routeIs('admin.pagamentos-pendentes')">{{ __('painel.pagamentos_pendentes_titulo') }}</x-ui.nav-item>
+                            @endcan
                         </div>
                     </div>
                 @endcanany
@@ -158,7 +161,7 @@
                         </button>
                         <div x-show="open" x-collapse>
                             <x-ui.nav-item :href="route('admin.filiais')" :active="request()->routeIs('admin.filiais')">{{ __('painel.filiais') }}</x-ui.nav-item>
-                            <x-ui.nav-item :href="route('admin.mercadopago')" :active="request()->routeIs('admin.mercadopago')">{{ __('painel.mp_titulo') }}</x-ui.nav-item>
+                            <x-ui.nav-item :href="route('admin.pagamentos')" :active="request()->routeIs('admin.pagamentos')">{{ __('painel.pagamentos_titulo') }}</x-ui.nav-item>
                             <x-ui.nav-item :href="route('admin.whatsapp')" :active="request()->routeIs('admin.whatsapp')">{{ __('painel.whatsapp_titulo') }}</x-ui.nav-item>
                             <x-ui.nav-item :href="route('admin.configuracoes')" :active="request()->routeIs('admin.configuracoes')">{{ __('painel.ajustes') }}</x-ui.nav-item>
                             <x-ui.nav-item :href="route('admin.assinatura')" :active="request()->routeIs('admin.assinatura')">{{ __('painel.assinatura_titulo') }}</x-ui.nav-item>

@@ -3,7 +3,7 @@
 namespace Tests\Feature\Pagamentos;
 
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
-use App\Livewire\Admin\Configuracoes\ConfigMercadoPago;
+use App\Livewire\Admin\Configuracoes\ConfigPagamentos;
 use App\Models\Barbearia;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -40,7 +40,7 @@ class ConfigMercadoPagoTest extends TestCase
     public function test_dono_pode_ativar_exigencia_de_pagamento(): void
     {
         Livewire::actingAs($this->dono)
-            ->test(ConfigMercadoPago::class)
+            ->test(ConfigPagamentos::class)
             ->assertSet('exigePagamentoAntecipado', false)
             ->set('exigePagamentoAntecipado', true)
             ->call('atualizarExigePagamento');
@@ -58,8 +58,8 @@ class ConfigMercadoPagoTest extends TestCase
         ]);
 
         Livewire::actingAs($this->dono)
-            ->test(ConfigMercadoPago::class)
-            ->call('desconectar');
+            ->test(ConfigPagamentos::class)
+            ->call('desconectarMercadoPago');
 
         $fresh = $this->barbearia->fresh();
         $this->assertNull($fresh->mp_access_token);
@@ -82,7 +82,7 @@ class ConfigMercadoPagoTest extends TestCase
         $atendente->assignRole('atendente');
 
         $this->actingAs($atendente)
-            ->get(route('admin.mercadopago'))
+            ->get(route('admin.pagamentos'))
             ->assertForbidden();
     }
 }

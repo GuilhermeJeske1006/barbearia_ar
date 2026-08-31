@@ -5,6 +5,7 @@ namespace App\Livewire\Public;
 use App\Actions\Agendamento\CalcularSlotsDisponiveisAction;
 use App\Actions\Agendamento\CriarAgendamentoAction;
 use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
+use App\Actions\Pagamento\CriarPagamentoTransferenciaAction;
 use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
 use App\Models\Barbeiro;
@@ -120,7 +121,20 @@ class AgendamentoWizard extends Component
 
     public function filiaisDisponiveis(): Collection
     {
-        return Filial::where('ativo', true)->orderBy('nome')->get();
+        // Sem isso, uma filial ativa mas sem nenhum serviço cadastrado
+        // aparece na etapa 1 e leva a etapa 2 (escolha de serviço) vazia,
+        // sem estado de erro — o cliente fica travado sem opção além de
+        // "Voltar". withoutGlobalScope('filial') é necessário aqui: nesta
+        // etapa nenhuma filial foi escolhida ainda, então Servico (que é
+        // BelongsToFilial fail-closed) bate '1=0' pra qualquer filial_id —
+        // sem removê-lo, whereHas nunca acha nada e a lista fica sempre
+        // vazia. A constraint 'servicos.filial_id = filiais.id' do próprio
+        // whereHas continua de pé, então cada filial só conta os serviços
+        // dela mesma.
+        return Filial::where('ativo', true)
+            ->whereHas('servicos', fn ($q) => $q->withoutGlobalScope('filial')->where('ativo', true))
+            ->orderBy('nome')
+            ->get();
     }
 
     public function servicosDisponiveis(): Collection
@@ -241,6 +255,11 @@ class AgendamentoWizard extends Component
         return app('barbearia')->conectadaAoMercadoPago();
     }
 
+    public function podeEscolherTransferencia(): bool
+    {
+        return app('barbearia')->metodoTransferenciaAtivo() !== null;
+    }
+
     /**
      * @return Collection<int, string> horários únicos 'H:i', ordenados
      */
@@ -270,6 +289,7 @@ class AgendamentoWizard extends Component
     public function confirmar(
         CriarAgendamentoAction $criarAgendamento,
         CriarPreferenciaMercadoPagoAction $criarPreferencia,
+        CriarPagamentoTransferenciaAction $criarPagamentoTransferencia,
         NotificarAgendamentoConfirmadoAction $notificarConfirmado,
     ): mixed {
         // Chave por IP: essa ação cria agendamento, chama o gateway de
@@ -324,6 +344,13 @@ class AgendamentoWizard extends Component
         $pagarAgora = $this->podeEscolherPagamento()
             && (app('barbearia')->exige_pagamento_antecipado || $this->metodoPagamento === 'agora');
 
+        // Independente de $pagarAgora acima (que só olha MP): transferência é
+        // uma segunda forma de "pagar agora", só entra em jogo quando o
+        // cliente não foi empurrado pro fluxo MP obrigatório.
+        $transferenciaSelecionada = ! $pagarAgora
+            && $this->metodoPagamento === 'transferencia'
+            && $this->podeEscolherTransferencia();
+
         try {
             $agendamento = $criarAgendamento->handle(
                 $barbeiro,
@@ -331,7 +358,7 @@ class AgendamentoWizard extends Component
                 $inicio,
                 $servicos,
                 'cliente_online',
-                status: $pagarAgora ? 'pendente' : 'confirmado',
+                status: ($pagarAgora || $transferenciaSelecionada) ? 'pendente' : 'confirmado',
             );
         } catch (RuntimeException) {
             $this->erroConfirmacao = __('agendamento.sin_horarios');
@@ -340,7 +367,7 @@ class AgendamentoWizard extends Component
             return null;
         }
 
-        if (! $pagarAgora) {
+        if (! $pagarAgora && ! $transferenciaSelecionada) {
             try {
                 $notificarConfirmado->handle($agendamento);
             } catch (\Throwable $e) {
@@ -351,6 +378,28 @@ class AgendamentoWizard extends Component
             $this->etapa = 8;
 
             return null;
+        }
+
+        if ($transferenciaSelecionada) {
+            try {
+                $criarPagamentoTransferencia->handle($agendamento, $this->precoTotal());
+            } catch (\Throwable $e) {
+                report($e);
+
+                // Mesma razão do cancelamento no catch da preferência MP logo
+                // abaixo: sem isso o horário fica preso a um agendamento
+                // 'pendente' sem nenhum pagamento associado.
+                $agendamento->update(['status' => 'cancelado']);
+                $this->erroConfirmacao = __('agendamento.erro_pagamento');
+                $this->etapa = 6;
+
+                return null;
+            }
+
+            return $this->redirect(URL::signedRoute('public.agendamento.comprovante', [
+                'barbearia' => app('barbearia')->slug,
+                'agendamento' => $agendamento->id,
+            ]));
         }
 
         try {
@@ -420,7 +469,7 @@ class AgendamentoWizard extends Component
         }
 
         return response()->streamDownload(
-            fn () => print($ics->paraAgendamento($this->agendamentoConfirmado)),
+            fn () => print ($ics->paraAgendamento($this->agendamentoConfirmado)),
             "agendamento-{$this->agendamentoConfirmado->id}.ics",
             ['Content-Type' => 'text/calendar; charset=utf-8'],
         );

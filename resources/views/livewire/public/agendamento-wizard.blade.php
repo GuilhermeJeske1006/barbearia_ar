@@ -272,16 +272,27 @@
             </x-ui.card>
 
             <div class="space-y-3.5">
-                @if ($this->podeEscolherPagamento())
+                @if ($this->podeEscolherPagamento() || $this->podeEscolherTransferencia())
                     <div>
                         <div class="flex flex-col gap-2.5 sm:flex-row">
-                            <label class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
-                                <input type="radio" wire:model="metodoPagamento" value="agora" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
-                                <span>
-                                    <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ __('agendamento.pagar_agora') }}</span>
-                                    <span class="block text-[11.5px] text-slate-400">{{ __('agendamento.pagar_agora_desc') }}</span>
-                                </span>
-                            </label>
+                            @if ($this->podeEscolherPagamento())
+                                <label class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
+                                    <input type="radio" wire:model="metodoPagamento" value="agora" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
+                                    <span>
+                                        <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ __('agendamento.pagar_agora') }}</span>
+                                        <span class="block text-[11.5px] text-slate-400">{{ __('agendamento.pagar_agora_desc') }}</span>
+                                    </span>
+                                </label>
+                            @endif
+                            @if ($this->podeEscolherTransferencia())
+                                <label class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
+                                    <input type="radio" wire:model="metodoPagamento" value="transferencia" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
+                                    <span>
+                                        <span class="block text-[13.5px] font-bold text-slate-900 dark:text-white">{{ __('agendamento.pagar_transferencia') }}</span>
+                                        <span class="block text-[11.5px] text-slate-400">{{ __('agendamento.pagar_transferencia_desc') }}</span>
+                                    </span>
+                                </label>
+                            @endif
                             <label class="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-3.5 py-3 has-checked:border-brand-600 has-checked:bg-brand-50">
                                 <input type="radio" wire:model="metodoPagamento" value="local" class="border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500">
                                 <span>
@@ -326,10 +337,18 @@
                     <span class="text-slate-500 dark:text-slate-400">{{ __('agendamento.tus_datos') }}</span>
                     <span class="text-right font-semibold">{{ $clienteNome }}<br><span class="font-normal text-slate-400">{{ $clienteTelefone }}</span></span>
                 </div>
-                @if ($this->podeEscolherPagamento())
+                @if ($this->podeEscolherPagamento() || $this->podeEscolherTransferencia())
                     <div class="flex justify-between gap-3 border-b border-dashed border-slate-200 dark:border-slate-800 pb-2.5 text-[13px]">
                         <span class="text-slate-500 dark:text-slate-400">{{ __('agendamento.elegir_metodo_pago') }}</span>
-                        <span class="font-semibold">{{ $metodoPagamento === 'agora' ? __('agendamento.pagar_agora') : __('agendamento.pagar_local') }}</span>
+                        <span class="font-semibold">
+                            @if ($metodoPagamento === 'agora')
+                                {{ __('agendamento.pagar_agora') }}
+                            @elseif ($metodoPagamento === 'transferencia' && $this->podeEscolherTransferencia())
+                                {{ __('agendamento.pagar_transferencia') }}
+                            @else
+                                {{ __('agendamento.pagar_local') }}
+                            @endif
+                        </span>
                     </div>
                 @endif
                 <div class="flex justify-between text-sm font-extrabold">
@@ -341,7 +360,13 @@
             <div class="mt-4 flex gap-2">
                 <x-ui.button variant="secondary" size="lg" wire:click="voltar">{{ __('agendamento.atras') }}</x-ui.button>
                 <x-ui.button size="lg" wire:click="confirmar" wire:loading.attr="disabled" class="flex-1">
-                    {{ ($this->podeEscolherPagamento() && $metodoPagamento === 'agora') ? __('agendamento.pagar_y_confirmar') : __('agendamento.revisar_confirmar_botao') }}
+                    @if ($this->podeEscolherPagamento() && $metodoPagamento === 'agora')
+                        {{ __('agendamento.pagar_y_confirmar') }}
+                    @elseif ($this->podeEscolherTransferencia() && $metodoPagamento === 'transferencia')
+                        {{ __('agendamento.continuar_transferencia') }}
+                    @else
+                        {{ __('agendamento.revisar_confirmar_botao') }}
+                    @endif
                 </x-ui.button>
             </div>
         @endif

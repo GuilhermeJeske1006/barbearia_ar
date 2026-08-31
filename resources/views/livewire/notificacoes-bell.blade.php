@@ -45,13 +45,16 @@
                     <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full {{ $lida ? 'bg-transparent' : 'bg-brand-500' }}"></span>
 
                     <div class="min-w-0 flex-1">
-                        @if ($titulo = $notificacao->data['titulo'] ?? null)
-                            <p class="truncate text-[12.5px] font-semibold text-slate-800 dark:text-slate-200">{{ $titulo }}</p>
-                        @endif
+                        @php $link = $notificacao->data['link'] ?? null; @endphp
+                        <a @if ($link) href="{{ $link }}" wire:navigate @endif class="block">
+                            @if ($titulo = $notificacao->data['titulo'] ?? null)
+                                <p class="truncate text-[12.5px] font-semibold text-slate-800 dark:text-slate-200">{{ $titulo }}</p>
+                            @endif
 
-                        @if ($mensagem = $notificacao->data['mensagem'] ?? null)
-                            <p class="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">{{ $mensagem }}</p>
-                        @endif
+                            @if ($mensagem = $notificacao->data['mensagem'] ?? null)
+                                <p class="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">{{ $mensagem }}</p>
+                            @endif
+                        </a>
 
                         <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{{ $notificacao->created_at->diffForHumans() }}</p>
                     </div>

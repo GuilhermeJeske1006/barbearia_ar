@@ -445,6 +445,54 @@
                     <span class="mt-1 block text-xs text-slate-400">{{ __('pdv.pago_dinheiro_ajuda') }}</span>
                 </label>
 
+                @if ($this->podeEscolherTransferencia())
+                    <label @class([
+                        'mb-3 block cursor-pointer rounded-xl border-2 p-4 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500',
+                        'border-brand-500 bg-brand-600/20' => $metodoPagamento === 'transferencia',
+                        'border-slate-700 bg-slate-800' => $metodoPagamento !== 'transferencia',
+                    ])>
+                        <input type="radio" wire:model.live="metodoPagamento" value="transferencia" class="sr-only">
+                        <span class="block text-lg font-semibold">🏦 {{ __('pdv.pago_transferencia') }}</span>
+                        <span class="mt-1 block text-xs text-slate-400">{{ __('pdv.pago_transferencia_ajuda') }}</span>
+                    </label>
+
+                    @if ($metodoPagamento === 'transferencia' && ($metodo = $this->metodoTransferenciaConfig()))
+                        <div class="mb-3 rounded-xl border-2 border-brand-500/40 bg-brand-500/10 p-4" x-data="{ copiado: false }">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] uppercase tracking-wide text-slate-400">{{ __('pdv.transferencia_alias') }}</p>
+                                    <p class="truncate font-mono text-base font-bold text-white">{{ $metodo->alias() }}</p>
+                                </div>
+                                <button type="button"
+                                    @click="navigator.clipboard.writeText(@js($metodo->alias())); copiado = true; setTimeout(() => copiado = false, 2000)"
+                                    class="shrink-0 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                                    <span x-show="!copiado">{{ __('pdv.transferencia_copiar') }}</span>
+                                    <span x-show="copiado" x-cloak>{{ __('pdv.transferencia_copiado') }}</span>
+                                </button>
+                            </div>
+
+                            <div class="mt-2.5 grid grid-cols-2 gap-2.5 text-sm">
+                                <div>
+                                    <p class="text-[11px] uppercase tracking-wide text-slate-400">{{ __('pdv.transferencia_titular') }}</p>
+                                    <p class="font-semibold text-white">{{ $metodo->titular() }}</p>
+                                </div>
+                                @if ($metodo->banco())
+                                    <div>
+                                        <p class="text-[11px] uppercase tracking-wide text-slate-400">{{ __('pdv.transferencia_banco') }}</p>
+                                        <p class="font-semibold text-white">{{ $metodo->banco() }}</p>
+                                    </div>
+                                @endif
+                                @if ($metodo->cbuCvu())
+                                    <div class="col-span-2">
+                                        <p class="text-[11px] uppercase tracking-wide text-slate-400">{{ __('pdv.transferencia_cbu_cvu') }}</p>
+                                        <p class="font-mono font-semibold text-white">{{ $metodo->cbuCvu() }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                @endif
+
                 @unless ($agendamentoJaPago)
                     <label @class([
                         'block cursor-pointer rounded-xl border-2 p-4 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500',

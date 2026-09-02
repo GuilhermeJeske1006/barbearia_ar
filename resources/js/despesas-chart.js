@@ -10,7 +10,7 @@ export default function despesasChart(categoriaLabels, categoriaValores, tendenc
                 type: 'bar',
                 data: {
                     labels: categoriaLabels,
-                    datasets: [{ data: categoriaValores, backgroundColor: '#a8763e' }],
+                    datasets: [{ data: categoriaValores, backgroundColor: '#d91e18' }],
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
             });
@@ -19,7 +19,7 @@ export default function despesasChart(categoriaLabels, categoriaValores, tendenc
                 type: 'line',
                 data: {
                     labels: tendenciaLabels,
-                    datasets: [{ data: tendenciaValores, borderColor: '#a8763e', tension: 0.3 }],
+                    datasets: [{ data: tendenciaValores, borderColor: '#d91e18', tension: 0.3 }],
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
             });

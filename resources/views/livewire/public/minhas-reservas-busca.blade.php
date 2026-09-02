@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-sm px-4 py-16 text-center md:px-8">
     @if ($enviado)
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 font-display text-3xl text-brass-400">✓</div>
+        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 font-display text-3xl text-brand-400">✓</div>
         <h2 class="text-lg font-extrabold text-slate-900 dark:text-white">{{ __('agendamento.minhas_reservas_enviado_titulo') }}</h2>
         <p class="mx-auto mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">{{ __('agendamento.minhas_reservas_enviado_detalhe') }}</p>
     @else

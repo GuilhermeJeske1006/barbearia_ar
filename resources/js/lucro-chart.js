@@ -10,8 +10,8 @@ export default function lucroChart(labels, receita, despesas, lucro) {
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Receita', data: receita, backgroundColor: '#a8763e' },
-                        { label: 'Despesas', data: despesas, backgroundColor: '#b45309' },
+                        { label: 'Receita', data: receita, backgroundColor: '#1a334f' },
+                        { label: 'Despesas', data: despesas, backgroundColor: '#d91e18' },
                         { label: 'Lucro', data: lucro, type: 'line', borderColor: '#166534', tension: 0.3 },
                     ],
                 },

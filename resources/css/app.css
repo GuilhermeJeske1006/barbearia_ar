@@ -6,44 +6,43 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Color scale overrides Tailwind's built-in `slate` scale with warm
- * charcoal + steel-ivory tones. Every existing bg-slate-* / border-slate-* /
- * text-slate-* class across the app repaints from this one place.
- * `brand-*` moves from generic blue to barber-pole red.
+ * Color scale follows the Barberya brand manual exactly:
+ * Azul Poste Urbano (#1A334F) anchors slate-900, Rojo Navaja (#D91E18)
+ * anchors brand-500, Acero Tijera (#C0C0C0) and Gris Loción (#6C757D) sit
+ * mid-scale, Espuma de Afeitar (#FFFFFF) anchors paper/ivory. Every existing
+ * bg-slate-* / border-slate-* / text-slate-* / bg-brand-* class across the
+ * app repaints from this one place.
  */
 @theme {
-    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Arimo', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Bebas Neue', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Baloo 2', 'Arimo', ui-sans-serif, system-ui, sans-serif;
 
-    --color-brand-50: #fbeced;
-    --color-brand-100: #f5dee0;
-    --color-brand-400: #c1495a;
-    --color-brand-500: #a2242f;
-    --color-brand-600: #8c1d27;
-    --color-brand-700: #6f1620;
+    /* Rojo Navaja */
+    --color-brand-50: #fdecea;
+    --color-brand-100: #fad9d6;
+    --color-brand-400: #e2453d;
+    --color-brand-500: #d91e18;
+    --color-brand-600: #b01912;
+    --color-brand-700: #8c130e;
 
-    --color-slate-50: #f5f3f1;
-    --color-slate-100: #e8e4de;
-    --color-slate-200: #d3ccc2;
-    --color-slate-300: #ab9f8f;
-    --color-slate-400: #8a7d6c;
-    --color-slate-500: #695d4f;
-    --color-slate-600: #4a443c;
-    --color-slate-700: #362f28;
-    --color-slate-800: #29231d;
-    --color-slate-900: #1f1a15;
-    --color-slate-950: #151210;
+    /* Azul Poste Urbano → Gris Loción → Acero Tijera → Espuma de Afeitar */
+    --color-slate-50: #f4f5f6;
+    --color-slate-100: #e8eaec;
+    --color-slate-200: #d5d9dc;
+    --color-slate-300: #c0c0c0;
+    --color-slate-400: #9aa1a8;
+    --color-slate-500: #6c757d;
+    --color-slate-600: #565f68;
+    --color-slate-700: #3d4a58;
+    --color-slate-800: #24384a;
+    --color-slate-900: #1a334f;
+    --color-slate-950: #10202f;
 
-    --color-paper: #f1ece3;
-    --color-ivory: #fbf8f3;
+    --color-paper: #f2f4f5;
+    --color-ivory: #fbfcfc;
 
-    --color-brass-100: #f1e6cf;
-    --color-brass-400: #cba15f;
-    --color-brass-500: #b08947;
-    --color-brass-600: #8f6d34;
-
-    --shadow-card: 0 1px 2px rgba(27, 24, 21, 0.05), 0 4px 16px rgba(27, 24, 21, 0.07);
+    --shadow-card: 0 1px 2px rgba(16, 32, 47, 0.06), 0 4px 16px rgba(16, 32, 47, 0.08);
 }
 
 /* Signature: diagonal barber-pole stripe. Used for the booking progress rail

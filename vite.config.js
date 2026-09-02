@@ -9,11 +9,11 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
+                bunny('Arimo', {
+                    weights: [400, 500, 600, 700],
                 }),
-                bunny('Manrope', {
-                    weights: [400, 500, 600, 700, 800],
+                bunny('Baloo 2', {
+                    weights: [500, 600, 700, 800],
                 }),
             ],
         }),

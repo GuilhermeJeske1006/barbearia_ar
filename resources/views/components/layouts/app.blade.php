@@ -4,8 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? config('app.name') }}</title>
+    <meta name="description" content="Painel de gestão Barberya — agenda, comissões e pagamentos da sua barbearia em um só lugar.">
+    <meta name="theme-color" content="#1a334f">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=baloo-2:500,600,700,800|arimo:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -16,7 +21,7 @@
         <aside :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-60 md:translate-x-0">
             <div class="mb-5 flex items-center justify-between px-2">
                 <a href="{{ route('painel') }}" wire:navigate class="flex items-center gap-2 font-display text-base tracking-wide text-white">
-                    <span class="h-6 w-6 shrink-0 rounded-md bg-brand-500"></span>
+                    <img src="{{ asset('images/Barberya_Logo_Isotipo-02.png') }}" alt="" class="h-7 w-7 shrink-0 rounded-md">
                     <span class="truncate">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</span>
                 </a>
                 <button type="button" @click="mobileOpen = false" class="text-slate-400 hover:text-white md:hidden" aria-label="{{ __('painel.cancelar') }}">

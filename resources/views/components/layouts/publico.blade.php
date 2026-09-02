@@ -3,9 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? (app()->bound('barbearia') ? app('barbearia')->nome : config('app.name')) }}</title>
+    @php $barbeariaNome = app()->bound('barbearia') ? app('barbearia')->nome : config('app.name'); @endphp
+    <title>{{ $title ?? $barbeariaNome }}</title>
+    <meta name="description" content="{{ __('painel.seo_agendar_descricao', ['nome' => $barbeariaNome]) }}">
+    <meta property="og:title" content="{{ $title ?? $barbeariaNome }}">
+    <meta property="og:description" content="{{ __('painel.seo_agendar_descricao', ['nome' => $barbeariaNome]) }}">
+    <meta property="og:image" content="{{ app()->bound('barbearia') && app('barbearia')->logo_url ? app('barbearia')->logo_url : asset('images/og-image.png') }}">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1a334f">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=baloo-2:500,600,700,800|arimo:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>

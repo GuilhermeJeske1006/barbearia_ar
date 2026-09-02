@@ -375,7 +375,7 @@
         @if ($etapa === 8 && $agendamentoConfirmado)
             <div class="py-8 text-center">
                 <div class="mx-auto max-w-xs rounded-2xl border-2 border-dashed border-slate-300 bg-ivory px-6 py-8 dark:border-slate-700 dark:bg-slate-900">
-                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 font-display text-3xl text-brass-400">✓</div>
+                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 font-display text-3xl text-brand-400">✓</div>
                     <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-600">{{ __('agendamento.turno_confirmado') }}</p>
                     <h2 class="mt-1 font-display text-2xl leading-none tracking-wide text-slate-900 dark:text-white">
                         {{ $agendamentoConfirmado->data_hora_inicio->translatedFormat('d/m') }} · {{ $agendamentoConfirmado->data_hora_inicio->format('H:i') }}

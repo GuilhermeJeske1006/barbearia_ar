@@ -203,7 +203,7 @@ return [
     'passo_seus_dados' => 'Seus dados',
     'passo_pagamento' => 'Pagamento',
     'continuar_para_pagamento' => 'Continuar para pagamento',
-    'plano_unico_nome' => 'Plano BarbeariaAR',
+    'plano_unico_nome' => 'Plano Barberya',
     'plano_unico_descricao' => 'Assinatura mensal, cancele quando quiser.',
     'confirmar_assinatura' => 'Confirmar assinatura',
     'processando_pagamento' => 'Processando...',
@@ -362,4 +362,7 @@ return [
     'pagamento_nenhum_pendente' => 'Não há pagamentos aguardando confirmação.',
     'pagamento_confirmado' => 'Pagamento confirmado. O agendamento foi confirmado.',
     'pagamento_recusado' => 'Pagamento recusado.',
+
+    'seo_agendar_descricao' => 'Agende seu horário na :nome pelo Barberya.',
+    'slogan' => 'Tu turno empieza ahora.',
 ];

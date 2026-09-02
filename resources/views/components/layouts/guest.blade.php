@@ -4,8 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? config('app.name') }}</title>
+    <meta name="description" content="Barberya — o sistema de gestão para barbearias. Agenda online, comissões automáticas e pagamentos em um só lugar.">
+    <meta property="og:title" content="{{ $title ?? config('app.name') }}">
+    <meta property="og:description" content="O sistema de gestão para barbearias. Agenda online, comissões automáticas e pagamentos em um só lugar.">
+    <meta property="og:image" content="{{ asset('images/og-image.png') }}">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1a334f">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=bebas-neue:400|manrope:500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=baloo-2:500,600,700,800|arimo:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -14,11 +23,8 @@
         <div class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-12 text-white lg:flex">
             <div class="barber-stripe pointer-events-none absolute -right-32 -top-32 h-96 w-96 rotate-12 opacity-20"></div>
 
-            <div class="relative flex items-center gap-2 font-display text-xl tracking-wide">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-sm font-extrabold">
-                    {{ mb_strtoupper(mb_substr(config('app.name'), 0, 1)) }}
-                </div>
-                {{ config('app.name') }}
+            <div class="relative">
+                <img src="{{ asset('images/Barberya_Logo_Logo-13.png') }}" alt="{{ config('app.name') }} — Tu turno empieza ahora." class="h-11 w-auto">
             </div>
 
             <div class="relative max-w-md">
@@ -48,11 +54,12 @@
 
             <div class="flex flex-1 items-center justify-center px-4 py-16">
                 <div class="w-full {{ $maxWidth ?? 'max-w-sm' }}">
-                    <div class="mb-6 flex items-center gap-2 lg:hidden">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-extrabold text-white">
-                            {{ mb_strtoupper(mb_substr(config('app.name'), 0, 1)) }}
-                        </div>
-                        <span class="font-display text-lg tracking-wide text-slate-900 dark:text-white">{{ config('app.name') }}</span>
+                    <div class="mb-6 flex items-center gap-2.5 lg:hidden">
+                        <img src="{{ asset('images/Barberya_Logo_Isotipo-02.png') }}" alt="" class="h-9 w-9 shrink-0 rounded-lg">
+                        <span>
+                            <span class="block font-display text-lg leading-tight tracking-wide text-slate-900 dark:text-white">{{ config('app.name') }}</span>
+                            <span class="block text-[11px] text-brand-500 dark:text-brand-400">{{ __('painel.slogan') }}</span>
+                        </span>
                     </div>
 
                     <div class="rounded-xl border border-slate-200 bg-ivory p-8 shadow-card dark:border-slate-800 dark:bg-slate-900">

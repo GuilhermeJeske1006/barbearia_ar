@@ -8,7 +8,7 @@ export default function painelChart({ faturamentoLabels, faturamentoValores, sta
                     type: 'bar',
                     data: {
                         labels: faturamentoLabels,
-                        datasets: [{ data: faturamentoValores, backgroundColor: '#a8763e' }],
+                        datasets: [{ data: faturamentoValores, backgroundColor: '#1a334f' }],
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
                 });
@@ -30,7 +30,7 @@ export default function painelChart({ faturamentoLabels, faturamentoValores, sta
                     type: 'bar',
                     data: {
                         labels: atendimentosLabels,
-                        datasets: [{ data: atendimentosValores, backgroundColor: '#a8763e' }],
+                        datasets: [{ data: atendimentosValores, backgroundColor: '#1a334f' }],
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
                 });
@@ -41,7 +41,7 @@ export default function painelChart({ faturamentoLabels, faturamentoValores, sta
                     type: 'line',
                     data: {
                         labels: comissoesLabels,
-                        datasets: [{ data: comissoesValores, borderColor: '#a8763e', tension: 0.3 }],
+                        datasets: [{ data: comissoesValores, borderColor: '#1a334f', tension: 0.3 }],
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
                 });

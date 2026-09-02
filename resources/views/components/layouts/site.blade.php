@@ -54,7 +54,6 @@
 
             <div class="flex items-center gap-2">
                 <livewire:theme-toggle />
-                <livewire:language-switcher />
                 <span class="hidden sm:inline-flex">
                     <x-ui.button href="{{ route('login') }}" variant="secondary-dark" size="sm">
                         {{ __('site.entrar') }}
@@ -70,6 +69,12 @@
     <main>
         {{ $slot }}
     </main>
+
+    <div class="fixed bottom-4 right-4 z-40 sm:bottom-6 sm:right-6" data-magnetic>
+        <div class="rounded-xl border border-slate-200 bg-ivory/95 p-1 shadow-card backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+            <livewire:language-switcher />
+        </div>
+    </div>
 
     <footer class="border-t border-slate-200 bg-ivory py-10 dark:border-slate-800 dark:bg-slate-950">
         <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 text-center md:px-6">

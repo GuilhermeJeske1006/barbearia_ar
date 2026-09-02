@@ -68,3 +68,82 @@
         background-position: 34px 0;
     }
 }
+
+/* Landing page interactive layer — magnetic buttons, tilt cards, nav underline.
+   All motion is JS-driven (see resources/js/landing.js) so the page is fully
+   usable and visually complete with JS disabled or prefers-reduced-motion set. */
+
+[data-magnetic] {
+    transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+}
+
+[data-magnetic]:active {
+    transition-duration: 100ms;
+}
+
+[data-tilt] {
+    transform-style: preserve-3d;
+    transition: transform 150ms ease-out, box-shadow 200ms ease-out;
+    will-change: transform;
+}
+
+[data-tilt]:hover {
+    box-shadow: 0 12px 32px rgba(16, 32, 47, 0.14);
+}
+
+.nav-underline {
+    position: relative;
+}
+
+.nav-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 2px;
+    width: 100%;
+    background: var(--color-brand-500);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms ease-out;
+}
+
+.nav-underline:hover::after,
+.nav-underline:focus-visible::after {
+    transform: scaleX(1);
+}
+
+.site-header {
+    transition: padding 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.site-header.is-scrolled {
+    padding-top: 0;
+    padding-bottom: 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.faq-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 200ms ease-out;
+}
+
+.faq-panel > div {
+    overflow: hidden;
+}
+
+details[open] .faq-panel {
+    grid-template-rows: 1fr;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-magnetic],
+    [data-tilt],
+    .nav-underline::after,
+    .site-header,
+    .faq-panel {
+        transition: none !important;
+    }
+}

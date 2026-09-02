@@ -36,8 +36,8 @@ class SetLocale
 
     private function resolve(Request $request): string
     {
-        if ($request->has('locale') && in_array($request->string('locale'), self::SUPPORTED, true)) {
-            return $request->string('locale');
+        if ($request->has('locale') && in_array($request->query('locale'), self::SUPPORTED, true)) {
+            return $request->query('locale');
         }
 
         if (session('locale') && in_array(session('locale'), self::SUPPORTED, true)) {

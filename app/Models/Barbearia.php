@@ -31,7 +31,7 @@ class Barbearia extends Model
     ];
 
     protected $fillable = [
-        'nome', 'slug', 'cuit', 'endereco', 'cidade', 'provincia', 'telefone', 'email',
+        'nome', 'slug', 'cuit', 'endereco', 'cidade', 'provincia', 'pais', 'telefone', 'email',
         'logo_path', 'timezone', 'moeda', 'mp_user_id', 'mp_access_token', 'mp_refresh_token',
         'mp_public_key', 'mp_token_expira_em', 'status', 'idioma_padrao', 'exige_pagamento_antecipado',
         'stripe_customer_id', 'stripe_subscription_id', 'subscription_status',

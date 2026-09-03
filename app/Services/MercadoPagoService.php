@@ -20,9 +20,26 @@ use MercadoPago\MercadoPagoConfig;
  */
 class MercadoPagoService
 {
+    /**
+     * Host de OAuth do Connect varia por país — não existe um único domínio
+     * global. Chaveado pela moeda da barbearia (proxy de país já usado em
+     * SIMBOLOS_MOEDA/TIMEZONES), não pelo idioma: 'es' sozinho não distingue
+     * Argentina de Colômbia. Moeda sem país MP conhecido (ex.: USD) cai pro
+     * host argentino, mesmo default de antes dessa mudança.
+     */
+    private const MP_HOSTS = [
+        'ARS' => 'auth.mercadopago.com.ar',
+        'BRL' => 'auth.mercadopago.com.br',
+        'MXN' => 'auth.mercadopago.com.mx',
+        'CLP' => 'auth.mercadopago.cl',
+        'COP' => 'auth.mercadopago.com.co',
+        'PEN' => 'auth.mercadopago.com.pe',
+        'UYU' => 'auth.mercadopago.com.uy',
+    ];
+
     public function oauthAuthorizeUrl(string $redirectUri, string $state, string $moeda = 'ARS'): string
     {
-        $host = $moeda === 'BRL' ? 'auth.mercadopago.com.br' : 'auth.mercadopago.com.ar';
+        $host = self::MP_HOSTS[$moeda] ?? self::MP_HOSTS['ARS'];
 
         return "https://{$host}/authorization?".http_build_query([
             'client_id' => config('services.mercadopago.client_id'),

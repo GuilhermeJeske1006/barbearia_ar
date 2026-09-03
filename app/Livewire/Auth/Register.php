@@ -3,7 +3,6 @@
 namespace App\Livewire\Auth;
 
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
-use App\Actions\Pagamento\CriarAssinaturaStripeAction;
 use App\Models\Barbearia;
 use App\Models\User;
 use App\Services\StripeService;
@@ -48,6 +47,8 @@ class Register extends Component
 
     public string $provinciaBarbearia = '';
 
+    public string $paisBarbearia = '';
+
     public string $cuitBarbearia = '';
 
     public string $idiomaPadrao = 'pt';
@@ -80,8 +81,15 @@ class Register extends Component
      * como 'incomplete' (sem cobrar ainda) só pra obter o client_secret que o
      * passo 2 usa pra montar o PaymentElement. Nenhum registro é gravado no
      * nosso banco aqui — só depois do pagamento confirmado.
+     *
+     * REGRA DE PLANOS DESATIVADA TEMPORARIAMENTE: por enquanto o cadastro
+     * cria a conta direto, sem exigir assinatura Stripe (ver bloco comentado
+     * abaixo e finalizarCadastroSemAssinatura()). Pra reativar: descomentar
+     * o trecho do Stripe, voltar o parâmetro `CriarAssinaturaStripeAction
+     * $action` na assinatura do método (import em App\Actions\Pagamento) e
+     * o wire:submit do blade pra este fluxo.
      */
-    public function avancarParaPagamento(CriarAssinaturaStripeAction $action): void
+    public function avancarParaPagamento(): void
     {
         $this->validate([
             'nome' => 'required|string|max:255',
@@ -94,17 +102,55 @@ class Register extends Component
             'enderecoBarbearia' => 'nullable|string|max:255',
             'cidadeBarbearia' => 'nullable|string|max:100',
             'provinciaBarbearia' => 'nullable|string|max:100',
+            'paisBarbearia' => 'nullable|string|size:2',
             'cuitBarbearia' => 'nullable|string|max:30',
             'idiomaPadrao' => 'required|in:es,pt',
         ]);
 
-        $assinatura = $action->handle(nome: $this->nome, email: $this->email);
+        // $assinatura = $action->handle(nome: $this->nome, email: $this->email);
+        //
+        // $this->stripeCustomerId = $assinatura['customerId'];
+        // $this->stripeSubscriptionId = $assinatura['subscriptionId'];
+        // $this->stripeClientSecret = $assinatura['clientSecret'];
+        // $this->stripePublicKey = config('services.stripe.key');
+        // $this->step = 'pagamento';
 
-        $this->stripeCustomerId = $assinatura['customerId'];
-        $this->stripeSubscriptionId = $assinatura['subscriptionId'];
-        $this->stripeClientSecret = $assinatura['clientSecret'];
-        $this->stripePublicKey = config('services.stripe.key');
-        $this->step = 'pagamento';
+        $this->finalizarCadastroSemAssinatura(app(RegistrarDonoEBarbeariaAction::class));
+    }
+
+    /**
+     * Substitui finalizarCadastro() enquanto a regra de planos estiver
+     * desativada: cria dono+barbearia sem assinatura Stripe (a action já
+     * suporta stripeCustomerId/stripeSubscriptionId nulos, marcando a
+     * barbearia como 'trial').
+     */
+    private function finalizarCadastroSemAssinatura(RegistrarDonoEBarbeariaAction $action): void
+    {
+        try {
+            $user = $action->handle(
+                nomeDono: $this->nome,
+                email: $this->email,
+                senha: $this->senha,
+                nomeBarbearia: $this->nomeBarbearia,
+                slugBarbearia: $this->slugBarbearia,
+                telefoneDono: $this->telefoneDono,
+                telefoneBarbearia: $this->telefoneBarbearia,
+                enderecoBarbearia: $this->enderecoBarbearia,
+                cidadeBarbearia: $this->cidadeBarbearia,
+                provinciaBarbearia: $this->provinciaBarbearia,
+                cuitBarbearia: $this->cuitBarbearia,
+                idiomaPadrao: $this->idiomaPadrao,
+                paisBarbearia: $this->paisBarbearia ?: null,
+            );
+        } catch (QueryException $e) {
+            $this->tratarConflitoDeUnicidade($e);
+
+            return;
+        }
+
+        Auth::login($user);
+
+        $this->redirect(route('painel'), navigate: true);
     }
 
     public function voltarParaDados(): void
@@ -156,6 +202,7 @@ class Register extends Component
                 provinciaBarbearia: $this->provinciaBarbearia,
                 cuitBarbearia: $this->cuitBarbearia,
                 idiomaPadrao: $this->idiomaPadrao,
+                paisBarbearia: $this->paisBarbearia ?: null,
             );
         } catch (QueryException $e) {
             // Corrida rara (pré-check em avancarParaPagamento() x INSERT

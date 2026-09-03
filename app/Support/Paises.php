@@ -58,6 +58,33 @@ class Paises
         return self::NOMES[strtoupper($codigo)][$locale] ?? $codigo;
     }
 
+    /**
+     * Moeda/timezone padrão pra uma barbearia nova ao escolher o país no
+     * cadastro (RegistrarDonoEBarbeariaAction) — só cobre os países com
+     * moeda suportada em Barbearia::SIMBOLOS_MOEDA e timezone suportado em
+     * ConfiguracoesBarbearia::TIMEZONES; os demais (sem par MP/moeda hoje)
+     * retornam null e quem chama decide o fallback.
+     */
+    private const MOEDA_TIMEZONE_PADRAO = [
+        'AR' => ['ARS', 'America/Argentina/Buenos_Aires'],
+        'BR' => ['BRL', 'America/Sao_Paulo'],
+        'UY' => ['UYU', 'America/Montevideo'],
+        'CL' => ['CLP', 'America/Santiago'],
+        'PE' => ['PEN', 'America/Lima'],
+        'CO' => ['COP', 'America/Bogota'],
+        'MX' => ['MXN', 'America/Mexico_City'],
+    ];
+
+    /** @return array{0: string, 1: string}|null [moeda, timezone] padrão pro país, ou null se não mapeado */
+    public static function moedaETimezonePadrao(?string $codigo): ?array
+    {
+        if (! $codigo) {
+            return null;
+        }
+
+        return self::MOEDA_TIMEZONE_PADRAO[strtoupper($codigo)] ?? null;
+    }
+
     public static function bandeira(?string $codigo): ?string
     {
         if (! $codigo || strlen($codigo) !== 2) {

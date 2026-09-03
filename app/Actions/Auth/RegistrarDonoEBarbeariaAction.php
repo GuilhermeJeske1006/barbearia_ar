@@ -5,6 +5,7 @@ namespace App\Actions\Auth;
 use App\Models\Barbearia;
 use App\Models\Filial;
 use App\Models\User;
+use App\Support\Paises;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\PermissionRegistrar;
@@ -41,30 +42,40 @@ class RegistrarDonoEBarbeariaAction
         string $provinciaBarbearia = '',
         string $cuitBarbearia = '',
         string $idiomaPadrao = 'pt',
+        ?string $paisBarbearia = null,
     ): User {
         return DB::transaction(function () use (
             $nomeDono, $email, $senha, $telefoneDono,
             $nomeBarbearia, $slugBarbearia, $telefoneBarbearia,
             $enderecoBarbearia, $cidadeBarbearia, $provinciaBarbearia,
-            $cuitBarbearia, $idiomaPadrao,
+            $cuitBarbearia, $idiomaPadrao, $paisBarbearia,
             $stripeCustomerId, $stripeSubscriptionId,
         ) {
             $temAssinaturaStripe = $stripeCustomerId && $stripeSubscriptionId;
 
-            $barbearia = Barbearia::create([
+            // Sem país escolhido (ou país sem moeda/timezone mapeados),
+            // não passamos 'moeda'/'timezone' pro create() — o INSERT usa o
+            // default da coluna (ARS/Buenos Aires), igual ao comportamento
+            // de antes de o país existir no cadastro.
+            $moedaETimezone = Paises::moedaETimezonePadrao($paisBarbearia);
+
+            $barbearia = Barbearia::create(array_filter([
                 'nome' => $nomeBarbearia,
                 'slug' => $slugBarbearia,
                 'telefone' => $telefoneBarbearia ?: null,
                 'endereco' => $enderecoBarbearia ?: null,
                 'cidade' => $cidadeBarbearia ?: null,
                 'provincia' => $provinciaBarbearia ?: null,
+                'pais' => $paisBarbearia ?: null,
                 'cuit' => $cuitBarbearia ?: null,
                 'idioma_padrao' => $idiomaPadrao,
+                'moeda' => $moedaETimezone[0] ?? null,
+                'timezone' => $moedaETimezone[1] ?? null,
                 'status' => $temAssinaturaStripe ? 'ativa' : 'trial',
                 'stripe_customer_id' => $stripeCustomerId,
                 'stripe_subscription_id' => $stripeSubscriptionId,
                 'subscription_status' => $temAssinaturaStripe ? 'active' : null,
-            ]);
+            ], fn ($valor, $chave) => ! in_array($chave, ['moeda', 'timezone'], true) || $valor !== null, ARRAY_FILTER_USE_BOTH));
 
             // Toda barbearia nasce com uma filial "Matriz" — sem isso não
             // haveria onde estampar barbeiros/clientes/agendamentos, já

@@ -216,4 +216,29 @@ class MercadoPagoServiceTest extends TestCase
 
         $this->assertSame('https://sandbox.mercadopago.com.ar/checkout/pref-123', $resultado['init_point']);
     }
+
+    /**
+     * Cada país tem seu próprio domínio de OAuth do Connect (não existe host
+     * global) — moeda errada aqui manda o dono da barbearia autorizar numa
+     * conta Mercado Pago do país errado.
+     */
+    public function test_oauth_authorize_url_usa_o_host_do_mercado_pago_do_pais_da_moeda(): void
+    {
+        $service = app(MercadoPagoService::class);
+
+        $this->assertStringContainsString('auth.mercadopago.com.co', $service->oauthAuthorizeUrl('https://x', 's', 'COP'));
+        $this->assertStringContainsString('auth.mercadopago.com.br', $service->oauthAuthorizeUrl('https://x', 's', 'BRL'));
+        $this->assertStringContainsString('auth.mercadopago.com.ar', $service->oauthAuthorizeUrl('https://x', 's', 'ARS'));
+        $this->assertStringContainsString('auth.mercadopago.com.mx', $service->oauthAuthorizeUrl('https://x', 's', 'MXN'));
+        $this->assertStringContainsString('auth.mercadopago.cl', $service->oauthAuthorizeUrl('https://x', 's', 'CLP'));
+        $this->assertStringContainsString('auth.mercadopago.com.pe', $service->oauthAuthorizeUrl('https://x', 's', 'PEN'));
+        $this->assertStringContainsString('auth.mercadopago.com.uy', $service->oauthAuthorizeUrl('https://x', 's', 'UYU'));
+    }
+
+    public function test_oauth_authorize_url_cai_pro_host_argentino_quando_moeda_sem_pais_mp_conhecido(): void
+    {
+        $service = app(MercadoPagoService::class);
+
+        $this->assertStringContainsString('auth.mercadopago.com.ar', $service->oauthAuthorizeUrl('https://x', 's', 'USD'));
+    }
 }

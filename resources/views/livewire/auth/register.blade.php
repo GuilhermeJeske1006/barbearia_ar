@@ -1,6 +1,9 @@
 <div>
     <h1 class="mb-6 text-lg font-extrabold text-slate-900 dark:text-white">{{ __('painel.registro_titulo') }}</h1>
 
+    {{-- Indicador de 2 passos (dados/pagamento) comentado junto com a regra
+         de planos abaixo — por enquanto o cadastro é só o passo "dados". --}}
+    {{--
     <div class="mb-6 flex items-center gap-2 text-xs font-semibold">
         <span class="flex h-6 w-6 items-center justify-center rounded-full {{ $step === 'dados' ? 'bg-brand-600 text-white' : 'bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300' }}">1</span>
         <span class="{{ $step === 'dados' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">{{ __('painel.passo_seus_dados') }}</span>
@@ -8,6 +11,7 @@
         <span class="flex h-6 w-6 items-center justify-center rounded-full {{ $step === 'pagamento' ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-800' }}">2</span>
         <span class="{{ $step === 'pagamento' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">{{ __('painel.passo_pagamento') }}</span>
     </div>
+    --}}
 
     @if ($step === 'dados')
         <form wire:submit="avancarParaPagamento" class="space-y-6">
@@ -47,17 +51,30 @@
                     <x-ui.input label="{{ __('painel.provincia') }}" id="provinciaBarbearia" name="provinciaBarbearia" wire:model="provinciaBarbearia" placeholder="{{ __('painel.placeholder_provincia') }}" />
                 </div>
 
-                <x-ui.select label="{{ __('painel.idioma_padrao') }}" id="idiomaPadrao" name="idiomaPadrao" wire:model="idiomaPadrao" class="sm:w-1/2" required>
-                    <option value="pt">Português</option>
-                    <option value="es">Español</option>
-                </x-ui.select>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-ui.select label="{{ __('painel.pais') }}" id="paisBarbearia" name="paisBarbearia" wire:model="paisBarbearia">
+                        <option value="">{{ __('painel.selecionar_pais') }}</option>
+                        @foreach (\App\Support\Paises::lista() as $codigo => $nomePais)
+                            <option value="{{ $codigo }}">{{ $nomePais }}</option>
+                        @endforeach
+                    </x-ui.select>
+
+                    <x-ui.select label="{{ __('painel.idioma_padrao') }}" id="idiomaPadrao" name="idiomaPadrao" wire:model="idiomaPadrao" required>
+                        <option value="pt">Português</option>
+                        <option value="es">Español</option>
+                    </x-ui.select>
+                </div>
             </fieldset>
 
             <x-ui.button type="submit" wire:loading.attr="disabled" class="w-full">
-                {{ __('painel.continuar_para_pagamento') }}
+                {{ __('painel.criar_conta') }}
             </x-ui.button>
         </form>
     @else
+        {{-- Passo de pagamento/plano desativado temporariamente (ver
+             App\Livewire\Auth\Register::avancarParaPagamento). Este branch
+             fica inalcançável enquanto $step nunca vira 'pagamento'. --}}
+        {{--
         <div
             x-data="stripeCheckout({
                 publicKey: @js($stripePublicKey),
@@ -98,6 +115,7 @@
                 </button>
             </div>
         </div>
+        --}}
     @endif
 
     <p class="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">

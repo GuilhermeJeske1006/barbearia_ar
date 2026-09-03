@@ -50,10 +50,13 @@ class RegisterTest extends TestCase
         });
     }
 
+    /**
+     * Regra de planos desativada temporariamente (ver
+     * App\Livewire\Auth\Register::avancarParaPagamento) — o cadastro
+     * conclui direto no passo 1, sem passar pelo Stripe.
+     */
     public function test_registra_dono_e_barbearia_com_todos_os_dados(): void
     {
-        $this->mockarAssinaturaStripeAtiva();
-
         Livewire::test(Register::class)
             ->set('nome', 'Maria Souza')
             ->set('email', 'maria@example.com')
@@ -69,8 +72,6 @@ class RegisterTest extends TestCase
             ->set('cuitBarbearia', '00.000.000/0001-00')
             ->set('idiomaPadrao', 'pt')
             ->call('avancarParaPagamento')
-            ->assertSet('step', 'pagamento')
-            ->call('finalizarCadastro')
             ->assertRedirect(route('painel'));
 
         $barbearia = Barbearia::where('slug', 'barbearia-vintage')->firstOrFail();
@@ -81,10 +82,10 @@ class RegisterTest extends TestCase
         $this->assertSame('SP', $barbearia->provincia);
         $this->assertSame('00.000.000/0001-00', $barbearia->cuit);
         $this->assertSame('pt', $barbearia->idioma_padrao);
-        $this->assertSame('ativa', $barbearia->status);
-        $this->assertSame('cus_teste123', $barbearia->stripe_customer_id);
-        $this->assertSame('sub_teste123', $barbearia->stripe_subscription_id);
-        $this->assertSame('active', $barbearia->subscription_status);
+        $this->assertSame('trial', $barbearia->status);
+        $this->assertNull($barbearia->stripe_customer_id);
+        $this->assertNull($barbearia->stripe_subscription_id);
+        $this->assertNull($barbearia->subscription_status);
 
         $user = User::where('email', 'maria@example.com')->firstOrFail();
         $this->assertSame('Maria Souza', $user->name);
@@ -99,8 +100,6 @@ class RegisterTest extends TestCase
 
     public function test_campos_opcionais_da_barbearia_podem_ficar_vazios(): void
     {
-        $this->mockarAssinaturaStripeAtiva();
-
         Livewire::test(Register::class)
             ->set('nome', 'Juan Perez')
             ->set('email', 'juan@example.com')
@@ -110,7 +109,6 @@ class RegisterTest extends TestCase
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'es')
             ->call('avancarParaPagamento')
-            ->call('finalizarCadastro')
             ->assertRedirect(route('painel'));
 
         $barbearia = Barbearia::where('slug', 'central')->firstOrFail();
@@ -157,56 +155,15 @@ class RegisterTest extends TestCase
 
     public function test_finalizar_cadastro_falha_se_assinatura_nao_estiver_ativa(): void
     {
-        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
-            $mock->shouldReceive('handle')->once()->andReturn([
-                'customerId' => 'cus_teste123',
-                'subscriptionId' => 'sub_teste123',
-                'clientSecret' => 'seti_teste_secret',
-            ]);
-        });
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('buscarSubscription')
-                ->with('sub_teste123')
-                ->once()
-                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'incomplete']));
-        });
-
-        Livewire::test(Register::class)
-            ->set('nome', 'Alguem')
-            ->set('email', 'novo@example.com')
-            ->set('senha', 'senha-forte-123')
-            ->set('senha_confirmation', 'senha-forte-123')
-            ->set('nomeBarbearia', 'Central')
-            ->set('slugBarbearia', 'central')
-            ->set('idiomaPadrao', 'pt')
-            ->call('avancarParaPagamento')
-            ->call('finalizarCadastro')
-            ->assertHasErrors(['pagamento']);
-
-        $this->assertGuest();
-        $this->assertFalse(Barbearia::where('slug', 'central')->exists());
+        $this->markTestSkipped(
+            'Regra de planos desativada temporariamente — finalizarCadastro() '
+            .'(passo do Stripe) não é mais chamado no fluxo de cadastro. '
+            .'Reativar este teste junto com o Stripe em avancarParaPagamento().'
+        );
     }
 
     public function test_corrida_no_email_entre_pre_check_e_insert_vira_erro_de_validacao(): void
     {
-        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
-            $mock->shouldReceive('handle')->once()->andReturn([
-                'customerId' => 'cus_teste123',
-                'subscriptionId' => 'sub_teste123',
-                'clientSecret' => 'seti_teste_secret',
-            ]);
-        });
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('buscarSubscription')
-                ->with('sub_teste123')
-                ->once()
-                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'active']));
-
-            $mock->shouldReceive('cancelarSubscription')->with('sub_teste123')->once();
-        });
-
         $this->mock(RegistrarDonoEBarbeariaAction::class, function ($mock) {
             $mock->shouldReceive('handle')->once()->andReturnUsing(function () {
                 // Simula outra requisição concorrente que venceu a corrida
@@ -234,7 +191,6 @@ class RegisterTest extends TestCase
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'pt')
             ->call('avancarParaPagamento')
-            ->call('finalizarCadastro')
             ->assertHasErrors(['email'])
             ->assertSet('step', 'dados');
 
@@ -243,23 +199,6 @@ class RegisterTest extends TestCase
 
     public function test_corrida_no_slug_entre_pre_check_e_insert_vira_erro_de_validacao(): void
     {
-        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
-            $mock->shouldReceive('handle')->once()->andReturn([
-                'customerId' => 'cus_teste123',
-                'subscriptionId' => 'sub_teste123',
-                'clientSecret' => 'seti_teste_secret',
-            ]);
-        });
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('buscarSubscription')
-                ->with('sub_teste123')
-                ->once()
-                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'active']));
-
-            $mock->shouldReceive('cancelarSubscription')->with('sub_teste123')->once();
-        });
-
         $this->mock(RegistrarDonoEBarbeariaAction::class, function ($mock) {
             $mock->shouldReceive('handle')->once()->andReturnUsing(function () {
                 Barbearia::create(['nome' => 'Concorrente', 'slug' => 'central', 'status' => 'ativa']);
@@ -279,7 +218,6 @@ class RegisterTest extends TestCase
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'pt')
             ->call('avancarParaPagamento')
-            ->call('finalizarCadastro')
             ->assertHasErrors(['slugBarbearia'])
             ->assertSet('step', 'dados');
 

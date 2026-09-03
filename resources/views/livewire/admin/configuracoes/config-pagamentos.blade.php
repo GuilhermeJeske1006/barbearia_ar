@@ -40,7 +40,7 @@
                 <x-ui.checkbox wire:model="ativo" :label="__('painel.transferencia_ativar')" />
 
                 <div class="flex gap-4">
-                    <x-ui.input label="{{ __('painel.transferencia_alias') }}" id="alias" name="alias" wire:model="alias" placeholder="mi.barberia.ars" class="flex-1" />
+                    <x-ui.input label="{{ __('painel.transferencia_alias') }}" id="alias" name="alias" wire:model="alias" placeholder="mi.barberia" class="flex-1" />
                     <x-ui.input label="{{ __('painel.transferencia_titular') }}" id="titular" name="titular" wire:model="titular" class="flex-1" />
                 </div>
 

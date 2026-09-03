@@ -2,16 +2,13 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Actions\Pagamento\CriarAssinaturaStripeAction;
 use App\Livewire\Auth\Register;
 use App\Models\Barbearia;
 use App\Models\User;
-use App\Services\StripeService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
-use Stripe\Subscription;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -29,23 +26,13 @@ class RegistrationTest extends TestCase
         $this->get('/register')->assertStatus(200);
     }
 
+    /**
+     * Regra de planos desativada temporariamente (ver
+     * App\Livewire\Auth\Register::avancarParaPagamento) — o cadastro
+     * conclui direto no passo 1, sem passar pelo Stripe.
+     */
     public function test_dono_pode_registrar_barbearia_e_e_logado_automaticamente(): void
     {
-        $this->mock(CriarAssinaturaStripeAction::class, function ($mock) {
-            $mock->shouldReceive('handle')->once()->andReturn([
-                'customerId' => 'cus_teste123',
-                'subscriptionId' => 'sub_teste123',
-                'clientSecret' => 'seti_teste_secret',
-            ]);
-        });
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('buscarSubscription')
-                ->with('sub_teste123')
-                ->once()
-                ->andReturn(Subscription::constructFrom(['id' => 'sub_teste123', 'status' => 'active']));
-        });
-
         Livewire::test(Register::class)
             ->set('nome', 'Juan Pérez')
             ->set('email', 'juan@example.com')
@@ -54,7 +41,6 @@ class RegistrationTest extends TestCase
             ->set('nomeBarbearia', 'Barbería Central')
             ->set('slugBarbearia', 'barberia-central')
             ->call('avancarParaPagamento')
-            ->call('finalizarCadastro')
             ->assertRedirect(route('painel'));
 
         $this->assertAuthenticated();

@@ -27,8 +27,8 @@
             </div>
 
             <div class="mt-4 flex gap-4">
-                <x-ui.input label="{{ __('painel.cuit') }}" id="cuit" name="cuit" wire:model="cuit" placeholder="{{ app()->getLocale() === 'pt' ? __('painel.placeholder_cnpj') : __('painel.placeholder_dni') }}" x-mask="{{ \App\Support\InputMasks::documentoEmpresa() }}" class="w-56" />
-                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" class="flex-1" />
+                <x-ui.input label="{{ __('painel.cuit') }}" id="cuit" name="cuit" wire:model="cuit" placeholder="{{ \App\Support\InputMasks::placeholderDocumentoEmpresa() }}" x-mask="{{ \App\Support\InputMasks::documentoEmpresa() }}" class="w-56" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ \App\Support\InputMasks::placeholderTelefone() }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" class="flex-1" />
                 <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="flex-1" />
             </div>
         </x-ui.card>

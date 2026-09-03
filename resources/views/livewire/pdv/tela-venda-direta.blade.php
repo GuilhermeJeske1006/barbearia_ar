@@ -355,7 +355,7 @@
             <form wire:submit="confirmarCliente" class="max-w-xl space-y-5">
                 <div>
                     <label for="clienteTelefone" class="mb-1.5 block text-sm text-slate-400">{{ __('pdv.telefono_cliente') }}</label>
-                    <input id="clienteTelefone" type="tel" wire:model.live="clienteTelefone" placeholder="{{ __('pdv.placeholder_telefone') }}" autofocus
+                    <input id="clienteTelefone" type="tel" wire:model.live="clienteTelefone" placeholder="{{ \App\Support\InputMasks::placeholderTelefone() }}" autofocus
                         x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}"
                         class="w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3.5 text-lg text-white focus:border-brand-500 focus:ring-brand-500">
                     @error('clienteTelefone') <p class="mt-1 text-sm text-red-400">{{ $message }}</p> @enderror

@@ -95,7 +95,7 @@ return [
     'transferencia_alias' => 'Alias',
     'transferencia_titular' => 'Titular',
     'transferencia_banco' => 'Banco',
-    'transferencia_cbu_cvu' => 'CBU/CVU',
+    'transferencia_cbu_cvu' => 'Número de cuenta',
     'transferencia_copiar' => 'Copiar',
     'transferencia_copiado' => '¡Copiado!',
     'transferencia_instrucao' => 'Hacé la transferencia desde tu banco o billetera virtual y después subí el comprobante acá abajo.',

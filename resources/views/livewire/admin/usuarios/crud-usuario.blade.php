@@ -12,7 +12,7 @@
         <form wire:submit="salvar" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_completo') }}" autofocus />
-                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
+                <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ \App\Support\InputMasks::placeholderTelefone() }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
             @unless ($editandoId)

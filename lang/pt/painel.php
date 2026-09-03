@@ -345,8 +345,8 @@ return [
     'transferencia_ativar' => 'Aceitar transferência bancária',
     'transferencia_alias' => 'Alias',
     'transferencia_titular' => 'Titular da conta',
-    'transferencia_cbu_cvu' => 'CBU/CVU',
-    'transferencia_cbu_cvu_ajuda' => 'Opcional — aparece pro cliente junto com o Alias.',
+    'transferencia_cbu_cvu' => 'Número da conta / Chave Pix',
+    'transferencia_cbu_cvu_ajuda' => 'Opcional — número da conta, chave Pix ou outro identificador, aparece pro cliente junto com o Alias.',
     'transferencia_banco' => 'Banco',
 
     'pagamentos_pendentes_titulo' => 'Pagamentos pendentes',

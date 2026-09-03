@@ -95,7 +95,7 @@ return [
     'transferencia_alias' => 'Alias',
     'transferencia_titular' => 'Titular',
     'transferencia_banco' => 'Banco',
-    'transferencia_cbu_cvu' => 'CBU/CVU',
+    'transferencia_cbu_cvu' => 'Número da conta',
     'transferencia_copiar' => 'Copiar',
     'transferencia_copiado' => 'Copiado!',
     'transferencia_instrucao' => 'Faça a transferência pelo seu banco ou carteira digital e depois envie o comprovante abaixo.',

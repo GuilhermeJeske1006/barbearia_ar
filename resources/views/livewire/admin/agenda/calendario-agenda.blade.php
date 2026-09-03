@@ -55,7 +55,7 @@
 
                     <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <x-ui.input label="{{ __('painel.nome') }}" id="novoClienteNome" name="novoClienteNome" wire:model="novoClienteNome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" class="sm:col-span-2" />
-                        <x-ui.input label="{{ __('painel.telefone') }}" id="novoClienteTelefone" name="novoClienteTelefone" type="tel" wire:model="novoClienteTelefone" placeholder="{{ __('painel.placeholder_telefone') }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
+                        <x-ui.input label="{{ __('painel.telefone') }}" id="novoClienteTelefone" name="novoClienteTelefone" type="tel" wire:model="novoClienteTelefone" placeholder="{{ \App\Support\InputMasks::placeholderTelefone() }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
                     </div>
                 @endif
             </div>

@@ -16,6 +16,18 @@ use Livewire\Component;
 #[Layout('layouts::app')]
 class Painel extends Component
 {
+    /**
+     * Fortify redireciona todo login pra /painel (config('fortify.home'),
+     * fixo) — Super Admin não tem barbearia_atual_id nem faz sentido ver
+     * este painel, então segue direto pro dele. Ver docs/adr/0009.
+     */
+    public function mount(): void
+    {
+        if (Auth::user()->tipo === 'super_admin') {
+            $this->redirect(route('superadmin.dashboard'));
+        }
+    }
+
     public function ehGestor(): bool
     {
         return Auth::user()->can('agenda.gerenciar');

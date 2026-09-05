@@ -12,5 +12,6 @@ Registro das decisões de arquitetura tomadas neste projeto — o quê, por quê
 | [0006](0006-i18n-es-pt.md) | Internacionalização es/pt com middleware de resolução em cadeia | Aceito |
 | [0007](0007-auth-fortify-hibrido.md) | Auth: Fortify para login/logout/reset, fluxo próprio para registro | Aceito |
 | [0008](0008-pagamento-antecipado-opcional.md) | Exigência de pagamento antecipado é opt-in e nunca bloqueia o cliente | Aceito |
+| [0009](0009-super-admin-cross-tenant.md) | Super Admin cross-tenant via Gate::before, fora do sistema de teams | Aceito |
 
 Nova decisão relevante → novo arquivo `NNNN-titulo-curto.md`, adicionar linha na tabela acima.

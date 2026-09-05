@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Http\Middleware\ResolveFilial;
 use App\Http\Middleware\ResolveTenant;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
         // component_layout')) — this namespace makes that convention resolve
         // to resources/views/components/layouts/*.blade.php.
         View::addNamespace('layouts', resource_path('views/components/layouts'));
+
+        // Super Admin opera fora do sistema de teams do spatie/permission
+        // (não tem barbearia_atual_id, então não há team_id pra atribuir a
+        // role) — ver docs/adr/0009. Gate::before concede qualquer
+        // habilidade antes de qualquer checagem de permission/role rodar.
+        Gate::before(fn (User $user, string $ability) => $user->tipo === 'super_admin' ? true : null);
 
         // Livewire re-runs the page route's 'can:' middleware on every
         // wire:click/wire:submit AJAX call via a fake sub-request (see

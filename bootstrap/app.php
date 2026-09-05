@@ -4,6 +4,7 @@ use App\Http\Middleware\ResolveFilial;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\ResolveTheme;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\SuperAdminOnly;
 use App\Http\Middleware\VerificarAssinaturaAtiva;
 use App\Http\Middleware\VerificarUsuarioAtivo;
 use Illuminate\Auth\Middleware\Authorize;
@@ -32,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')
                 ->group(__DIR__.'/../routes/auth.php');
 
+            Route::middleware('web')
+                ->group(__DIR__.'/../routes/superadmin.php');
+
             Route::group([], __DIR__.'/../routes/webhooks.php');
         },
     )
@@ -46,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'filial' => ResolveFilial::class,
             'usuario.ativo' => VerificarUsuarioAtivo::class,
             'assinatura.ativa' => VerificarAssinaturaAtiva::class,
+            'superadmin' => SuperAdminOnly::class,
         ]);
         $middleware->validateCsrfTokens(except: ['webhooks/mercadopago', 'webhooks/whatsapp/*', 'webhooks/stripe']);
 

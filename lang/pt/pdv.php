@@ -46,6 +46,8 @@ return [
     'transferencia_cbu_cvu' => 'Número da conta',
     'transferencia_copiar' => 'Copiar',
     'transferencia_copiado' => 'Copiado!',
+    'pago_cartao_presencial' => 'Cartão de crédito (maquininha)',
+    'pago_cartao_presencial_ajuda' => 'Cobrança feita na maquininha presencial e a venda fecha na hora, sem taxa registrada aqui.',
     'pago_mercadopago' => 'Mercado Pago (QR)',
     'pago_mercadopago_ajuda' => 'Gera um QR/link — a venda só fecha quando o pagamento cair.',
     'finalizar' => 'Finalizar venda',

@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Configuracoes;
 
 use App\Models\Barbearia;
+use App\Models\BarbeariaFoto;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -46,6 +47,12 @@ class ConfiguracoesBarbearia extends Component
     #[Validate('nullable|email|max:255')]
     public string $email = '';
 
+    #[Validate('nullable|string|max:1000')]
+    public string $descricao = '';
+
+    #[Validate('nullable|string|max:255')]
+    public string $instagram = '';
+
     #[Validate('required|string|timezone')]
     public string $timezone = '';
 
@@ -57,6 +64,12 @@ class ConfiguracoesBarbearia extends Component
 
     #[Validate('nullable|image|max:2048')]
     public $logo = null;
+
+    #[Validate('nullable|image|max:4096')]
+    public $capa = null;
+
+    #[Validate('nullable|array|max:10')]
+    public array $novasFotos = [];
 
     public function mount(): void
     {
@@ -70,6 +83,8 @@ class ConfiguracoesBarbearia extends Component
         $this->provincia = (string) $barbearia->provincia;
         $this->telefone = (string) $barbearia->telefone;
         $this->email = (string) $barbearia->email;
+        $this->descricao = (string) $barbearia->descricao;
+        $this->instagram = (string) $barbearia->instagram;
         $this->timezone = $barbearia->timezone;
         $this->moeda = $barbearia->moeda;
         $this->idiomaPadrao = $barbearia->idioma_padrao;
@@ -98,6 +113,8 @@ class ConfiguracoesBarbearia extends Component
             'provincia' => $this->provincia ?: null,
             'telefone' => $this->telefone ?: null,
             'email' => $this->email ?: null,
+            'descricao' => $this->descricao ?: null,
+            'instagram' => $this->instagram ?: null,
             'timezone' => $this->timezone,
             'moeda' => $this->moeda,
             'idioma_padrao' => $this->idiomaPadrao,
@@ -114,13 +131,52 @@ class ConfiguracoesBarbearia extends Component
             $this->logo = null;
         }
 
+        if ($this->capa) {
+            $caminho = $this->capa->store('capas', 'public');
+
+            if ($barbearia->capa_path) {
+                Storage::disk('public')->delete($barbearia->capa_path);
+            }
+
+            $barbearia->update(['capa_path' => $caminho]);
+            $this->capa = null;
+        }
+
         session()->flash('status', __('painel.configuracoes_salvas'));
+    }
+
+    public function adicionarFotos(): void
+    {
+        $this->validate([
+            'novasFotos' => 'array|max:10',
+            'novasFotos.*' => 'image|max:4096',
+        ]);
+
+        $proximaOrdem = (int) $this->barbearia()->fotos()->max('ordem') + 1;
+
+        foreach ($this->novasFotos as $foto) {
+            BarbeariaFoto::create([
+                'foto_path' => $foto->store('barbearia-fotos', 'public'),
+                'ordem' => $proximaOrdem++,
+            ]);
+        }
+
+        $this->novasFotos = [];
+    }
+
+    public function removerFoto(int $fotoId): void
+    {
+        $foto = $this->barbearia()->fotos()->findOrFail($fotoId);
+
+        Storage::disk('public')->delete($foto->foto_path);
+        $foto->delete();
     }
 
     public function render()
     {
         return view('livewire.admin.configuracoes.configuracoes-barbearia', [
             'barbearia' => $this->barbearia(),
+            'fotos' => $this->barbearia()->fotos,
         ]);
     }
 }

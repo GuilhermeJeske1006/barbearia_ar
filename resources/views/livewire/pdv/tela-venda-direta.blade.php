@@ -45,7 +45,7 @@
         @if ($modoInicial === 'menu')
             <h1 class="mb-6 text-2xl font-extrabold">{{ __('pdv.inicio_pergunta') }}</h1>
 
-            <div class="grid max-w-2xl gap-4 sm:grid-cols-2">
+            <div class="grid max-w-4xl gap-4 sm:grid-cols-3">
                 <button type="button" wire:click="$set('modoInicial', 'busca')"
                     class="rounded-2xl border-2 border-slate-700 bg-slate-800 p-6 text-left transition-colors hover:border-brand-500">
                     <span class="mb-2 block text-3xl">📅</span>
@@ -59,11 +59,13 @@
                     <span class="block text-lg font-bold">{{ __('pdv.verificar_horario') }}</span>
                     <span class="mt-1 block text-sm text-slate-400">{{ __('pdv.verificar_horario_desc') }}</span>
                 </button>
-            </div>
 
-            <x-ui.button variant="secondary-dark" size="lg" wire:click="novaVendaAvulsa" class="mt-8">
-                {{ __('pdv.busca_novo_atendimento') }} →
-            </x-ui.button>
+                <button type="button" wire:click="novaVendaAvulsa"
+                    class="rounded-2xl border-2 border-brand-500 bg-brand-600/20 p-6 text-left transition-colors hover:border-brand-400">
+                    <span class="mb-2 block text-3xl">⚡</span>
+                    <span class="block text-lg font-bold">{{ __('pdv.busca_novo_atendimento') }}</span>
+                </button>
+            </div>
         @endif
 
         {{-- Buscar agendamento existente --}}
@@ -492,6 +494,16 @@
                         </div>
                     @endif
                 @endif
+
+                <label @class([
+                    'mb-3 block cursor-pointer rounded-xl border-2 p-4 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500',
+                    'border-brand-500 bg-brand-600/20' => $metodoPagamento === 'cartao_credito_presencial',
+                    'border-slate-700 bg-slate-800' => $metodoPagamento !== 'cartao_credito_presencial',
+                ])>
+                    <input type="radio" wire:model.live="metodoPagamento" value="cartao_credito_presencial" class="sr-only">
+                    <span class="block text-lg font-semibold">💳 {{ __('pdv.pago_cartao_presencial') }}</span>
+                    <span class="mt-1 block text-xs text-slate-400">{{ __('pdv.pago_cartao_presencial_ajuda') }}</span>
+                </label>
 
                 @unless ($agendamentoJaPago)
                     <label @class([

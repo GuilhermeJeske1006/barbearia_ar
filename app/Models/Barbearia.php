@@ -32,7 +32,7 @@ class Barbearia extends Model
 
     protected $fillable = [
         'nome', 'slug', 'cuit', 'endereco', 'cidade', 'provincia', 'pais', 'telefone', 'email',
-        'logo_path', 'timezone', 'moeda', 'mp_user_id', 'mp_access_token', 'mp_refresh_token',
+        'logo_path', 'capa_path', 'descricao', 'instagram', 'timezone', 'moeda', 'mp_user_id', 'mp_access_token', 'mp_refresh_token',
         'mp_public_key', 'mp_token_expira_em', 'status', 'idioma_padrao', 'exige_pagamento_antecipado',
         'stripe_customer_id', 'stripe_subscription_id', 'subscription_status',
         'wuzapi_token', 'wuzapi_session_name', 'wuzapi_webhook_token',
@@ -86,6 +86,18 @@ class Barbearia extends Model
         return $this->logo_path
             ? Storage::disk('public')->url($this->logo_path)
             : null;
+    }
+
+    public function getCapaUrlAttribute(): ?string
+    {
+        return $this->capa_path
+            ? Storage::disk('public')->url($this->capa_path)
+            : null;
+    }
+
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(BarbeariaFoto::class)->orderBy('ordem');
     }
 
     public function filiais(): HasMany

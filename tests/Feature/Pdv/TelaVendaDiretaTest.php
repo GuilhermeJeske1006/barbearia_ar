@@ -114,6 +114,30 @@ class TelaVendaDiretaTest extends TestCase
         ]);
     }
 
+    public function test_venda_em_cartao_credito_presencial_conclui_na_hora(): void
+    {
+        Livewire::actingAs($this->dono)
+            ->test(TelaVendaDireta::class)
+            ->call('toggleServico', $this->servico->id)
+            ->call('irParaBarbeiro')
+            ->call('escolherBarbeiro', $this->barbeiro->id)
+            ->set('clienteTelefone', '11999998888')
+            ->set('clienteNome', 'Maria')
+            ->call('confirmarCliente')
+            ->set('metodoPagamento', 'cartao_credito_presencial')
+            ->call('finalizar')
+            ->assertSet('etapa', 5)
+            ->assertHasNoErrors();
+
+        $agendamento = Agendamento::firstOrFail();
+        $this->assertSame('concluido', $agendamento->status);
+
+        $pagamento = Pagamento::firstOrFail();
+        $this->assertSame('cartao_credito_presencial', $pagamento->metodo);
+        $this->assertEquals(5000, $pagamento->valor_total);
+        $this->assertNotNull($pagamento->pago_em);
+    }
+
     public function test_produto_com_estoque_controlado_e_debitado_na_venda(): void
     {
         $this->produto->update(['estoque_qtd' => 5]);

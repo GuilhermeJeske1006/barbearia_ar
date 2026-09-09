@@ -46,6 +46,8 @@ return [
     'transferencia_cbu_cvu' => 'Número de cuenta',
     'transferencia_copiar' => 'Copiar',
     'transferencia_copiado' => '¡Copiado!',
+    'pago_cartao_presencial' => 'Tarjeta de crédito (posnet)',
+    'pago_cartao_presencial_ajuda' => 'Cobrás en el posnet presencial y la venta se cierra al instante, sin comisión registrada acá.',
     'pago_mercadopago' => 'Mercado Pago (QR)',
     'pago_mercadopago_ajuda' => 'Genera un QR/link — la venta se cierra recién cuando se acredita el pago.',
     'finalizar' => 'Finalizar venta',

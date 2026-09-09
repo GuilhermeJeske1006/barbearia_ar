@@ -1,19 +1,175 @@
 <div>
     @if (! $iniciado)
-        <div class="flex min-h-[calc(100vh-62px)] flex-col items-center justify-center px-6 py-16 text-center lg:min-h-screen">
-            @if (app()->bound('barbearia') && app('barbearia')->logo_url)
-                <img src="{{ app('barbearia')->logo_url }}" class="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-lg" alt="{{ app('barbearia')->nome }}">
-            @else
-                <div class="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-brand-500 font-display text-4xl text-white shadow-lg">
-                    {{ mb_strtoupper(mb_substr(app()->bound('barbearia') ? app('barbearia')->nome : config('app.name'), 0, 1)) }}
+        @php
+            $barbearia = app()->bound('barbearia') ? app('barbearia') : null;
+            $servicosPreview = $this->servicosDisponiveis();
+            $equipe = $this->barbeirosDisponiveis();
+            $fotos = $barbearia?->fotos ?? collect();
+            $enderecoCompleto = $barbearia ? collect([$barbearia->endereco, $barbearia->cidade, $barbearia->provincia, $barbearia->pais])->filter()->join(', ') : '';
+        @endphp
+        <div class="lg:grid lg:grid-cols-[.86fr_1.5fr] lg:items-stretch">
+            {{-- Identidade da barbearia (sidebar fixa no desktop) --}}
+            <aside class="relative overflow-hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto lg:border-r lg:border-slate-200 dark:lg:border-slate-800">
+                <div class="relative h-44 w-full shrink-0 md:h-56 lg:h-72">
+                    @if ($barbearia?->capa_url)
+                        <img src="{{ $barbearia->capa_url }}" class="h-full w-full object-cover" alt="">
+                    @else
+                        <div class="barber-stripe h-full w-full opacity-90"></div>
+                    @endif
+
+                    <div class="absolute -bottom-10 left-6 h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-ivory bg-white shadow-lg dark:border-slate-950">
+                        @if ($barbearia?->logo_url)
+                            <img src="{{ $barbearia->logo_url }}" class="h-full w-full object-cover" alt="{{ $barbearia->nome }}">
+                        @else
+                            <div class="flex h-full w-full items-center justify-center bg-brand-500 font-display text-3xl text-white">
+                                {{ mb_strtoupper(mb_substr($barbearia?->nome ?? config('app.name'), 0, 1)) }}
+                            </div>
+                        @endif
+                    </div>
                 </div>
-            @endif
 
-            <h1 class="mt-6 font-display text-3xl leading-tight tracking-wide">{{ __('agendamento.bem_vindo') }}</h1>
-            <p class="mt-1.5 text-lg font-semibold text-slate-600 dark:text-slate-300">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</p>
-            <p class="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">{{ __('agendamento.bem_vindo_desc') }}</p>
+                <div class="flex-1 px-6 pb-8 pt-14 lg:px-8">
+                    <h1 class="font-display text-2xl leading-tight tracking-wide">{{ $barbearia?->nome ?? config('app.name') }}</h1>
 
-            <x-ui.button size="lg" wire:click="iniciar" class="mt-8">{{ __('agendamento.comecar') }} →</x-ui.button>
+                    @if ($barbearia && ($barbearia->endereco || $barbearia->cidade))
+                        <p class="mt-1.5 flex items-start gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                            <span>📍</span>
+                            <span>{{ collect([$barbearia->endereco, $barbearia->cidade, $barbearia->provincia])->filter()->join(', ') }}</span>
+                        </p>
+                    @endif
+
+                    @if ($barbearia?->telefone)
+                        <p class="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                            <span>📞</span>
+                            <span>{{ $barbearia->telefone }}</span>
+                        </p>
+                    @endif
+
+                    @if ($barbearia?->instagram)
+                        <a href="https://instagram.com/{{ ltrim($barbearia->instagram, '@') }}" target="_blank" rel="noopener"
+                            class="mt-1 flex w-fit items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400">
+                            <span>📷</span>
+                            <span>{{ '@'.ltrim($barbearia->instagram, '@') }}</span>
+                        </a>
+                    @endif
+
+                    @if ($horario = $this->horarioFuncionamentoHoje())
+                        @php $aberto = $this->abertoAgora(); @endphp
+                        <div class="mt-4 inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-ivory px-3 py-2 text-[12.5px] font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                            <span @class(['h-2 w-2 shrink-0 rounded-full', 'bg-emerald-500' => $aberto, 'bg-slate-400' => ! $aberto])></span>
+                            {{ $aberto ? __('agendamento.aberto_agora') : __('agendamento.fechado_agora') }} · {{ $horario }}
+                        </div>
+                    @endif
+
+                    <p class="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{{ $barbearia?->descricao ?: __('agendamento.bem_vindo_desc') }}</p>
+
+                    <div class="hidden lg:mt-6 lg:block">
+                        <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                    </div>
+                </div>
+            </aside>
+
+            {{-- Fotos, serviços, equipe, horário, mapa --}}
+            <div class="lg:flex lg:min-h-screen lg:flex-col">
+                <div class="px-6 pb-28 pt-8 lg:flex-1 lg:px-10 lg:pb-10 lg:pt-10">
+                    {{-- Galeria de fotos --}}
+                    @if ($fotos->isNotEmpty())
+                        <div x-data="{ aberta: false, indice: 0 }">
+                            <h2 class="mb-3 font-display text-lg tracking-wide">{{ __('agendamento.galeria') }}</h2>
+                            <div class="-mx-6 grid grid-cols-3 gap-1 px-6 sm:grid-cols-4 lg:mx-0 lg:grid-cols-4 lg:gap-2 lg:px-0 xl:grid-cols-5">
+                                @foreach ($fotos as $i => $foto)
+                                    <button type="button" @click="aberta = true; indice = {{ $i }}" class="aspect-square overflow-hidden bg-slate-100 lg:rounded-lg dark:bg-slate-800">
+                                        <img src="{{ $foto->foto_url }}" class="h-full w-full object-cover" alt="">
+                                    </button>
+                                @endforeach
+                            </div>
+
+                            <div x-show="aberta" x-cloak @keydown.escape.window="aberta = false" @click.self="aberta = false"
+                                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4">
+                                <button type="button" @click="aberta = false" class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20">✕</button>
+
+                                <button type="button" @click="indice = (indice - 1 + {{ $fotos->count() }}) % {{ $fotos->count() }}" class="absolute left-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-4">‹</button>
+                                <button type="button" @click="indice = (indice + 1) % {{ $fotos->count() }}" class="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-4">›</button>
+
+                                @foreach ($fotos as $i => $foto)
+                                    <img x-show="indice === {{ $i }}" src="{{ $foto->foto_url }}" class="max-h-[85vh] max-w-full rounded-lg object-contain" alt="">
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Serviços --}}
+                    @if ($servicosPreview->isNotEmpty())
+                        <div class="mt-10">
+                            <h2 class="mb-3 font-display text-lg tracking-wide">{{ __('agendamento.nossos_servicos') }}</h2>
+                            <div class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0 2xl:grid-cols-3">
+                                @foreach ($servicosPreview as $servico)
+                                    <div class="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-ivory px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-bold leading-snug text-slate-900 dark:text-white">{{ $servico->nome }}</p>
+                                            <p class="text-xs text-slate-400">{{ $servico->duracao_minutos }} {{ __('agendamento.minutos') }}</p>
+                                        </div>
+                                        <span class="shrink-0 text-sm font-extrabold text-brand-600"><x-ui.money :value="$servico->preco" /></span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Equipe --}}
+                    @if ($equipe->isNotEmpty())
+                        <div class="mt-8">
+                            <h2 class="mb-3 font-display text-lg tracking-wide">{{ __('agendamento.nossa_equipe') }}</h2>
+                            <div class="-mx-6 flex gap-3 overflow-x-auto px-6 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
+                                @foreach ($equipe as $barbeiro)
+                                    <div class="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center lg:w-24">
+                                        @if ($barbeiro->foto_path)
+                                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeiro->foto_path) }}" class="h-14 w-14 rounded-full object-cover">
+                                        @else
+                                            <x-ui.avatar :name="$barbeiro->nome" size="lg" />
+                                        @endif
+                                        <span class="w-full truncate text-[11.5px] font-semibold text-slate-600 dark:text-slate-300">{{ $barbeiro->nome }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="lg:grid lg:grid-cols-2 lg:gap-8">
+                        {{-- Horário da semana --}}
+                        @if ($this->horariosSemana()->contains(fn ($d) => $d['range']))
+                            <div class="mt-8">
+                                <h2 class="mb-3 font-display text-lg tracking-wide">{{ __('agendamento.horario_semana') }}</h2>
+                                <div class="divide-y divide-dashed divide-slate-200 rounded-xl border border-slate-200 bg-ivory px-4 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+                                    @foreach ($this->horariosSemana() as $dia)
+                                        @php $hoje = $dia['dia'] === $this->agoraDiaSemana(); @endphp
+                                        <div @class(['flex items-center justify-between gap-3 py-2.5 text-[13px]', 'font-bold text-slate-900 dark:text-white' => $hoje, 'text-slate-500 dark:text-slate-400' => ! $hoje])>
+                                            <span>{{ __('painel.dia_'.$dia['dia']) }}</span>
+                                            <span>{{ $dia['range'] ?? __('agendamento.dia_fechado') }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Mapa --}}
+                        @if ($enderecoCompleto !== '')
+                            <div class="mt-8">
+                                <h2 class="mb-3 font-display text-lg tracking-wide">{{ __('agendamento.como_llegar') }}</h2>
+                                <div class="h-48 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800">
+                                    <iframe
+                                        src="https://www.google.com/maps?q={{ urlencode($enderecoCompleto) }}&output=embed"
+                                        class="h-full w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 border-t border-slate-200 bg-ivory/95 px-6 py-3 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-900/95">
+                    <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                </div>
+            </div>
         </div>
     @else
     <div class="lg:grid lg:grid-cols-[.86fr_1.5fr] lg:items-stretch">

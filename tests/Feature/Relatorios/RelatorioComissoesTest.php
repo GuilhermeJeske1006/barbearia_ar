@@ -179,6 +179,20 @@ class RelatorioComissoesTest extends TestCase
         $this->assertStringContainsString('pendente', $conteudo);
     }
 
+    public function test_exportar_pdf_gera_arquivo_pdf(): void
+    {
+        $this->criarComissao('pendente', now()->toDateString(), 2500);
+
+        $component = Livewire::actingAs($this->dono)->test(RelatorioComissoes::class);
+
+        // Livewire::call() falha ao capturar snapshot de resposta binária
+        // (PDF não é UTF-8) — chamamos a action direto na instância, como o
+        // wire:click faria de verdade no navegador.
+        $response = $component->instance()->exportarPdf();
+
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+    }
+
     public function test_comissao_de_barbeiro_removido_continua_no_relatorio_com_nome(): void
     {
         $comissao = $this->criarComissao('pago', now()->toDateString(), 2500);

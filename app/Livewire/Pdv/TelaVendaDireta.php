@@ -97,9 +97,15 @@ class TelaVendaDireta extends Component
         // pública do Livewire, então nunca confia nela sozinha — só aceita
         // 'transferencia_alias' se a barbearia realmente tiver o método
         // ativo, senão cai pro único método manual sempre disponível.
-        return $this->metodoPagamento === 'transferencia' && $this->podeEscolherTransferencia()
-            ? 'transferencia_alias'
-            : 'dinheiro';
+        if ($this->metodoPagamento === 'transferencia' && $this->podeEscolherTransferencia()) {
+            return 'transferencia_alias';
+        }
+
+        if ($this->metodoPagamento === 'cartao_credito_presencial') {
+            return 'cartao_credito_presencial';
+        }
+
+        return 'dinheiro';
     }
 
     public ?Agendamento $vendaConcluida = null;
@@ -412,7 +418,7 @@ class TelaVendaDireta extends Component
             ['nome' => $this->clienteNome],
         );
 
-        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia'], true);
+        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia', 'cartao_credito_presencial'], true);
 
         try {
             $agendamento = $criarAgendamento->handle(
@@ -517,7 +523,7 @@ class TelaVendaDireta extends Component
             ->all();
 
         $statusAnterior = $agendamento->status;
-        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia'], true);
+        $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia', 'cartao_credito_presencial'], true);
 
         try {
             DB::transaction(function () use ($agendamento, $quantidadesAntigas, $estoqueService) {

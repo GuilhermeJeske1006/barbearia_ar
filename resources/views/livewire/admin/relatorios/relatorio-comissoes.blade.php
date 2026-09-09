@@ -18,6 +18,7 @@
 
         <div class="ml-auto flex gap-2">
             <x-ui.button variant="secondary" wire:click="exportarCsv">{{ __('painel.exportar_csv') }}</x-ui.button>
+            <x-ui.button variant="secondary" wire:click="exportarPdf">{{ __('painel.exportar_pdf') }}</x-ui.button>
             @can('financeiro.visualizar')
                 <x-ui.button wire:click="marcarTodasComoPagas" wire:confirm="{{ __('painel.confirmar_pagamento_lote') }}">
                     {{ __('painel.marcar_todas_pagas') }}
@@ -38,7 +39,9 @@
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.data') }}</th>
+                    <th class="px-4 py-2.5 font-bold">{{ __('painel.horario') }}</th>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.barberos') }}</th>
+                    <th class="px-4 py-2.5 font-bold">{{ __('painel.servicos') }}</th>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.valor') }}</th>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.status') }}</th>
                     <th class="px-4 py-2.5"></th>
@@ -48,7 +51,15 @@
                 @forelse ($comissoes as $comissao)
                     <tr wire:key="comissao-{{ $comissao->id }}">
                         <td class="px-4 py-2.5">{{ $comissao->data_referencia->format('d/m/Y') }}</td>
+                        <td class="px-4 py-2.5">{{ $this->horarioAgendamento($comissao) ?? '-' }}</td>
                         <td class="px-4 py-2.5">{{ $comissao->barbeiro->nome }}</td>
+                        <td class="px-4 py-2.5">
+                            @forelse ($this->servicosComPreco($comissao) as $servico)
+                                <div>{{ $servico['nome'] }} <span class="text-slate-400">({{ \App\Support\Money::format($servico['preco']) }})</span></div>
+                            @empty
+                                <span class="text-slate-400">-</span>
+                            @endforelse
+                        </td>
                         <td class="px-4 py-2.5 font-semibold"><x-ui.money :value="$comissao->valor" /></td>
                         <td class="px-4 py-2.5"><x-ui.status-comissao :status="$comissao->status" /></td>
                         <td class="px-4 py-2.5 text-right">
@@ -61,7 +72,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5"><x-ui.empty-state icon="💵" :title="__('painel.nenhum_registro')" /></td>
+                        <td colspan="7"><x-ui.empty-state icon="💵" :title="__('painel.nenhum_registro')" /></td>
                     </tr>
                 @endforelse
             </tbody>

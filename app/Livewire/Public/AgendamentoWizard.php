@@ -19,11 +19,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use RuntimeException;
 
-#[Layout('layouts::publico')]
 class AgendamentoWizard extends Component
 {
     private const SEM_PREFERENCIA = 'qualquer';
@@ -162,20 +160,61 @@ class AgendamentoWizard extends Component
         return Barbeiro::find($this->barbeiroSelecionado);
     }
 
+    /**
+     * @return Collection<int, array{inicio: Carbon, fim: Carbon}> chave = dia_semana (0=dom..6=sáb)
+     */
+    private function horariosPorDiaSemana(): Collection
+    {
+        return BarbeiroHorario::whereIn('barbeiro_id', $this->barbeirosDisponiveis()->pluck('id'))
+            ->get()
+            ->groupBy('dia_semana')
+            ->map(fn (Collection $horarios) => [
+                'inicio' => Carbon::parse($horarios->min('hora_inicio')),
+                'fim' => Carbon::parse($horarios->max('hora_fim')),
+            ]);
+    }
+
     public function horarioFuncionamentoHoje(): ?string
     {
-        $horarios = BarbeiroHorario::whereIn('barbeiro_id', $this->barbeirosDisponiveis()->pluck('id'))
-            ->where('dia_semana', Carbon::now(app('barbearia')->timezone ?? config('app.timezone'))->dayOfWeek)
-            ->get();
+        $hoje = $this->horariosPorDiaSemana()->get($this->agora()->dayOfWeek);
 
-        if ($horarios->isEmpty()) {
-            return null;
+        return $hoje ? $hoje['inicio']->format('H:i').' – '.$hoje['fim']->format('H:i') : null;
+    }
+
+    public function abertoAgora(): bool
+    {
+        $agora = $this->agora();
+        $hoje = $this->horariosPorDiaSemana()->get($agora->dayOfWeek);
+
+        if (! $hoje) {
+            return false;
         }
 
-        $inicio = $horarios->min('hora_inicio');
-        $fim = $horarios->max('hora_fim');
+        return $agora->format('H:i') >= $hoje['inicio']->format('H:i')
+            && $agora->format('H:i') < $hoje['fim']->format('H:i');
+    }
 
-        return Carbon::parse($inicio)->format('H:i').' – '.Carbon::parse($fim)->format('H:i');
+    /**
+     * @return Collection<int, array{dia: int, range: ?string}> dias 0(dom)..6(sáb), na ordem seg..dom
+     */
+    public function horariosSemana(): Collection
+    {
+        $porDia = $this->horariosPorDiaSemana();
+
+        return collect([1, 2, 3, 4, 5, 6, 0])->map(fn ($dia) => [
+            'dia' => $dia,
+            'range' => $porDia->has($dia) ? $porDia[$dia]['inicio']->format('H:i').' – '.$porDia[$dia]['fim']->format('H:i') : null,
+        ]);
+    }
+
+    private function agora(): Carbon
+    {
+        return Carbon::now(app('barbearia')->timezone ?? config('app.timezone'));
+    }
+
+    public function agoraDiaSemana(): int
+    {
+        return $this->agora()->dayOfWeek;
     }
 
     public function duracaoTotal(): int
@@ -488,6 +527,7 @@ class AgendamentoWizard extends Component
 
     public function render()
     {
-        return view('livewire.public.agendamento-wizard');
+        return view('livewire.public.agendamento-wizard')
+            ->layout('layouts::publico', ['ocultarHeaderMobile' => ! $this->iniciado]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Relatorios;
 
 use App\Models\Barbeiro;
 use App\Models\Comissao;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -51,10 +52,26 @@ class RelatorioComissoes extends Component
 
     private function query()
     {
-        return Comissao::with(['barbeiro', 'pagamento.agendamento'])
+        return Comissao::with(['barbeiro', 'pagamento.agendamento.servicos'])
             ->whereBetween('data_referencia', [$this->dataInicio, $this->dataFim])
             ->when($this->barbeiroId, fn ($q) => $q->where('barbeiro_id', $this->barbeiroId))
             ->orderBy('data_referencia');
+    }
+
+    // Comissão vem sempre de um pagamento ligado a um agendamento; sem
+    // pagamento (registro legado/manual) não tem horário nem serviço a mostrar.
+    public function horarioAgendamento(Comissao $comissao): ?string
+    {
+        return $comissao->pagamento?->agendamento?->data_hora_inicio?->format('H:i');
+    }
+
+    public function servicosComPreco(Comissao $comissao): Collection
+    {
+        return ($comissao->pagamento?->agendamento?->servicos ?? collect())
+            ->map(fn ($servico) => [
+                'nome' => $servico->nome,
+                'preco' => (float) $servico->pivot->preco_cobrado,
+            ]);
     }
 
     public function comissoes(): Collection
@@ -113,6 +130,33 @@ class RelatorioComissoes extends Component
 
             fclose($out);
         }, "comissoes-{$this->dataInicio}-a-{$this->dataFim}.csv");
+    }
+
+    public function exportarPdf(): StreamedResponse
+    {
+        $comissoes = $this->comissoes()->map(fn (Comissao $comissao) => [
+            'data' => $comissao->data_referencia->format('d/m/Y'),
+            'horario' => $this->horarioAgendamento($comissao),
+            'barbeiro' => $comissao->barbeiro->nome,
+            'servicos' => $this->servicosComPreco($comissao),
+            'valor' => $comissao->valor,
+            'status' => $comissao->status,
+        ]);
+
+        $pdf = Pdf::loadView('pdf.relatorio-comissoes', [
+            'comissoes' => $comissoes,
+            'dataInicio' => $this->dataInicio,
+            'dataFim' => $this->dataFim,
+            'totais' => $this->totais(),
+        ]);
+
+        // Livewire só trata download automático de StreamedResponse/BinaryFileResponse;
+        // o Response comum do dompdf faz Livewire tentar json_encode do binário do PDF
+        // como retorno da action, quebrando com "Malformed UTF-8 characters".
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            "comissoes-{$this->dataInicio}-a-{$this->dataFim}.pdf"
+        );
     }
 
     public function render()

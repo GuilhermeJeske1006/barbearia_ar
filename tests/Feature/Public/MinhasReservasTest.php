@@ -15,7 +15,9 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
@@ -175,4 +177,22 @@ class MinhasReservasTest extends TestCase
     // do abort_if() dentro de mount() do mesmo jeito que uma request HTTP
     // real, então tentar capturá-la neste nível testaria o comportamento do
     // harness de teste, não da aplicação.
+    public function test_ids_de_clientes_nao_podem_ser_adulterados(): void
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(MinhasReservasLista::class, ['telefone' => '1123456789'])
+            ->set('clienteIds', [999]);
+    }
+
+    public function test_nao_gera_link_de_cancelamento_para_reserva_de_outro_cliente(): void
+    {
+        $component = Livewire::test(MinhasReservasLista::class, ['telefone' => '1123456789']);
+        $reserva = new Agendamento([
+            'barbearia_id' => $this->barbearia->id,
+            'cliente_id' => $this->cliente->id + 1,
+        ]);
+        $this->expectException(HttpException::class);
+        $component->instance()->linkCancelamento($reserva);
+    }
 }

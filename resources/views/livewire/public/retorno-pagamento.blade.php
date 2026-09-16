@@ -17,10 +17,15 @@
             <x-ui.alert tone="danger" class="mt-4">{{ $erro }}</x-ui.alert>
         @endif
 
+        @if ($this->podeTentarNovamente())
         <button wire:click="tentarNovamente" wire:loading.attr="disabled"
             class="mt-4 inline-block w-full rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-500">
             {{ __('agendamento.tentar_pagar_novamente') }}
         </button>
+        @endif
+    @elseif (in_array($this->statusPagamento(), ['estornado', 'expirado', 'revisao'], true))
+        <h2 class="text-lg font-extrabold text-slate-900 dark:text-white">{{ __('agendamento.pagamento_'.$this->statusPagamento()) }}</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('agendamento.pagamento_'.$this->statusPagamento().'_detalhe') }}</p>
     @else
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl text-amber-600">⏳</div>
         <h2 class="text-lg font-extrabold text-amber-800">{{ __('agendamento.pago_procesando') }}</h2>

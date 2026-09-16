@@ -19,7 +19,7 @@
         <div class="ml-auto flex gap-2">
             <x-ui.button variant="secondary" wire:click="exportarCsv">{{ __('painel.exportar_csv') }}</x-ui.button>
             <x-ui.button variant="secondary" wire:click="exportarPdf">{{ __('painel.exportar_pdf') }}</x-ui.button>
-            @can('financeiro.visualizar')
+            @can('financeiro.gerenciar')
                 <x-ui.button wire:click="marcarTodasComoPagas" wire:confirm="{{ __('painel.confirmar_pagamento_lote') }}">
                     {{ __('painel.marcar_todas_pagas') }}
                 </x-ui.button>
@@ -63,7 +63,7 @@
                         <td class="px-4 py-2.5 font-semibold"><x-ui.money :value="$comissao->valor" /></td>
                         <td class="px-4 py-2.5"><x-ui.status-comissao :status="$comissao->status" /></td>
                         <td class="px-4 py-2.5 text-right">
-                            @if ($comissao->status === 'pendente')
+                            @if ($comissao->status === 'pendente' && auth()->user()->can('financeiro.gerenciar'))
                                 <x-ui.button variant="link" wire:click="marcarComoPago({{ $comissao->id }})">
                                     {{ __('painel.marcar_pago') }}
                                 </x-ui.button>

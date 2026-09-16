@@ -5,6 +5,7 @@ namespace App\Actions\Pagamento;
 use App\Actions\Notificacoes\NotificarAgendamentoConfirmadoAction;
 use App\Actions\Notificacoes\NotificarPesquisaSatisfacaoAction;
 use App\Models\Agendamento;
+use App\Models\Barbearia;
 use App\Models\Pagamento;
 use App\Services\ComissaoService;
 use App\Services\EstoqueService;
@@ -28,13 +29,14 @@ class ProcessarWebhookMercadoPagoAction
         private readonly NotificarPesquisaSatisfacaoAction $notificarPesquisa,
     ) {}
 
-    public function handle(string $mpPaymentId): void
+    public function handle(string $mpPaymentId, ?int $barbeariaId = null): void
     {
-        $paymentApi = $this->mercadoPago->buscarPagamento($mpPaymentId);
+        $vendedor = $barbeariaId !== null ? Barbearia::findOrFail($barbeariaId) : null;
+        $paymentApi = $this->mercadoPago->buscarPagamento($mpPaymentId, $vendedor);
 
         $agendamento = Agendamento::withoutGlobalScopes()->find($paymentApi->external_reference);
 
-        if (! $agendamento) {
+        if (! $agendamento || ($vendedor && $agendamento->barbearia_id !== $vendedor->id)) {
             // Sem isso, um pagamento aprovado sem agendamento correspondente
             // (ex.: agendamento cancelado/apagado entre o checkout e a
             // confirmação) desaparecia em silêncio — dinheiro cobrado pela MP
@@ -73,25 +75,40 @@ class ProcessarWebhookMercadoPagoAction
             // idempotência num reenvio do webhook; (2) existe um Pagamento
             // "reservado" pela CriarPreferenciaMercadoPagoAction no momento
             // do checkout (tem mp_preference_id mas ainda não tem
-            // mp_payment_id) — é ele que a gente completa agora; (3) nenhum
-            // dos dois — fallback pra um pagamento avulso (ex.: PDV). Já
-            // corretamente escopadas pelo tenant bindado acima.
+            // mp_payment_id) — é ele que a gente completa agora. Sem um
+            // checkout conhecido, o evento exige conciliação manual.
             $pagamento = Pagamento::where('mp_payment_id', $mpPaymentId)
                 ->lockForUpdate()
                 ->first()
                 ?? Pagamento::where('agendamento_id', $agendamentoLocked->id)
+                    ->where('metodo', 'mp_checkout')
                     ->whereNull('mp_payment_id')
                     ->latest()
                     ->lockForUpdate()
-                    ->first()
-                ?? new Pagamento([
-                    'barbearia_id' => $agendamentoLocked->barbearia_id,
-                    'filial_id' => $agendamentoLocked->filial_id,
-                    'agendamento_id' => $agendamentoLocked->id,
-                    'cliente_id' => $agendamentoLocked->cliente_id,
-                    'metodo' => 'mp_checkout',
-                    'forma_split' => 'manual',
+                    ->first();
+
+            $barbearia = $agendamentoLocked->barbearia;
+            if (! $pagamento
+                || (int) $pagamento->agendamento_id !== (int) $agendamentoLocked->id
+                || (string) ($paymentApi->id ?? '') !== $mpPaymentId
+                || ! $barbearia->mp_user_id
+                || (string) ($paymentApi->collector_id ?? '') !== (string) $barbearia->mp_user_id
+                || ($paymentApi->currency_id ?? null) !== $barbearia->moeda
+                || ! is_numeric($paymentApi->transaction_amount ?? null)
+                || (int) round($paymentApi->transaction_amount * 100) !== (int) round($pagamento->valor_total * 100)
+            ) {
+                Log::warning('Webhook Mercado Pago: pagamento divergente do checkout', [
+                    'mp_payment_id' => $mpPaymentId, 'agendamento_id' => $agendamentoLocked->id,
                 ]);
+
+                return;
+            }
+
+            // Uma resposta atrasada não desfaz uma aprovação/estorno já aplicado.
+            if (($pagamento->mp_status === 'approved' && in_array($paymentApi->status, ['pending', 'in_process', 'rejected', 'cancelled'], true))
+                || (in_array($pagamento->mp_status, ['refunded', 'charged_back'], true) && ! in_array($paymentApi->status, ['refunded', 'charged_back'], true))) {
+                return;
+            }
 
             $valorTotal = (float) $paymentApi->transaction_amount;
             $comissao = $this->calcularComissao->handle($agendamentoLocked, $valorTotal);
@@ -103,7 +120,7 @@ class ProcessarWebhookMercadoPagoAction
                 'valor_comissao_barbeiro' => $comissao['comissao'],
                 'valor_barbearia' => $comissao['barbearia'],
                 'raw_payload' => (array) $paymentApi,
-                'pago_em' => $paymentApi->status === 'approved' ? now() : null,
+                'pago_em' => $paymentApi->status === 'approved' ? ($pagamento->pago_em ?? now()) : null,
             ])->save();
 
             // PDV: o atendimento já aconteceu, então o pagamento aprovado
@@ -111,17 +128,42 @@ class ProcessarWebhookMercadoPagoAction
             // atendimento ainda está por vir.
             $statusFinal = $agendamentoLocked->origem_pdv ? 'concluido' : 'confirmado';
 
-            if ($paymentApi->status === 'approved' && $agendamentoLocked->status !== $statusFinal) {
-                $agendamentoLocked->update(['status' => $statusFinal, 'pagamento_id' => $pagamento->id]);
+            if (in_array($paymentApi->status, ['refunded', 'charged_back'], true)) {
+                $pagamento->comissoes()->update(['status' => 'estornado']);
+                if ($agendamentoLocked->pagamento_id === $pagamento->id && in_array($agendamentoLocked->status, ['pendente', 'confirmado'], true)) {
+                    $agendamentoLocked->update(['status' => 'cancelado']);
+                }
+
+                return;
+            }
+
+            if ($paymentApi->status === 'approved' && $agendamentoLocked->status === 'cancelado') {
+                Log::warning('Webhook Mercado Pago: pagamento recebido para reserva cancelada; requer conciliacao', [
+                    'mp_payment_id' => $mpPaymentId, 'agendamento_id' => $agendamentoLocked->id,
+                ]);
+
+                return;
+            }
+
+            if ($paymentApi->status === 'approved' && ! $agendamentoLocked->pagamento_id
+                && in_array($agendamentoLocked->status, ['pendente', 'confirmado', 'em_atendimento', 'concluido'], true)) {
+                $statusAnterior = $agendamentoLocked->status;
+                $agendamentoLocked->update([
+                    'status' => in_array($statusAnterior, ['em_atendimento', 'concluido'], true) ? $statusAnterior : $statusFinal,
+                    'pagamento_id' => $pagamento->id,
+                ]);
                 $this->comissaoService->registrar($pagamento);
 
-                if ($statusFinal === 'concluido') {
+                if ($statusFinal === 'concluido' && $statusAnterior !== 'concluido') {
                     $this->estoqueService->debitarConsumoServicos($agendamentoLocked, $agendamentoLocked->servicos);
                 }
 
-                $confirmouAgoraOnline = $statusFinal === 'confirmado';
-                $concluiuAgoraPdv = $statusFinal === 'concluido';
-            } elseif (in_array($paymentApi->status, ['rejected', 'cancelled'], true) && $agendamentoLocked->status === 'pendente') {
+                $confirmouAgoraOnline = $statusFinal === 'confirmado' && $statusAnterior === 'pendente';
+                $concluiuAgoraPdv = $statusFinal === 'concluido' && $statusAnterior !== 'concluido';
+            } elseif (in_array($paymentApi->status, ['rejected', 'cancelled'], true)
+                && $agendamentoLocked->status === 'pendente'
+                && $pagamento->id === Pagamento::where('agendamento_id', $agendamentoLocked->id)
+                    ->where('metodo', 'mp_checkout')->latest('id')->value('id')) {
                 // Libera o horário na hora em vez de esperar o cron de 30min
                 // (ExpirarAgendamentosPendentes) — o cliente já está na tela
                 // de retorno vendo a recusa, não faz sentido segurar o slot.

@@ -12,10 +12,11 @@ use App\Models\Servico;
 use App\Notifications\AgendamentoConfirmado;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Support\Facades\Notification;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class AgendamentoWizardTest extends TestCase
@@ -296,5 +297,64 @@ class AgendamentoWizardTest extends TestCase
         Livewire::test(AgendamentoWizard::class)
             ->call('baixarIcs')
             ->assertNoRedirect();
+    }
+
+    public function test_id_de_reserva_no_polling_nao_pode_ser_adulterado(): void
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+        Livewire::test(AgendamentoWizard::class)->set('agendamentoAguardandoPagamentoId', 999);
+    }
+
+    private function confirmarDiretamente(array $overrides = [])
+    {
+        Notification::fake();
+        $component = Livewire::test(AgendamentoWizard::class);
+        foreach (array_replace([
+            'servicosSelecionados' => [$this->servico->id],
+            'barbeiroSelecionado' => (string) $this->barbeiro->id,
+            'data' => $this->proximaSegunda()->toDateString(),
+            'horarioSelecionado' => '09:00',
+            'clienteNome' => 'Cliente',
+            'clienteTelefone' => '11999990000',
+        ], $overrides) as $key => $value) {
+            $component->set($key, $value);
+        }
+
+        return $component->call('confirmar');
+    }
+
+    public function test_confirmacao_direta_exige_servico_e_horario_valido(): void
+    {
+        $this->confirmarDiretamente(['servicosSelecionados' => [], 'horarioSelecionado' => 'invalido'])
+            ->assertHasErrors(['servicosSelecionados', 'horarioSelecionado']);
+        $this->assertDatabaseCount('agendamentos', 0);
+    }
+
+    public function test_nao_confirma_com_servico_desativado(): void
+    {
+        $this->servico->update(['ativo' => false]);
+        $this->confirmarDiretamente()->assertSet('erroConfirmacao', __('agendamento.sin_horarios'));
+        $this->assertDatabaseCount('agendamentos', 0);
+    }
+
+    public function test_nao_confirma_com_barbeiro_sem_servico_selecionado(): void
+    {
+        $this->barbeiro->servicos()->detach();
+        $this->confirmarDiretamente()->assertSet('erroConfirmacao', __('agendamento.sin_horarios'));
+        $this->assertDatabaseCount('agendamentos', 0);
+    }
+
+    public function test_nao_confirma_com_barbeiro_desativado(): void
+    {
+        $this->barbeiro->update(['ativo' => false]);
+        $this->confirmarDiretamente()->assertSet('erroConfirmacao', __('agendamento.sin_horarios'));
+        $this->assertDatabaseCount('agendamentos', 0);
+    }
+
+    public function test_nao_confirma_agendamento_no_passado(): void
+    {
+        $this->confirmarDiretamente(['data' => now()->subWeek()->toDateString()])
+            ->assertSet('erroConfirmacao', __('agendamento.sin_horarios'));
+        $this->assertDatabaseCount('agendamentos', 0);
     }
 }

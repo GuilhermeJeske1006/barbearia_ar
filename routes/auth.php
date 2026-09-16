@@ -30,7 +30,6 @@ use App\Livewire\Barbeiro\MinhasComissoes;
 use App\Livewire\Painel;
 use App\Livewire\Pdv\TelaVendaDireta;
 use App\Livewire\Perfil;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -139,13 +138,5 @@ Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativ
 
 // Fora do prefixo /painel: a URL de callback é fixa, registrada uma única
 // vez no app Mercado Pago Developers — não pode carregar o slug da barbearia.
-Route::middleware('auth')->get('/mercadopago/callback', [MercadoPagoConnectController::class, 'callback'])
+Route::middleware(['auth', 'usuario.ativo', 'tenant'])->get('/mercadopago/callback', [MercadoPagoConnectController::class, 'callback'])
     ->name('mercadopago.callback');
-
-if (app()->environment('local')) {
-    Route::get('/_debug-login/{id}', function (int $id) {
-        Auth::loginUsingId($id);
-
-        return redirect('/painel/configuracoes');
-    })->middleware('web');
-}

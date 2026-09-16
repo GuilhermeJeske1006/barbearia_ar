@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -21,6 +22,7 @@ use Livewire\Component;
 class MinhasReservasLista extends Component
 {
     /** @var array<int, int> */
+    #[Locked]
     public array $clienteIds = [];
 
     /**
@@ -69,6 +71,9 @@ class MinhasReservasLista extends Component
 
     public function linkCancelamento(Agendamento $agendamento): string
     {
+        abort_unless(in_array($agendamento->cliente_id, $this->clienteIds, true)
+            && (int) $agendamento->barbearia_id === (int) app('barbearia.id'), 403);
+
         return URL::signedRoute('public.agendamento.cancelar', [
             'barbearia' => app('barbearia')->slug,
             'agendamento' => $agendamento->id,

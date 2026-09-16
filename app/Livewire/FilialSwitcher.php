@@ -15,7 +15,7 @@ class FilialSwitcher extends Component
 
     public function trocar(int $filialId): void
     {
-        $filial = Filial::findOrFail($filialId);
+        $filial = Filial::where('ativo', true)->findOrFail($filialId);
 
         auth()->user()->update(['filial_atual_id' => $filial->id]);
 

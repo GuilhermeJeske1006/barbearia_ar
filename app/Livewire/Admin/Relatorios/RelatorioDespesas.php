@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Relatorios;
 
 use App\Models\Barbeiro;
 use App\Models\Despesa;
+use App\Support\Csv;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -158,8 +159,8 @@ class RelatorioDespesas extends Component
                 fputcsv($out, [
                     $despesa->data_despesa->toDateString(),
                     $despesa->categoria,
-                    $despesa->descricao,
-                    $despesa->barbeiro->nome ?? '',
+                    Csv::safeCell($despesa->descricao),
+                    Csv::safeCell($despesa->barbeiro->nome ?? ''),
                     number_format($despesa->valor, 2, ',', '.'),
                 ]);
             }

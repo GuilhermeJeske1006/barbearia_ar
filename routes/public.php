@@ -6,6 +6,7 @@ use App\Livewire\Public\EnviarComprovanteTransferencia;
 use App\Livewire\Public\MinhasReservasBusca;
 use App\Livewire\Public\MinhasReservasLista;
 use App\Livewire\Public\RetornoPagamento;
+use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,7 +28,11 @@ Route::middleware(['tenant', 'throttle:publico'])->prefix('b/{barbearia}')->grou
     // — binding implícito tipado não dá: filial.id nunca é bindado em rota
     // pública anônima, e Agendamento é BelongsToFilial fail-closed.
     Route::get('/agendamento/{agendamento}/retorno', RetornoPagamento::class)
-        ->middleware('signed')->name('public.agendamento.retorno');
+        ->middleware(ValidateSignature::absolute([
+            'collection_id', 'collection_status', 'payment_id', 'status',
+            'external_reference', 'payment_type', 'payment_method_id', 'merchant_order_id',
+            'preference_id', 'site_id', 'processing_mode', 'merchant_account_id',
+        ]))->name('public.agendamento.retorno');
 
     // Link de autocancelamento enviado no e-mail/WhatsApp de confirmação —
     // mesma lógica de acesso do retorno acima: assinatura + tenant resolvido

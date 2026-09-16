@@ -67,6 +67,8 @@ class AgendamentoComTransferenciaTest extends TestCase
             'aceita_online' => true,
         ]);
 
+        $this->barbeiro->servicos()->attach($this->servico->id);
+
         BarbeiroHorario::create([
             'barbeiro_id' => $this->barbeiro->id,
             'barbearia_id' => $this->barbearia->id,

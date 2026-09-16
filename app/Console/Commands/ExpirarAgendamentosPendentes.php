@@ -28,10 +28,15 @@ class ExpirarAgendamentosPendentes extends Command
         $expirados = Agendamento::withoutGlobalScopes()
             ->where('status', 'pendente')
             ->where('created_at', '<', now()->subMinutes(self::MINUTOS_DE_TOLERANCIA))
+            ->whereDoesntHave('pagamentos', fn ($query) => $query->withoutGlobalScopes()
+                ->where('metodo', 'mp_checkout')
+                ->where('created_at', '>=', now()->subMinutes(self::MINUTOS_DE_TOLERANCIA)))
             ->get();
 
         foreach ($expirados as $agendamento) {
-            $agendamento->update(['status' => 'cancelado']);
+            // Não sobrescreve aprovação que chegou entre a leitura e o UPDATE.
+            Agendamento::withoutGlobalScopes()->whereKey($agendamento->id)
+                ->where('status', 'pendente')->update(['status' => 'cancelado']);
         }
 
         $this->info("Agendamentos pendentes expirados: {$expirados->count()}.");

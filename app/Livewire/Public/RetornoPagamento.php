@@ -4,7 +4,11 @@ namespace App\Livewire\Public;
 
 use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
+use App\Models\Barbeiro;
 use App\Services\DisponibilidadeService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -58,16 +62,34 @@ class RetornoPagamento extends Component
 
     public function statusPagamento(): string
     {
-        if (in_array($this->reserva->status, ['confirmado', 'concluido'], true)) {
+        $ultimoPagamento = $this->reserva->pagamentos->where('metodo', 'mp_checkout')->sortByDesc('id')->first();
+
+        if (in_array($ultimoPagamento?->mp_status, ['refunded', 'charged_back'], true)) {
+            return 'estornado';
+        }
+
+        if ($this->reserva->status === 'cancelado' && $ultimoPagamento?->mp_status === 'approved') {
+            return 'revisao';
+        }
+
+        if (in_array($this->reserva->status, ['confirmado', 'em_atendimento', 'concluido'], true)
+            && $ultimoPagamento?->mp_status === 'approved') {
             return 'aprovado';
         }
 
-        $ultimoPagamento = $this->reserva->pagamentos->sortByDesc('id')->first();
+        if (in_array($ultimoPagamento?->mp_status, ['rejected', 'cancelled'], true)) {
+            return 'rejeitado';
+        }
 
-        return match ($ultimoPagamento?->mp_status) {
-            'rejected', 'cancelled' => 'rejeitado',
-            default => 'pendente',
-        };
+        return $this->reserva->status === 'cancelado' ? 'expirado' : 'pendente';
+    }
+
+    public function podeTentarNovamente(): bool
+    {
+        return $this->reserva->status === 'cancelado'
+            && $this->reserva->data_hora_inicio->isFuture()
+            && $this->statusPagamento() === 'rejeitado'
+            && ! $this->reserva->pagamentos->contains(fn ($pagamento) => $pagamento->mp_status === 'approved');
     }
 
     /**
@@ -81,26 +103,49 @@ class RetornoPagamento extends Component
         CriarPreferenciaMercadoPagoAction $criarPreferencia,
         DisponibilidadeService $disponibilidade,
     ): mixed {
-        if ($this->reserva->status !== 'cancelado') {
-            return null;
-        }
-
-        // O slot pode ter sido tomado por outro cliente/admin no meio tempo
-        // entre a recusa e o retry — sem essa checagem, reabrir como
-        // 'pendente' e gerar uma preferência nova podia dar origem a um
-        // double-booking.
-        if (! $disponibilidade->estaLivre($this->reserva->barbeiro, $this->reserva->data_hora_inicio, $this->reserva->data_hora_fim)) {
-            $this->erro = __('agendamento.horario_ja_ocupado_reintentar');
+        $this->erro = null;
+        $key = 'mp-retry:'.request()->ip();
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $this->erro = __('agendamento.muitas_tentativas', ['segundos' => RateLimiter::availableIn($key)]);
 
             return null;
         }
+        RateLimiter::hit($key, 600);
 
-        $this->reserva->update(['status' => 'pendente']);
+        try {
+            $resultado = DB::transaction(function () use ($criarPreferencia, $disponibilidade) {
+                // Mesma ordem de bloqueios da criação: barbeiro, depois reserva.
+                Barbeiro::whereKey($this->reserva->barbeiro_id)->lockForUpdate()->firstOrFail();
+                $this->reserva = Agendamento::whereKey($this->reserva->id)->lockForUpdate()->firstOrFail();
 
-        $valorTotal = (float) $this->reserva->servicos->sum('pivot.preco_cobrado');
-        $resultado = $criarPreferencia->handle($this->reserva, $valorTotal);
+                if (! $this->podeTentarNovamente()) {
+                    return null;
+                }
 
-        return $this->redirect($resultado['init_point']);
+                if (! $disponibilidade->estaLivre($this->reserva->barbeiro, $this->reserva->data_hora_inicio, $this->reserva->data_hora_fim)) {
+                    $this->erro = __('agendamento.horario_ja_ocupado_reintentar');
+
+                    return null;
+                }
+
+                $this->reserva->update(['status' => 'pendente']);
+                // Usa o total original do checkout, incluindo produtos do PDV.
+                $valorTotal = (float) $this->reserva->pagamentos
+                    ->where('metodo', 'mp_checkout')->sortByDesc('id')->first()->valor_total;
+
+                return $criarPreferencia->handle($this->reserva, $valorTotal);
+            });
+        } catch (\Throwable $e) {
+            $this->reserva->refresh();
+            Log::warning('Mercado Pago: falha ao retomar checkout', [
+                'agendamento_id' => $this->reserva->id, 'exception' => $e::class,
+            ]);
+            $this->erro = __('agendamento.erro_pagamento');
+
+            return null;
+        }
+
+        return $resultado ? $this->redirect($resultado['init_point']) : null;
     }
 
     public function render()

@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use RuntimeException;
 
@@ -53,6 +54,7 @@ class AgendamentoWizard extends Component
 
     public ?string $linkPagamentoQrCode = null;
 
+    #[Locked]
     public ?int $agendamentoAguardandoPagamentoId = null;
 
     public bool $mostrarQrCode = false;
@@ -111,7 +113,7 @@ class AgendamentoWizard extends Component
 
         $filial = Filial::withoutGlobalScopes()->find($this->filialSelecionada);
 
-        if ($filial && $filial->barbearia_id === app('barbearia')->id) {
+        if ($filial && $filial->ativo && $filial->barbearia_id === app('barbearia')->id) {
             app()->instance('filial.id', $filial->id);
             app()->instance('filial', $filial);
         }
@@ -229,7 +231,7 @@ class AgendamentoWizard extends Component
 
     public function servicosSelecionadosCollection(): Collection
     {
-        return Servico::whereIn('id', $this->servicosSelecionados)->get();
+        return Servico::where('ativo', true)->whereIn('id', $this->servicosSelecionados)->get();
     }
 
     public function irParaEtapa2(): void
@@ -353,14 +355,28 @@ class AgendamentoWizard extends Component
             'clienteTelefone' => 'required|string|max:30',
         ]);
 
+        $this->validate([
+            'data' => 'required|date_format:Y-m-d',
+            'horarioSelecionado' => 'required|date_format:H:i',
+            'servicosSelecionados' => 'required|array|min:1',
+            'servicosSelecionados.*' => 'required|integer|distinct',
+            'barbeiroSelecionado' => 'required|string',
+        ]);
+
         $this->erroConfirmacao = null;
 
-        $inicio = Carbon::parse("{$this->data} {$this->horarioSelecionado}");
+        $inicio = Carbon::parse("{$this->data} {$this->horarioSelecionado}", app('barbearia')->timezone);
         $servicos = $this->servicosSelecionadosCollection();
+
+        if ($inicio->isPast() || $servicos->count() !== count($this->servicosSelecionados)) {
+            $this->erroConfirmacao = __('agendamento.sin_horarios');
+
+            return null;
+        }
 
         $barbeiro = $this->barbeiroSelecionado === self::SEM_PREFERENCIA
             ? $this->primeiroBarbeiroLivre($inicio, $servicos)
-            : Barbeiro::find($this->barbeiroSelecionado);
+            : $this->barbeirosDisponiveis()->firstWhere('id', $this->barbeiroSelecionado);
 
         if (! $barbeiro) {
             $this->erroConfirmacao = __('agendamento.sin_horarios');

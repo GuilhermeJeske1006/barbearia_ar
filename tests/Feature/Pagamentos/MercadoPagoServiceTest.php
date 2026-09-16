@@ -2,14 +2,17 @@
 
 namespace Tests\Feature\Pagamentos;
 
+use App\Actions\Pagamento\CriarPreferenciaMercadoPagoAction;
 use App\Models\Agendamento;
 use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\Cliente;
 use App\Models\Servico;
 use App\Services\MercadoPagoService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Net\MPDefaultHttpClient;
 use MercadoPago\Net\MPHttpClient;
@@ -240,5 +243,60 @@ class MercadoPagoServiceTest extends TestCase
         $service = app(MercadoPagoService::class);
 
         $this->assertStringContainsString('auth.mercadopago.com.ar', $service->oauthAuthorizeUrl('https://x', 's', 'USD'));
+    }
+
+    public function test_fluxo_checkout_webhook_assinado_retorno_e_reenvio(): void
+    {
+        Notification::fake();
+        config(['queue.default' => 'sync', 'services.mercadopago.webhook_secret' => 'secret-test']);
+        $this->barbearia->update(['mp_user_id' => '123']);
+        $capturado = (object) ['preference' => null, 'headers' => []];
+        MercadoPagoConfig::setHttpClient(new class($capturado, $this->agendamento->id) implements MPHttpClient
+        {
+            public function __construct(private object $capturado, private int $agendamentoId) {}
+
+            public function send(MPRequest $request): MPResponse
+            {
+                $this->capturado->headers[] = $request->getHeaders();
+                if ($request->getPayload()) {
+                    $this->capturado->preference = json_decode($request->getPayload(), true);
+
+                    return new MPResponse(201, [
+                        'id' => 'pref-integration', 'init_point' => 'https://mercadopago.com.ar/checkout/test',
+                        'sandbox_init_point' => 'https://sandbox.mercadopago.com.ar/checkout/test',
+                    ]);
+                }
+
+                return new MPResponse(200, [
+                    'id' => 999, 'collector_id' => 123, 'currency_id' => 'ARS',
+                    'status' => 'approved', 'transaction_amount' => 5000,
+                    'external_reference' => (string) $this->agendamentoId,
+                ]);
+            }
+        });
+
+        $checkout = app(CriarPreferenciaMercadoPagoAction::class)->handle($this->agendamento, 5000);
+        $this->assertNotNull($checkout['pagamento']->mp_preference_id);
+        $this->assertTrue($capturado->preference['expires']);
+        $this->assertSame(30.0, Carbon::parse($capturado->preference['expiration_date_from'])
+            ->diffInMinutes(Carbon::parse($capturado->preference['expiration_date_to'])));
+
+        $notificationUrl = $capturado->preference['notification_url'].'&data.id=999';
+        $ts = (string) time();
+        $signature = hash_hmac('sha256', "id:999;request-id:integration;ts:{$ts};", 'secret-test');
+        $headers = ['x-signature' => "ts={$ts},v1={$signature}", 'x-request-id' => 'integration'];
+        $payload = ['type' => 'payment', 'data' => ['id' => '999']];
+        $this->postJson($notificationUrl, $payload, $headers)->assertOk();
+        $this->postJson($notificationUrl, $payload, $headers)->assertOk();
+
+        $this->assertSame('confirmado', $this->agendamento->fresh()->status);
+        $this->assertDatabaseCount('pagamentos', 1);
+        $this->assertDatabaseCount('comissoes', 1);
+        $this->assertSame('999', $checkout['pagamento']->fresh()->mp_payment_id);
+        foreach ($capturado->headers as $requestHeaders) {
+            $this->assertContains('Authorization: Bearer APP_USR-token-atual', $requestHeaders);
+        }
+        $this->get($capturado->preference['back_urls']['success'].'&payment_id=999&status=approved')
+            ->assertOk()->assertSee(__('agendamento.turno_confirmado'));
     }
 }

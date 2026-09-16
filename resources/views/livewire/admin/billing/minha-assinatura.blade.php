@@ -19,7 +19,7 @@
             </span>
         </p>
 
-        @if ($barbearia->assinaturaAtiva())
+        @if ($barbearia->assinaturaAtiva() && auth()->user()->can('barbearia.gerenciar'))
             <x-ui.button variant="secondary" wire:click="cancelar" wire:confirm="{{ __('painel.confirmar_cancelamento_assinatura') }}" class="mt-4">
                 {{ __('painel.cancelar_assinatura') }}
             </x-ui.button>

@@ -12,6 +12,7 @@ use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Stripe\Subscription;
 use Tests\TestCase;
@@ -236,5 +237,11 @@ class RegisterTest extends TestCase
             ->set('idiomaPadrao', 'en')
             ->call('avancarParaPagamento')
             ->assertHasErrors(['idiomaPadrao']);
+    }
+
+    public function test_assinatura_stripe_nao_pode_ser_substituida_pelo_cliente(): void
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+        Livewire::test(Register::class)->set('stripeSubscriptionId', 'sub_alheia');
     }
 }

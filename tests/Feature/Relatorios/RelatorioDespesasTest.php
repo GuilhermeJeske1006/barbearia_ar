@@ -7,6 +7,7 @@ use App\Livewire\Admin\Relatorios\RelatorioDespesas;
 use App\Models\Barbearia;
 use App\Models\Barbeiro;
 use App\Models\Despesa;
+use App\Models\Filial;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +27,7 @@ class RelatorioDespesasTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        app()->setLocale('pt');
         $this->seed(RoleAndPermissionSeeder::class);
 
         $this->dono = app(RegistrarDonoEBarbeariaAction::class)->handle(
@@ -109,7 +111,7 @@ class RelatorioDespesasTest extends TestCase
     public function test_nao_mostra_despesa_de_outra_barbearia(): void
     {
         $outra = Barbearia::create(['nome' => 'Norte', 'slug' => 'norte']);
-        $filialOutra = \App\Models\Filial::create(['barbearia_id' => $outra->id, 'nome' => 'Matriz']);
+        $filialOutra = Filial::create(['barbearia_id' => $outra->id, 'nome' => 'Matriz']);
 
         app()->instance('barbearia.id', $outra->id);
         app()->instance('filial.id', $filialOutra->id);

@@ -51,8 +51,8 @@ return [
         'client_secret' => env('MP_CLIENT_SECRET'),
         'webhook_secret' => env('MP_WEBHOOK_SECRET'),
         // Token da própria aplicação da plataforma (dono do Marketplace) —
-        // usado para consultar pagamentos via API a partir do webhook, antes
-        // de sabermos a qual barbearia o pagamento pertence.
+        // compatibilidade com webhooks de preferências antigas sem tenant
+        // na notification_url. Novas preferências usam o OAuth do vendedor.
         'access_token' => env('MP_ACCESS_TOKEN'),
         // Fração retida pela plataforma como taxa de uso do SaaS (0.05 = 5%).
         'taxa_plataforma' => env('MP_TAXA_PLATAFORMA', 0),

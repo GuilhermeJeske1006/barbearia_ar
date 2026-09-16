@@ -24,6 +24,8 @@ class CriarPreferenciaMercadoPagoAction
             throw new RuntimeException('Esta barbearia ainda não conectou uma conta Mercado Pago.');
         }
 
+        $preferencia = $this->mercadoPago->criarPreferencia($barbearia, $agendamento, $valorTotal);
+
         // Se o cliente reabrir o checkout (recarregou, abriu 2ª aba) sem
         // nunca ter pago a reserva anterior, ela vira lixo — apaga antes de
         // criar outra pra não deixar múltiplas "reservadas" (sem
@@ -33,8 +35,6 @@ class CriarPreferenciaMercadoPagoAction
             ->whereNull('mp_payment_id')
             ->where('mp_status', 'pending')
             ->delete();
-
-        $preferencia = $this->mercadoPago->criarPreferencia($barbearia, $agendamento, $valorTotal);
 
         $pagamento = Pagamento::create([
             'barbearia_id' => $agendamento->barbearia_id,

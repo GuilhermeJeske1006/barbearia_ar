@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 #[Layout('layouts::guest', ['maxWidth' => 'max-w-xl'])]
@@ -53,12 +54,16 @@ class Register extends Component
 
     public string $idiomaPadrao = 'pt';
 
+    #[Locked]
     public ?string $stripeCustomerId = null;
 
+    #[Locked]
     public ?string $stripeSubscriptionId = null;
 
+    #[Locked]
     public ?string $stripeClientSecret = null;
 
+    #[Locked]
     public ?string $stripePublicKey = null;
 
     private bool $slugTocado = false;

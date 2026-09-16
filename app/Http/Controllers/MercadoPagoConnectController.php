@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Barbearia;
 use App\Services\MercadoPagoService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -31,7 +35,8 @@ class MercadoPagoConnectController extends Controller
     public function callback(Request $request, MercadoPagoService $mercadoPago): RedirectResponse
     {
         if (
-            ! $request->filled('code')
+            ! is_string($request->query('code'))
+            || ! $request->filled('code')
             || $request->query('state') !== session('mp_oauth_state')
             || ! session('mp_oauth_barbearia_id')
         ) {
@@ -50,9 +55,21 @@ class MercadoPagoConnectController extends Controller
             abort(403);
         }
 
+        Gate::authorize('barbearia.gerenciar');
+
         $barbearia = Barbearia::withoutGlobalScopes()->findOrFail($barbeariaOAuthId);
 
-        $token = $mercadoPago->trocarCodigoPorToken($request->query('code'), route('mercadopago.callback'));
+        try {
+            $token = $mercadoPago->trocarCodigoPorToken($request->query('code'), route('mercadopago.callback'));
+        } catch (RequestException|ConnectionException $e) {
+            Log::warning('Mercado Pago: falha na conexao OAuth', ['barbearia_id' => $barbearia->id, 'exception' => $e::class]);
+
+            return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
+        }
+
+        if (empty($token['access_token']) || empty($token['user_id'])) {
+            return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
+        }
 
         $barbearia->update([
             'mp_user_id' => $token['user_id'] ?? null,

@@ -118,4 +118,37 @@ class RetornoPagamentoHttpTest extends TestCase
             ->assertOk()
             ->assertSee(__('agendamento.turno_confirmado'));
     }
+
+    public function test_retorno_aceita_parametros_adicionados_pelo_mercado_pago(): void
+    {
+        $this->get($this->link().'&payment_id=123&status=approved&collection_id=123&collection_status=approved&external_reference='.$this->agendamento->id.'&payment_type=credit_card&merchant_order_id=456&preference_id=pref-123&site_id=MLA&processing_mode=aggregator&merchant_account_id=null')
+            ->assertOk();
+    }
+
+    public function test_status_forjado_na_query_nao_confirma_pagamento(): void
+    {
+        $this->agendamento->update(['status' => 'pendente']);
+        Pagamento::withoutGlobalScopes()->update(['mp_status' => 'pending']);
+        $this->get($this->link().'&status=approved&payment_id=123')
+            ->assertOk()->assertSee(__('agendamento.pago_procesando'));
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+    }
+
+    public function test_parametros_extras_nao_autorizam_url_sem_assinatura(): void
+    {
+        $this->get(route('public.agendamento.retorno', [
+            'barbearia' => $this->barbearia->slug, 'agendamento' => $this->agendamento->id,
+        ]).'?status=approved')->assertForbidden();
+    }
+
+    public function test_query_do_gateway_nao_permite_alterar_id_assinado(): void
+    {
+        $url = str_replace('/agendamento/'.$this->agendamento->id.'/', '/agendamento/999999/', $this->link());
+        $this->get($url.'&status=approved')->assertForbidden();
+    }
+
+    public function test_query_nao_documentada_continua_invalidando_assinatura(): void
+    {
+        $this->get($this->link().'&admin=true')->assertForbidden();
+    }
 }

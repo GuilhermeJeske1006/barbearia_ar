@@ -35,6 +35,10 @@ class ResolveTenant
         }
 
         if ($barbearia) {
+            // A suspensão administrativa também vale nas ações Livewire.
+            // Mantém a tela de assinatura acessível para regularização.
+            abort_if($barbearia->status === 'suspensa' && ! $request->routeIs('admin.assinatura'), 403);
+
             app()->instance('barbearia.id', $barbearia->id);
             app()->instance('barbearia', $barbearia);
             app(PermissionRegistrar::class)->setPermissionsTeamId($barbearia->id);

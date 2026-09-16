@@ -11,9 +11,9 @@ use App\Models\Pagamento;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class RelatorioComissoesTest extends TestCase
@@ -29,6 +29,7 @@ class RelatorioComissoesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        app()->setLocale('pt');
         $this->seed(RoleAndPermissionSeeder::class);
 
         $this->dono = app(RegistrarDonoEBarbeariaAction::class)->handle(
@@ -185,12 +186,14 @@ class RelatorioComissoesTest extends TestCase
 
         $component = Livewire::actingAs($this->dono)->test(RelatorioComissoes::class);
 
-        // Livewire::call() falha ao capturar snapshot de resposta binária
-        // (PDF não é UTF-8) — chamamos a action direto na instância, como o
-        // wire:click faria de verdade no navegador.
+        $component->call('exportarPdf')->assertFileDownloaded();
+
         $response = $component->instance()->exportarPdf();
 
-        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        ob_start();
+        $response->sendContent();
+        $this->assertStringStartsWith('%PDF-', ob_get_clean());
     }
 
     public function test_comissao_de_barbeiro_removido_continua_no_relatorio_com_nome(): void

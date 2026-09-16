@@ -6,9 +6,10 @@ use App\Models\Agendamento;
 use App\Models\Barbearia;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
+use MercadoPago\Client\Common\RequestOptions;
 use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Client\Preference\PreferenceClient;
-use MercadoPago\MercadoPagoConfig;
+use RuntimeException;
 
 /**
  * Marketplace/Connect wrapper around the MP SDK. Each barbearia authenticates
@@ -52,7 +53,7 @@ class MercadoPagoService
 
     public function trocarCodigoPorToken(string $code, string $redirectUri): array
     {
-        $response = Http::asForm()->post('https://api.mercadopago.com/oauth/token', [
+        $response = Http::asForm()->connectTimeout(5)->timeout(15)->post('https://api.mercadopago.com/oauth/token', [
             'client_secret' => config('services.mercadopago.client_secret'),
             'client_id' => config('services.mercadopago.client_id'),
             'grant_type' => 'authorization_code',
@@ -70,7 +71,7 @@ class MercadoPagoService
      */
     public function renovarToken(string $refreshToken): array
     {
-        $response = Http::asForm()->post('https://api.mercadopago.com/oauth/token', [
+        $response = Http::asForm()->connectTimeout(5)->timeout(15)->post('https://api.mercadopago.com/oauth/token', [
             'client_secret' => config('services.mercadopago.client_secret'),
             'client_id' => config('services.mercadopago.client_id'),
             'grant_type' => 'refresh_token',
@@ -91,7 +92,7 @@ class MercadoPagoService
             return;
         }
 
-        if ($barbearia->mp_token_expira_em && now()->lt($barbearia->mp_token_expira_em->subDays(7))) {
+        if ($barbearia->mp_token_expira_em && now()->lt($barbearia->mp_token_expira_em->copy()->subDays(7))) {
             return;
         }
 
@@ -108,7 +109,7 @@ class MercadoPagoService
     {
         $this->garantirTokenValido($barbearia);
 
-        MercadoPagoConfig::setAccessToken($barbearia->mp_access_token);
+        $options = new RequestOptions(access_token: $barbearia->mp_access_token, connection_timeout: 15000);
 
         $client = new PreferenceClient;
 
@@ -129,7 +130,10 @@ class MercadoPagoService
             ]],
             'marketplace_fee' => $this->calcularTaxaPlataforma($valorTotal),
             'external_reference' => (string) $agendamento->id,
-            'notification_url' => route('webhooks.mercadopago'),
+            'notification_url' => route('webhooks.mercadopago', ['barbearia' => $barbearia->id]),
+            'expires' => true,
+            'expiration_date_from' => now()->toIso8601String(),
+            'expiration_date_to' => now()->addMinutes(30)->toIso8601String(),
             'statement_descriptor' => substr($barbearia->nome, 0, 22),
             'back_urls' => [
                 'success' => $retornoUrl,
@@ -143,7 +147,7 @@ class MercadoPagoService
             $dadosPreferencia['payer'] = ['email' => $agendamento->cliente->email, 'name' => $agendamento->cliente->nome];
         }
 
-        $preference = $client->create($dadosPreferencia);
+        $preference = $client->create($dadosPreferencia, $options);
 
         $initPoint = config('services.mercadopago.sandbox') && $preference->sandbox_init_point
             ? $preference->sandbox_init_point
@@ -153,25 +157,23 @@ class MercadoPagoService
     }
 
     /**
-     * Busca um pagamento pela API usando o token da própria plataforma —
-     * suficiente pra ler pagamentos criados a partir de uma preferência que
-     * a plataforma emitiu, mesmo antes de sabermos a qual barbearia (tenant)
-     * ele pertence. É por isso que o webhook consegue resolver o
-     * external_reference (id do agendamento) antes de qualquer contexto de
-     * tenant existir.
-     *
-     * Tipado como object (não o \MercadoPago\Resources\Payment concreto do
-     * SDK) de propósito — quem consome só acessa propriedades dinâmicas
-     * (status, transaction_amount, external_reference), então testes podem
-     * mockar isso com um stdClass sem precisar construir o objeto real do
-     * SDK, que não tem um jeito prático de instanciar fora de uma resposta
-     * HTTP de verdade.
+     * Novos checkouts consultam com OAuth do vendedor identificado na URL
+     * de notificação. O token da plataforma fica apenas como compatibilidade
+     * para preferências antigas, emitidas sem esse identificador.
      */
-    public function buscarPagamento(string $mpPaymentId): object
+    public function buscarPagamento(string $mpPaymentId, ?Barbearia $barbearia = null): object
     {
-        MercadoPagoConfig::setAccessToken(config('services.mercadopago.access_token'));
+        if ($barbearia) {
+            $this->garantirTokenValido($barbearia);
+        }
 
-        return (new PaymentClient)->get($mpPaymentId);
+        $token = $barbearia ? $barbearia->mp_access_token : config('services.mercadopago.access_token');
+        if (! is_string($token) || $token === '') {
+            throw new RuntimeException('Credencial Mercado Pago indisponível para consultar o pagamento.');
+        }
+        $options = new RequestOptions(access_token: $token, connection_timeout: 15000);
+
+        return (new PaymentClient)->get($mpPaymentId, $options);
     }
 
     private function calcularTaxaPlataforma(float $valorTotal): float

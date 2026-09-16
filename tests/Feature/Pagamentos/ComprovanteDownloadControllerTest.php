@@ -95,6 +95,7 @@ class ComprovanteDownloadControllerTest extends TestCase
     {
         $atendente = User::create([
             'name' => 'Atendente', 'email' => 'atendente@example.com', 'password' => bcrypt('senha-forte-123'),
+            'filial_atual_id' => $this->dono->filial_atual_id,
             'tipo' => 'atendente', 'barbearia_atual_id' => $this->barbearia->id, 'ativo' => true,
         ]);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
@@ -108,7 +109,7 @@ class ComprovanteDownloadControllerTest extends TestCase
     public function test_dono_de_outra_barbearia_nao_baixa_comprovante_alheio(): void
     {
         $outraBarbearia = Barbearia::create(['nome' => 'Outra', 'slug' => 'outra']);
-        $filialOutra = Filial::create(['barbearia_id' => $outraBarbearia->id, 'nome' => 'Matriz']);
+        $filialOutra = Filial::withoutEvents(fn () => Filial::create(['barbearia_id' => $outraBarbearia->id, 'nome' => 'Matriz']));
         app(PermissionRegistrar::class)->setPermissionsTeamId($outraBarbearia->id);
 
         $donoOutra = User::create([

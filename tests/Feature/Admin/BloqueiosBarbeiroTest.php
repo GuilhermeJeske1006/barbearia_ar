@@ -66,7 +66,7 @@ class BloqueiosBarbeiroTest extends TestCase
         $this->assertSame($this->barbearia->id, $bloqueio->barbearia_id);
     }
 
-    public function test_dataFim_antes_de_dataInicio_falha_validacao(): void
+    public function test_data_fim_antes_de_data_inicio_falha_validacao(): void
     {
         Livewire::actingAs($this->dono)
             ->test(BloqueiosBarbeiro::class, ['barbeiro' => $this->barbeiro])
@@ -121,6 +121,7 @@ class BloqueiosBarbeiroTest extends TestCase
             'email' => 'barbeiro@example.com',
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
+            'filial_atual_id' => $this->barbeiro->filial_id,
             'barbearia_atual_id' => $this->barbearia->id,
             'ativo' => true,
         ]);

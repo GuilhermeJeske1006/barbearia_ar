@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Http\Middleware\ResolveFilial;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SuperAdminOnly;
+use App\Http\Middleware\VerificarAssinaturaAtiva;
+use App\Http\Middleware\VerificarUsuarioAtivo;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -50,6 +53,11 @@ class AppServiceProvider extends ServiceProvider
         // 'auth'/'can' so the team context exists before Authorize checks.
         app(PersistentMiddleware::class)->addPersistentMiddleware(ResolveTenant::class);
         app(PersistentMiddleware::class)->addPersistentMiddleware(ResolveFilial::class);
+        app(PersistentMiddleware::class)->addPersistentMiddleware([
+            VerificarUsuarioAtivo::class,
+            VerificarAssinaturaAtiva::class,
+            SuperAdminOnly::class,
+        ]);
 
         // Throttle público (/b/{barbearia}): limita carregamento da página
         // por IP. A ação de criar agendamento (que chama gateway de

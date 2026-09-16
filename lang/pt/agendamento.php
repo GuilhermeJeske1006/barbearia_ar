@@ -113,4 +113,10 @@ return [
     'transferencia_comprovante_ajuda' => 'JPG, PNG ou PDF, até 5 MB.',
     'transferencia_enviando' => 'Enviando…',
     'transferencia_enviar_botao' => 'Enviar comprovante',
+    'pagamento_estornado' => 'Pagamento devolvido ou contestado',
+    'pagamento_estornado_detalhe' => 'Este pagamento foi devolvido ou contestado. Entre em contato com a barbearia para conferir sua reserva.',
+    'pagamento_expirado' => 'Reserva cancelada ou expirada',
+    'pagamento_expirado_detalhe' => 'Este horário não está mais reservado. Se você já pagou, entre em contato com a barbearia antes de fazer outro pagamento.',
+    'pagamento_revisao' => 'Pagamento recebido após o cancelamento',
+    'pagamento_revisao_detalhe' => 'O pagamento foi recebido, mas o horário não está confirmado. Entre em contato com a barbearia para combinar um novo horário ou a devolução.',
 ];

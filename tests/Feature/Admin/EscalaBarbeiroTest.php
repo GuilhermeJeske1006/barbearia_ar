@@ -14,9 +14,9 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class EscalaBarbeiroTest extends TestCase
@@ -154,6 +154,7 @@ class EscalaBarbeiroTest extends TestCase
             'email' => 'barbeiro@example.com',
             'password' => bcrypt('senha-forte-123'),
             'tipo' => 'barbeiro',
+            'filial_atual_id' => $this->barbeiro->filial_id,
             'barbearia_atual_id' => $this->barbearia->id,
             'ativo' => true,
         ]);

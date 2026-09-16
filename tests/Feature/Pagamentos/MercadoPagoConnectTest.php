@@ -141,4 +141,27 @@ class MercadoPagoConnectTest extends TestCase
             ->get(route('mercadopago.conectar'))
             ->assertForbidden();
     }
+
+    public function test_callback_revalida_permissao_revogada_durante_o_oauth(): void
+    {
+        Http::fake();
+        $this->actingAs($this->dono)->get(route('mercadopago.conectar'));
+        $state = session('mp_oauth_state');
+        $this->dono->syncRoles(['atendente']);
+
+        $this->get(route('mercadopago.callback', ['code' => 'code', 'state' => $state]))->assertForbidden();
+        Http::assertNothingSent();
+        $this->assertNull($this->barbearia->fresh()->mp_access_token);
+    }
+
+    public function test_falha_na_api_oauth_preserva_conexao_anterior_e_exibe_erro(): void
+    {
+        $this->barbearia->update(['mp_access_token' => 'token-anterior']);
+        Http::fake(['api.mercadopago.com/oauth/token' => Http::response(['error' => 'invalid_grant'], 400)]);
+        $this->actingAs($this->dono)->get(route('mercadopago.conectar'));
+        $this->get(route('mercadopago.callback', ['code' => 'code', 'state' => session('mp_oauth_state')]))
+            ->assertRedirect(route('painel'))->assertSessionHas('erro');
+        $this->assertSame('token-anterior', $this->barbearia->fresh()->mp_access_token);
+        $this->assertNull(session('mp_oauth_state'));
+    }
 }

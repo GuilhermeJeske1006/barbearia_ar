@@ -189,4 +189,70 @@ class RetornoPagamentoTest extends TestCase
 
         $this->assertSame('pendente', $this->agendamento->fresh()->status);
     }
+
+    public function test_falha_na_retentativa_nao_prende_o_horario_nem_apaga_pagamentos(): void
+    {
+        $this->barbearia->update(['mp_access_token' => 'TEST-fake-token']);
+        $this->agendamento->update(['status' => 'cancelado']);
+        $pagamento = $this->criarPagamento('rejected');
+        BarbeiroHorario::create([
+            'barbeiro_id' => $this->agendamento->barbeiro_id, 'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => $this->agendamento->data_hora_inicio->dayOfWeek,
+            'hora_inicio' => '09:00', 'hora_fim' => '18:00',
+        ]);
+        $this->mock(MercadoPagoService::class)->shouldReceive('criarPreferencia')->once()->andThrow(new \RuntimeException('API indisponivel'));
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
+            ->call('tentarNovamente')->assertNoRedirect()->assertSet('erro', __('agendamento.erro_pagamento'));
+        $this->assertSame('cancelado', $this->agendamento->fresh()->status);
+        $this->assertSame('rejected', $pagamento->fresh()->mp_status);
+    }
+
+    public function test_pagamento_estornado_nao_mostra_confirmacao_nem_botao_para_pagar(): void
+    {
+        $this->criarPagamento('refunded');
+        $this->agendamento->update(['status' => 'concluido']);
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
+            ->assertSee(__('agendamento.pagamento_estornado'))
+            ->assertDontSee(__('agendamento.turno_confirmado'))
+            ->assertDontSee('wire:poll', false);
+    }
+
+    public function test_pagamento_tardio_exige_conciliacao_sem_oferecer_nova_cobranca(): void
+    {
+        $this->criarPagamento('approved');
+        $this->agendamento->update(['status' => 'cancelado']);
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
+            ->assertSee(__('agendamento.pagamento_revisao'))
+            ->assertDontSee(__('agendamento.tentar_pagar_novamente'))
+            ->call('tentarNovamente')->assertNoRedirect();
+    }
+
+    public function test_retentativa_preserva_total_do_checkout_com_produtos(): void
+    {
+        $this->barbearia->update(['mp_access_token' => 'TEST-fake-token']);
+        $this->agendamento->update(['status' => 'cancelado', 'origem_pdv' => true]);
+        $this->criarPagamento('rejected')->update(['valor_total' => 6500]);
+        BarbeiroHorario::create([
+            'barbeiro_id' => $this->agendamento->barbeiro_id, 'barbearia_id' => $this->barbearia->id,
+            'dia_semana' => $this->agendamento->data_hora_inicio->dayOfWeek,
+            'hora_inicio' => '09:00', 'hora_fim' => '18:00',
+        ]);
+        $this->mock(MercadoPagoService::class)->shouldReceive('criarPreferencia')->once()
+            ->withArgs(fn ($barbearia, $reserva, $valor) => $valor === 6500.0)
+            ->andReturn(['id' => 'pref-nova', 'init_point' => 'https://mercadopago.com.ar/checkout/test']);
+        Livewire::test(RetornoPagamento::class, ['agendamento' => $this->agendamento->id])
+            ->call('tentarNovamente')->assertRedirect('https://mercadopago.com.ar/checkout/test');
+        $this->assertDatabaseHas('pagamentos', ['mp_preference_id' => 'pref-nova', 'valor_total' => 6500]);
+    }
+
+    public function test_expiracao_respeita_checkout_novo_em_reserva_antiga(): void
+    {
+        $this->agendamento->update(['created_at' => now()->subHour()]);
+        $this->criarPagamento('pending');
+        $this->artisan('agendamentos:expirar-pendentes')->assertSuccessful();
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+        $this->travel(31)->minutes();
+        $this->artisan('agendamentos:expirar-pendentes')->assertSuccessful();
+        $this->assertSame('cancelado', $this->agendamento->fresh()->status);
+    }
 }

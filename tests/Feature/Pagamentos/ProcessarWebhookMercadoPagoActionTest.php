@@ -38,6 +38,7 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
             'nome' => 'Central',
             'slug' => 'central',
             'mp_access_token' => 'TEST-token',
+            'mp_user_id' => '123',
         ]);
         $this->criarEBindarFilial($this->barbearia);
 
@@ -83,17 +84,19 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         app()->instance('barbearia.id', $this->barbearia->id);
     }
 
-    private function mockPagamentoApi(string $status, float $valor = 5000): void
+    private function mockPagamentoApi(string $status, float $valor = 5000, array $overrides = []): void
     {
-        $this->mock(MercadoPagoService::class, function ($mock) use ($status, $valor) {
+        $this->mock(MercadoPagoService::class, function ($mock) use ($status, $valor, $overrides) {
             $mock->shouldReceive('buscarPagamento')
                 ->once()
-                ->andReturn((object) [
+                ->andReturn((object) array_replace([
                     'id' => 'mp-999',
                     'status' => $status,
+                    'collector_id' => '123',
+                    'currency_id' => 'ARS',
                     'transaction_amount' => $valor,
                     'external_reference' => (string) $this->agendamento->id,
-                ]);
+                ], $overrides));
         });
     }
 
@@ -304,5 +307,116 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         Log::shouldHaveReceived('warning')
             ->once()
             ->withArgs(fn ($mensagem, $contexto) => $contexto['mp_payment_id'] === 'mp-999');
+    }
+
+    private function reservarPagamento(): Pagamento
+    {
+        return Pagamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'agendamento_id' => $this->agendamento->id,
+            'cliente_id' => $this->agendamento->cliente_id,
+            'valor_total' => 5000, 'metodo' => 'mp_checkout',
+            'mp_preference_id' => 'pref-123', 'mp_status' => 'pending', 'forma_split' => 'manual',
+        ]);
+    }
+
+    public function test_valor_divergente_nao_confirma_reserva(): void
+    {
+        $this->reservarPagamento();
+        $this->mockPagamentoApi('approved', 1);
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+        $this->assertDatabaseCount('comissoes', 0);
+    }
+
+    public function test_reenvio_aprovado_nao_regride_atendimento_concluido(): void
+    {
+        $pagamento = $this->reservarPagamento();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->agendamento->update(['status' => 'concluido']);
+        $pagoEm = $pagamento->fresh()->pago_em;
+        $this->travel(1)->days();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('concluido', $this->agendamento->fresh()->status);
+        $this->assertTrue($pagoEm->equalTo($pagamento->fresh()->pago_em));
+    }
+
+    public function test_estorno_total_estorna_comissao_sem_reabrir_atendimento_concluido(): void
+    {
+        $this->reservarPagamento();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->agendamento->update(['status' => 'concluido']);
+        $this->mockPagamentoApi('refunded');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('estornado', Comissao::firstOrFail()->status);
+        $this->assertSame('concluido', $this->agendamento->fresh()->status);
+    }
+
+    public function test_recebedor_divergente_nao_confirma_reserva(): void
+    {
+        $this->reservarPagamento();
+        $this->mockPagamentoApi('approved', overrides: ['collector_id' => '999']);
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+        $this->assertDatabaseCount('comissoes', 0);
+    }
+
+    public function test_moeda_divergente_nao_confirma_reserva(): void
+    {
+        $this->reservarPagamento();
+        $this->mockPagamentoApi('approved', overrides: ['currency_id' => 'BRL']);
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+    }
+
+    public function test_pagamento_tardio_nao_reativa_reserva_cancelada(): void
+    {
+        $pagamento = $this->reservarPagamento();
+        $this->agendamento->update(['status' => 'cancelado']);
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('cancelado', $this->agendamento->fresh()->status);
+        $this->assertSame('approved', $pagamento->fresh()->mp_status);
+        $this->assertNotNull($pagamento->fresh()->pago_em);
+        $this->assertDatabaseCount('comissoes', 0);
+    }
+
+    public function test_evento_pendente_atrasado_nao_apaga_pagamento_aprovado(): void
+    {
+        $pagamento = $this->reservarPagamento();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->mockPagamentoApi('pending');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('approved', $pagamento->fresh()->mp_status);
+        $this->assertNotNull($pagamento->fresh()->pago_em);
+    }
+
+    public function test_recusa_antiga_nao_cancela_nova_tentativa_pendente(): void
+    {
+        $this->reservarPagamento();
+        $this->mockPagamentoApi('rejected');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->agendamento->refresh()->update(['status' => 'pendente']);
+        $nova = $this->reservarPagamento();
+        $this->mockPagamentoApi('rejected');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('pendente', $this->agendamento->fresh()->status);
+        $this->assertSame('pending', $nova->fresh()->mp_status);
+    }
+
+    public function test_chargeback_cancela_reserva_futura_e_estorna_comissao(): void
+    {
+        $pagamento = $this->reservarPagamento();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->mockPagamentoApi('charged_back');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+        $this->assertSame('cancelado', $this->agendamento->fresh()->status);
+        $this->assertSame('estornado', Comissao::firstOrFail()->status);
+        $this->assertNull($pagamento->fresh()->pago_em);
     }
 }

@@ -20,13 +20,18 @@ class ResolveFilial
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->filial_atual_id) {
-            $filial = Filial::withoutGlobalScopes()->find($request->user()->filial_atual_id);
+        app()->forgetInstance('filial.id');
+        app()->forgetInstance('filial');
 
-            if ($filial) {
-                app()->instance('filial.id', $filial->id);
-                app()->instance('filial', $filial);
-            }
+        if ($request->user()?->filial_atual_id) {
+            $filial = Filial::withoutGlobalScope('barbearia')
+                ->where('barbearia_id', $request->user()->barbearia_atual_id)
+                ->find($request->user()->filial_atual_id);
+
+            abort_unless($filial, 404);
+
+            app()->instance('filial.id', $filial->id);
+            app()->instance('filial', $filial);
         }
 
         return $next($request);

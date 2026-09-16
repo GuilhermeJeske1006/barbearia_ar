@@ -11,10 +11,10 @@ use App\Models\Servico;
 use App\Services\MercadoPagoService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class AgendamentoComPagamentoTest extends TestCase
@@ -57,6 +57,8 @@ class AgendamentoComPagamentoTest extends TestCase
             'percentual_comissao' => 50,
             'aceita_online' => true,
         ]);
+
+        $this->barbeiro->servicos()->attach($this->servico->id);
 
         BarbeiroHorario::create([
             'barbeiro_id' => $this->barbeiro->id,

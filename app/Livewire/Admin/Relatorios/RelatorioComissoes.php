@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Relatorios;
 
 use App\Models\Barbeiro;
 use App\Models\Comissao;
+use App\Support\Csv;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -99,6 +100,8 @@ class RelatorioComissoes extends Component
 
     public function marcarTodasComoPagas(): void
     {
+        $this->authorize('financeiro.gerenciar');
+
         DB::transaction(function () {
             $this->query()->where('status', 'pendente')->update(['status' => 'pago']);
         });
@@ -108,6 +111,8 @@ class RelatorioComissoes extends Component
 
     public function marcarComoPago(int $comissaoId): void
     {
+        $this->authorize('financeiro.gerenciar');
+
         Comissao::whereKey($comissaoId)->where('status', 'pendente')->update(['status' => 'pago']);
     }
 
@@ -122,7 +127,7 @@ class RelatorioComissoes extends Component
             foreach ($comissoes as $comissao) {
                 fputcsv($out, [
                     $comissao->data_referencia->toDateString(),
-                    $comissao->barbeiro->nome,
+                    Csv::safeCell($comissao->barbeiro->nome),
                     number_format($comissao->valor, 2, ',', '.'),
                     $comissao->status,
                 ]);
@@ -155,7 +160,8 @@ class RelatorioComissoes extends Component
         // como retorno da action, quebrando com "Malformed UTF-8 characters".
         return response()->streamDownload(
             fn () => print ($pdf->output()),
-            "comissoes-{$this->dataInicio}-a-{$this->dataFim}.pdf"
+            "comissoes-{$this->dataInicio}-a-{$this->dataFim}.pdf",
+            ['Content-Type' => 'application/pdf']
         );
     }
 

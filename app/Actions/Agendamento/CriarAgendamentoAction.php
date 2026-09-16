@@ -39,6 +39,10 @@ class CriarAgendamentoAction
         $fim = $inicio->copy()->addMinutes($duracaoTotal);
 
         return DB::transaction(function () use ($barbeiro, $cliente, $inicio, $fim, $servicos, $criadoPor, $origemPdv, $status, $produtosComQuantidade) {
+            // Bloqueia uma linha estável mesmo quando ainda não há reservas.
+            // Bloquear só agendamentos existentes não protege um horário vazio.
+            Barbeiro::whereKey($barbeiro->id)->lockForUpdate()->firstOrFail();
+
             // PDV registra um atendimento que já está em curso presencialmente
             // — não recusa por causa de expediente/bloqueio, só por conflito
             // real de agenda. Wizard público e agendamento manual do admin

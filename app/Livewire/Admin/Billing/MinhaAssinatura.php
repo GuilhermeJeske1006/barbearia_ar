@@ -12,6 +12,8 @@ class MinhaAssinatura extends Component
 {
     public function cancelar(StripeService $stripe): void
     {
+        $this->authorize('barbearia.gerenciar');
+
         $barbearia = $this->barbearia();
 
         if ($barbearia->stripe_subscription_id) {

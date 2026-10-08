@@ -303,7 +303,8 @@ return [
 
     'assinatura_titulo' => 'Mi suscripción',
     'assinatura_inativa_aviso' => 'Tu suscripción no está activa. Renová el pago para seguir usando el panel.',
-    'assinatura_sem_status' => 'Sin suscripción',
+    'assinatura_sem_status' => 'Sin cobro',
+    'assinatura_sem_cobranca_aviso' => 'Tu panel está habilitado. No hay ningún cobro activo por ahora, no necesitás hacer nada acá.',
     'assinatura_cancelada' => 'Suscripción cancelada.',
     'confirmar_cancelamento_assinatura' => '¿Confirmás que querés cancelar tu suscripción? Vas a perder el acceso al panel.',
     'cancelar_assinatura' => 'Cancelar suscripción',

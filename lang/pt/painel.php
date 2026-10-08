@@ -303,7 +303,8 @@ return [
 
     'assinatura_titulo' => 'Minha assinatura',
     'assinatura_inativa_aviso' => 'Sua assinatura não está ativa. Renove o pagamento para continuar usando o painel.',
-    'assinatura_sem_status' => 'Sem assinatura',
+    'assinatura_sem_status' => 'Sem cobrança',
+    'assinatura_sem_cobranca_aviso' => 'Seu painel está liberado. Não há nenhuma cobrança ativa no momento — não é preciso fazer nada por aqui.',
     'assinatura_cancelada' => 'Assinatura cancelada.',
     'confirmar_cancelamento_assinatura' => 'Confirma que deseja cancelar sua assinatura? Você perderá acesso ao painel.',
     'cancelar_assinatura' => 'Cancelar assinatura',

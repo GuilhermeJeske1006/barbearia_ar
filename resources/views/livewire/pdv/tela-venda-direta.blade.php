@@ -168,15 +168,25 @@
                     @endforeach
 
                     @foreach ($this->produtosDisponiveis() as $produto)
-                        <div class="rounded-xl border-2 border-slate-700 bg-slate-800 p-3">
-                            <span class="block text-sm font-bold leading-snug">{{ $produto->nome }}</span>
-                            <span class="mt-1 flex items-center justify-between gap-1.5 text-xs text-slate-400">
-                                <span>{{ __('pdv.produto') }}</span>
-                                <span><x-ui.money :value="$produto->preco" /></span>
-                            </span>
-                            @if (! is_null($produto->estoque_qtd) && $produto->estoque_qtd <= 5)
-                                <span class="mt-1.5 block text-[11px] font-bold text-amber-400">{{ __('pdv.estoque_baixo', ['n' => $produto->estoque_qtd]) }}</span>
+                        <div class="overflow-hidden rounded-xl border-2 border-slate-700 bg-slate-800">
+                            @if ($produto->foto_path)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($produto->foto_path) }}" class="aspect-square w-full object-cover" alt="">
+                            @else
+                                <div class="flex aspect-square w-full items-center justify-center bg-slate-700/60">
+                                    <x-ui.avatar :name="$produto->nome" size="lg" />
+                                </div>
                             @endif
+
+                            <div class="p-3">
+                                <span class="block text-sm font-bold leading-snug">{{ $produto->nome }}</span>
+                                <span class="mt-1 flex items-center justify-between gap-1.5 text-xs text-slate-400">
+                                    <span>{{ __('pdv.produto') }}</span>
+                                    <span><x-ui.money :value="$produto->preco" /></span>
+                                </span>
+                                @if (! is_null($produto->estoque_qtd) && $produto->estoque_qtd <= 5)
+                                    <span class="mt-1.5 block text-[11px] font-bold text-amber-400">{{ __('pdv.estoque_baixo', ['n' => $produto->estoque_qtd]) }}</span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>

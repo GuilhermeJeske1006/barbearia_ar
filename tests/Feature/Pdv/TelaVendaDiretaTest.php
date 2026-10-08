@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\MercadoPagoService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\CriaFilialParaTeste;
@@ -287,6 +288,18 @@ class TelaVendaDiretaTest extends TestCase
 
         $component->set('abaVerificar', 'catalogo')
             ->assertSee(__('pdv.aba_catalogo'));
+    }
+
+    public function test_catalogo_mostra_foto_do_produto(): void
+    {
+        $this->produto->update(['foto_path' => 'produtos/pomada.jpg']);
+
+        Livewire::actingAs($this->dono)
+            ->test(TelaVendaDireta::class)
+            ->call('iniciar')
+            ->set('modoInicial', 'agenda')
+            ->set('abaVerificar', 'catalogo')
+            ->assertSeeHtml(Storage::disk('public')->url('produtos/pomada.jpg'));
     }
 
     public function test_nao_permite_finalizar_sem_selecionar_servico_ou_produto(): void

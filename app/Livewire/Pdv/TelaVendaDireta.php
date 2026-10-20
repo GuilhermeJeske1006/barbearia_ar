@@ -302,6 +302,40 @@ class TelaVendaDireta extends Component
         }
     }
 
+    public string $codigoVenda = '';
+
+    /** Retorna true quando adicionou, pra o leitor limpar o campo e aceitar o próximo código. */
+    public function adicionarPorCodigo(string $codigo): bool
+    {
+        abort_unless(auth()->user()->can('pdv.operar'), 403);
+        $this->resetErrorBag('codigoVenda');
+        $this->codigoVenda = trim($codigo);
+        $this->validate(['codigoVenda' => 'required|string|max:64'], [], ['codigoVenda' => __('estoque.attr_codigo_barras')]);
+        $produto = Produto::where('codigo_barras', $this->codigoVenda)
+            ->where('ativo', true)->where('apenas_insumo', false)->first();
+        if (! $produto) {
+            $this->addError('codigoVenda', __('estoque.pdv_codigo_nao_encontrado'));
+
+            return false;
+        }
+
+        // Agendamento vinculado ainda não pago: o que ele já reservou saiu do
+        // saldo quando foi criado, então conta como disponível pra este carrinho.
+        $reservado = $this->agendamentoVinculadoId && ! $this->agendamentoJaPago
+            ? (int) ($this->agendamentoVinculado()?->produtos->firstWhere('id', $produto->id)?->pivot->quantidade ?? 0)
+            : 0;
+        $quantidade = ($this->produtosSelecionados[$produto->id] ?? 0) + 1;
+        if ($produto->estoque_qtd !== null && $quantidade > $produto->estoque_qtd + $reservado) {
+            $this->addError('codigoVenda', __('estoque.pdv_estoque_insuficiente'));
+
+            return false;
+        }
+        $this->incrementarProduto($produto->id);
+        $this->codigoVenda = '';
+
+        return true;
+    }
+
     public function incrementarProduto(int $produtoId): void
     {
         $this->produtosSelecionados[$produtoId] = ($this->produtosSelecionados[$produtoId] ?? 0) + 1;
@@ -421,16 +455,28 @@ class TelaVendaDireta extends Component
         $ehMetodoManual = in_array($this->metodoPagamento, ['dinheiro', 'transferencia', 'cartao_credito_presencial'], true);
 
         try {
-            $agendamento = $criarAgendamento->handle(
-                $barbeiro,
-                $cliente,
-                Carbon::now(),
-                $this->servicosSelecionadosCollection(),
-                'pdv',
-                origemPdv: true,
-                status: $ehMetodoManual ? 'concluido' : 'pendente',
-                produtosComQuantidade: $this->produtosSelecionados,
-            );
+            // Criação + pagamento manual + consumo de insumo numa transação só:
+            // se faltar insumo (ex.: nenhuma embalagem aberta pra consumo em
+            // ml/g), nada fica commitado — sem agendamento órfão 'concluido'
+            // sem pagamento que duplicaria a cada nova tentativa do caixa.
+            $agendamento = DB::transaction(function () use ($criarAgendamento, $barbeiro, $cliente, $ehMetodoManual, $estoqueService) {
+                $agendamento = $criarAgendamento->handle(
+                    $barbeiro,
+                    $cliente,
+                    Carbon::now(),
+                    $this->servicosSelecionadosCollection(),
+                    'pdv',
+                    origemPdv: true,
+                    status: $ehMetodoManual ? 'concluido' : 'pendente',
+                    produtosComQuantidade: $this->produtosSelecionados,
+                );
+
+                if ($ehMetodoManual) {
+                    $this->registrarPagamentoManual($agendamento, $estoqueService);
+                }
+
+                return $agendamento;
+            });
         } catch (RuntimeException $e) {
             $this->erro = $e->getMessage();
 
@@ -438,8 +484,6 @@ class TelaVendaDireta extends Component
         }
 
         if ($ehMetodoManual) {
-            $this->registrarPagamentoManual($agendamento, $estoqueService);
-
             // Notificação nunca pode derrubar uma venda já commitada — se
             // falhar aqui e a exception subir, o caixa vê erro numa venda
             // que já está no banco, clica de novo e duplica tudo.
@@ -572,28 +616,37 @@ class TelaVendaDireta extends Component
         );
 
         if ($ehMetodoManual) {
-            DB::transaction(function () use ($agendamento, $valorTotal, $calcularComissao, $estoqueService) {
-                $comissao = $calcularComissao->handle($agendamento, $valorTotal);
+            // Itens já sincronizados acima continuam reservados no mesmo
+            // agendamento; se faltar insumo, só o pagamento é desfeito e o
+            // caixa pode tentar de novo sem duplicar nada.
+            try {
+                DB::transaction(function () use ($agendamento, $valorTotal, $calcularComissao, $estoqueService) {
+                    $comissao = $calcularComissao->handle($agendamento, $valorTotal);
 
-                $pagamento = Pagamento::create([
-                    'barbearia_id' => $agendamento->barbearia_id,
-                    'filial_id' => $agendamento->filial_id,
-                    'agendamento_id' => $agendamento->id,
-                    'cliente_id' => $agendamento->cliente_id,
-                    'valor_total' => $valorTotal,
-                    'valor_comissao_barbeiro' => $comissao['comissao'],
-                    'valor_barbearia' => $comissao['barbearia'],
-                    'metodo' => $this->metodoManualAtual(),
-                    'forma_split' => 'manual',
-                    'pago_em' => now(),
-                ]);
+                    $pagamento = Pagamento::create([
+                        'barbearia_id' => $agendamento->barbearia_id,
+                        'filial_id' => $agendamento->filial_id,
+                        'agendamento_id' => $agendamento->id,
+                        'cliente_id' => $agendamento->cliente_id,
+                        'valor_total' => $valorTotal,
+                        'valor_comissao_barbeiro' => $comissao['comissao'],
+                        'valor_barbearia' => $comissao['barbearia'],
+                        'metodo' => $this->metodoManualAtual(),
+                        'forma_split' => 'manual',
+                        'pago_em' => now(),
+                    ]);
 
-                $agendamento->update(['status' => 'concluido', 'pagamento_id' => $pagamento->id]);
+                    $agendamento->update(['status' => 'concluido', 'pagamento_id' => $pagamento->id]);
 
-                $estoqueService->debitarConsumoServicos($agendamento, $agendamento->servicos);
+                    $estoqueService->debitarConsumoServicos($agendamento, $agendamento->servicos);
 
-                app(ComissaoService::class)->registrar($pagamento);
-            });
+                    app(ComissaoService::class)->registrar($pagamento);
+                });
+            } catch (RuntimeException $e) {
+                $this->erro = $e->getMessage();
+
+                return;
+            }
 
             try {
                 $notificarPesquisa->handle($agendamento->fresh());

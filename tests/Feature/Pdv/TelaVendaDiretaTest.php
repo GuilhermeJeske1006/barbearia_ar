@@ -71,6 +71,22 @@ class TelaVendaDiretaTest extends TestCase
         ]);
     }
 
+    public function test_codigo_adiciona_unidade_sem_baixar_estoque_e_respeita_disponibilidade(): void
+    {
+        $this->produto->update(['codigo_barras' => '0012345678905', 'estoque_qtd' => 1]);
+        $component = Livewire::actingAs($this->dono)->test(TelaVendaDireta::class)
+            ->call('adicionarPorCodigo', '0012345678905')
+            ->assertSet('produtosSelecionados.'.$this->produto->id, 1)->assertHasNoErrors();
+        $this->assertSame(1, $this->produto->fresh()->estoque_qtd);
+        $component->call('adicionarPorCodigo', '0012345678905')->assertHasErrors('codigoVenda')
+            ->assertSet('produtosSelecionados.'.$this->produto->id, 1);
+        $this->produto->update(['apenas_insumo' => true]);
+        $component->call('adicionarPorCodigo', '0012345678905')->assertHasErrors('codigoVenda');
+        $this->produto->update(['apenas_insumo' => false, 'ativo' => false]);
+        $component->call('adicionarPorCodigo', '0012345678905')->assertHasErrors('codigoVenda');
+        $component->call('adicionarPorCodigo', '99999999')->assertHasErrors('codigoVenda');
+    }
+
     public function test_venda_em_dinheiro_conclui_na_hora_com_comissao_registrada(): void
     {
         Livewire::actingAs($this->dono)
@@ -113,6 +129,56 @@ class TelaVendaDiretaTest extends TestCase
             'pagamento_id' => $pagamento->id,
             'valor' => 2500,
         ]);
+    }
+
+    public function test_venda_em_dinheiro_sem_saldo_aberto_para_consumo_em_ml_nao_deixa_agendamento_orfao(): void
+    {
+        $this->produto->update(['estoque_qtd' => 5]);
+        $locao = Produto::create(['nome' => 'Loção', 'preco' => 1000, 'estoque_qtd' => 2, 'unidade_consumo' => 'ml', 'conteudo_embalagem' => '500']);
+        $this->servico->produtosConsumidos()->attach($locao->id, ['quantidade_consumida' => 0, 'quantidade_fracionada' => '5']);
+
+        $component = Livewire::actingAs($this->dono)
+            ->test(TelaVendaDireta::class)
+            ->call('toggleServico', $this->servico->id)
+            ->call('incrementarProduto', $this->produto->id)
+            ->call('irParaBarbeiro')
+            ->call('escolherBarbeiro', $this->barbeiro->id)
+            ->set('clienteTelefone', '11999998888')
+            ->set('clienteNome', 'Maria')
+            ->call('confirmarCliente')
+            ->set('metodoPagamento', 'dinheiro')
+            ->call('finalizar')
+            ->assertSet('etapa', 4)
+            ->assertSet('erro', __('estoque.saldo_aberto_insuficiente', ['nome' => 'Loção']));
+
+        // Nada commitado: tentar de novo não duplica agendamento nem baixa estoque duas vezes.
+        $component->call('finalizar')->assertSet('etapa', 4);
+        $this->assertSame(0, Agendamento::count());
+        $this->assertSame(0, Pagamento::count());
+        $this->assertSame(5, $this->produto->fresh()->estoque_qtd);
+        $this->assertDatabaseCount('movimentacoes_estoque', 0);
+    }
+
+    public function test_codigo_considera_unidade_ja_reservada_pelo_agendamento_vinculado(): void
+    {
+        $this->produto->update(['codigo_barras' => '0012345678905', 'estoque_qtd' => 1]);
+        $cliente = Cliente::create(['barbearia_id' => $this->barbearia->id, 'nome' => 'Ana', 'telefone' => '111']);
+        $agendamento = Agendamento::create([
+            'barbearia_id' => $this->barbearia->id, 'barbeiro_id' => $this->barbeiro->id, 'cliente_id' => $cliente->id,
+            'criado_por' => 'admin', 'data_hora_inicio' => now(), 'data_hora_fim' => now()->addMinutes(30), 'status' => 'confirmado',
+        ]);
+        // Reserva de 1 unidade já debitada do saldo (sobrou 1).
+        $agendamento->produtos()->attach($this->produto->id, ['quantidade' => 1, 'preco_cobrado' => 2000]);
+
+        Livewire::actingAs($this->dono)->test(TelaVendaDireta::class)
+            ->call('selecionarAgendamento', $agendamento->id)
+            ->call('adicionarPorCodigo', '0012345678905')
+            ->assertHasNoErrors()
+            ->assertSet('produtosSelecionados.'.$this->produto->id, 2)
+            ->assertSet('codigoVenda', '')
+            ->call('adicionarPorCodigo', '0012345678905')
+            ->assertHasErrors('codigoVenda')
+            ->assertSet('produtosSelecionados.'.$this->produto->id, 2);
     }
 
     public function test_venda_em_cartao_credito_presencial_conclui_na_hora(): void

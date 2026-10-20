@@ -19,6 +19,7 @@
     },
     "dependencies": {
         "@alpinejs/collapse": "^3.16.3",
+        "@zxing/browser": "^0.1.5",
         "chart.js": "^4.4.7",
         "gsap": "^3.15.0",
         "qrcode": "^1.5.4"

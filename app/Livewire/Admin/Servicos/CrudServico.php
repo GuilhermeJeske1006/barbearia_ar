@@ -56,7 +56,7 @@ class CrudServico extends Component
         $this->preco = (string) $servico->preco;
         $this->ativo = $servico->ativo;
         $this->produtosConsumo = $servico->produtosConsumidos
-            ->mapWithKeys(fn (Produto $produto) => [$produto->id => $produto->pivot->quantidade_consumida])
+            ->mapWithKeys(fn (Produto $produto) => [$produto->id => $produto->unidade_consumo === 'un' ? $produto->pivot->quantidade_consumida : $produto->pivot->quantidade_fracionada])
             ->all();
         $this->mostrarForm = true;
     }
@@ -73,7 +73,7 @@ class CrudServico extends Component
 
     public function incrementarProdutoConsumo(int $produtoId): void
     {
-        $this->produtosConsumo[$produtoId] = ($this->produtosConsumo[$produtoId] ?? 0) + 1;
+        $this->produtosConsumo[$produtoId] = $this->quantidadeConsumo($produtoId) + 1;
     }
 
     public function decrementarProdutoConsumo(int $produtoId): void
@@ -82,17 +82,54 @@ class CrudServico extends Component
             return;
         }
 
-        $this->produtosConsumo[$produtoId]--;
+        $this->produtosConsumo[$produtoId] = $this->quantidadeConsumo($produtoId) - 1;
 
         if ($this->produtosConsumo[$produtoId] <= 0) {
             unset($this->produtosConsumo[$produtoId]);
         }
     }
 
+    /** O campo é texto livre: "5,25", "" ou lixo não podem quebrar o +/−. */
+    private function quantidadeConsumo(int $produtoId): float|int
+    {
+        $valor = str_replace(',', '.', trim((string) ($this->produtosConsumo[$produtoId] ?? 0)));
+        $numero = is_numeric($valor) ? $valor + 0 : 0;
+
+        return round($numero, 2) == (int) $numero ? (int) $numero : round($numero, 2);
+    }
+
     public function salvar(): void
     {
         $this->validate();
 
+        // Sem o filtro de 'ativo' do picker: um insumo desativado depois de
+        // entrar na receita continua nela (invisível no form) e não pode
+        // impedir o serviço de ser salvo de novo.
+        $produtos = Produto::whereNotNull('estoque_qtd')->whereIn('id', array_keys($this->produtosConsumo))->get()->keyBy('id');
+        $receita = [];
+        foreach ($this->produtosConsumo as $id => $quantidade) {
+            $produto = $produtos->get($id);
+            if (! $produto) {
+                $this->addError('produtosConsumo', __('estoque.produto_indisponivel_filial'));
+
+                return;
+            }
+            // Campo de texto: vazio vale zero e a vírgula decimal (pt/es) vira ponto.
+            $quantidade = str_replace(',', '.', trim((string) $quantidade));
+            if ($quantidade === '') {
+                unset($this->produtosConsumo[$id]);
+
+                continue;
+            }
+            $this->produtosConsumo[$id] = $quantidade;
+            $regras = $produto->unidade_consumo === 'un' ? 'required|integer|min:0|max:1000000' : 'required|numeric|min:0|max:1000000|decimal:0,2';
+            $this->validate(['produtosConsumo.'.$id => $regras], [], ['produtosConsumo.'.$id => __('estoque.attr_consumo', ['nome' => $produto->nome])]);
+            if ((float) $quantidade > 0) {
+                $receita[$id] = $produto->unidade_consumo === 'un'
+                    ? ['quantidade_consumida' => (int) $quantidade, 'quantidade_fracionada' => null]
+                    : ['quantidade_consumida' => 0, 'quantidade_fracionada' => $quantidade];
+            }
+        }
         $servico = Servico::updateOrCreate(
             ['id' => $this->editandoId],
             [
@@ -104,11 +141,7 @@ class CrudServico extends Component
             ],
         );
 
-        $servico->produtosConsumidos()->sync(
-            collect($this->produtosConsumo)->mapWithKeys(
-                fn (int $quantidade, int $produtoId) => [$produtoId => ['quantidade_consumida' => $quantidade]]
-            )->all()
-        );
+        $servico->produtosConsumidos()->sync($receita);
 
         $this->mostrarForm = false;
         $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo']);

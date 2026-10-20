@@ -24,15 +24,22 @@
             </x-ui.upload-foto>
 
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_produto') }}" autofocus />
+            <x-ui.barcode-scanner model="codigoBarras" field="codigoBarras" variant="simples" />
+            <x-ui.select label="{{ __('estoque.unidade_consumo') }}" id="unidadeConsumo" name="unidadeConsumo" wire:model.live="unidadeConsumo">
+                <option value="un">{{ __('estoque.unidade_un') }}</option><option value="ml">{{ __('estoque.unidade_ml') }}</option><option value="g">{{ __('estoque.unidade_g') }}</option>
+            </x-ui.select>
+            @if ($unidadeConsumo !== 'un')
+                <x-ui.input label="{{ __('estoque.conteudo_embalagem') }}" name="conteudoEmbalagem" wire:model="conteudoEmbalagem" type="text" inputmode="decimal" autocomplete="off" suffix="{{ $unidadeConsumo }}" hint="{{ __('estoque.conteudo_embalagem_ajuda') }}" />
+            @endif
             <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_produto') }}" rows="2" />
 
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" />
                 @if (! $editandoId)
                     <x-ui.input label="{{ __('painel.estoque') }}" id="estoqueQtd" name="estoqueQtd" type="number" min="0" wire:model="estoqueQtd" placeholder="{{ __('painel.placeholder_estoque') }}" />
                 @endif
                 <x-ui.input label="{{ __('painel.estoque_minimo') }}" id="estoqueMinimo" name="estoqueMinimo" type="number" min="0" wire:model="estoqueMinimo" placeholder="{{ __('painel.placeholder_estoque') }}" />
-                <div class="flex items-center pt-6">
+                <div class="flex min-h-11 items-center">
                     <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
                 </div>
             </div>
@@ -91,6 +98,7 @@
                         </td>
                         <td class="px-4 py-2.5">
                             {{ $produto->nome }}
+                            @if ($produto->codigo_barras)<span class="block text-xs text-slate-500">{{ $produto->codigo_barras }}</span>@endif
                             @if ($produto->apenas_insumo)
                                 <x-ui.badge tone="slate" class="ml-1">{{ __('painel.insumo') }}</x-ui.badge>
                             @endif

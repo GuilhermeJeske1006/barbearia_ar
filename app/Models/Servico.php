@@ -30,7 +30,7 @@ class Servico extends Model
     public function produtosConsumidos(): BelongsToMany
     {
         return $this->belongsToMany(Produto::class, 'servico_produto')
-            ->withPivot('quantidade_consumida')
+            ->withPivot('quantidade_consumida', 'quantidade_fracionada')
             ->withTimestamps();
     }
 }

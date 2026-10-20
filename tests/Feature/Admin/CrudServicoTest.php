@@ -10,9 +10,9 @@ use App\Models\Servico;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class CrudServicoTest extends TestCase
@@ -37,6 +37,44 @@ class CrudServicoTest extends TestCase
         app()->instance('barbearia', $this->barbearia);
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
         $this->criarEBindarFilial($this->barbearia);
+    }
+
+    public function test_receita_aceita_consumo_fracionado_e_preserva_na_edicao(): void
+    {
+        $produto = Produto::create(['nome' => 'Loção', 'preco' => 10, 'estoque_qtd' => 2, 'unidade_consumo' => 'ml', 'conteudo_embalagem' => 500]);
+        $component = Livewire::actingAs($this->dono)->test(CrudServico::class)
+            ->call('criar')->set('nome', 'Barba')->set('preco', '20')->set('duracaoMinutos', '15')
+            ->set('produtosConsumo', [$produto->id => '5.25'])->call('salvar')->assertHasNoErrors();
+        $servico = Servico::where('nome', 'Barba')->firstOrFail();
+        $this->assertDatabaseHas('servico_produto', ['servico_id' => $servico->id, 'produto_id' => $produto->id, 'quantidade_fracionada' => 5.25, 'quantidade_consumida' => 0]);
+        $component->call('editar', $servico->id)->assertSet('produtosConsumo.'.$produto->id, 5.25);
+    }
+
+    public function test_receita_aceita_virgula_decimal_e_botoes_nao_quebram_com_valor_digitado(): void
+    {
+        $produto = Produto::create(['nome' => 'Loção', 'preco' => 10, 'estoque_qtd' => 2, 'unidade_consumo' => 'ml', 'conteudo_embalagem' => 500]);
+        Livewire::actingAs($this->dono)->test(CrudServico::class)
+            ->call('criar')->set('nome', 'Barba')->set('preco', '20')->set('duracaoMinutos', '15')
+            ->set('produtosConsumo', [$produto->id => '5,25'])
+            ->call('incrementarProdutoConsumo', $produto->id)->assertSet('produtosConsumo.'.$produto->id, 6.25)
+            ->call('decrementarProdutoConsumo', $produto->id)->assertSet('produtosConsumo.'.$produto->id, 5.25)
+            ->call('salvar')->assertHasNoErrors();
+        $this->assertDatabaseHas('servico_produto', ['produto_id' => $produto->id, 'quantidade_fracionada' => 5.25]);
+    }
+
+    public function test_insumo_desativado_depois_de_entrar_na_receita_nao_impede_salvar_o_servico(): void
+    {
+        $produto = Produto::create(['nome' => 'Pomada', 'preco' => 10, 'estoque_qtd' => 2]);
+        $servico = Servico::create(['nome' => 'Corte', 'preco' => 20, 'duracao_minutos' => 30]);
+        $servico->produtosConsumidos()->attach($produto->id, ['quantidade_consumida' => 1]);
+        $produto->update(['ativo' => false]);
+
+        Livewire::actingAs($this->dono)->test(CrudServico::class)
+            ->call('editar', $servico->id)->set('nome', 'Corte clássico')
+            ->call('salvar')->assertHasNoErrors();
+
+        $this->assertSame('Corte clássico', $servico->fresh()->nome);
+        $this->assertDatabaseHas('servico_produto', ['servico_id' => $servico->id, 'produto_id' => $produto->id, 'quantidade_consumida' => 1]);
     }
 
     public function test_dono_pode_criar_editar_e_remover_servico(): void

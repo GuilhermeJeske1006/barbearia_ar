@@ -196,6 +196,7 @@
 
     {{-- Etapa 1: serviços + produtos --}}
     @if ($etapa === 1)
+        <x-ui.barcode-scanner action="adicionarPorCodigo" label="{{ __('estoque.adicionar_unidade_venda') }}" field="codigoVenda" variant="pdv" limpar focar class="mb-5" />
         <h1 class="mb-5 text-xl font-extrabold">{{ __('pdv.servicios_y_productos') }}</h1>
 
         @if ($erro)

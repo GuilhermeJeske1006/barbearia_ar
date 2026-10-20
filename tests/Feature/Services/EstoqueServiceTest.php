@@ -144,6 +144,52 @@ class EstoqueServiceTest extends TestCase
         $this->assertDatabaseCount('movimentacoes_estoque', 0);
     }
 
+    public function test_abrir_embalagem_separa_fechados_do_conteudo_e_debita_consumo_decimal(): void
+    {
+        $locao = Produto::create(['nome' => 'Loção', 'preco' => 50, 'estoque_qtd' => 2, 'unidade_consumo' => 'ml', 'conteudo_embalagem' => '500.50']);
+        $this->service->abrirEmbalagem($locao);
+        $this->assertSame(1, $locao->fresh()->estoque_qtd);
+        $this->assertSame('500.50', $locao->fresh()->saldo_aberto);
+        $servico = Servico::create(['nome' => 'Barba', 'preco' => 20, 'duracao_minutos' => 15]);
+        $servico->produtosConsumidos()->attach($locao->id, ['quantidade_consumida' => 0, 'quantidade_fracionada' => '5.25']);
+        $agendamento = $this->criarAgendamento();
+        $this->service->debitarConsumoServicos($agendamento, collect([$servico]));
+        $this->assertSame('495.25', $locao->fresh()->saldo_aberto);
+        $this->assertSame(1, $locao->fresh()->estoque_qtd);
+        $this->assertDatabaseHas('movimentacoes_estoque', ['produto_id' => $locao->id, 'unidade' => 'ml', 'quantidade' => -5.25, 'agendamento_id' => $agendamento->id]);
+        $this->service->movimentarAberto($locao, -25, 'ajuste', 'Perda');
+        $this->assertSame('495.00', $locao->fresh()->saldo_aberto);
+    }
+
+    public function test_falta_de_conteudo_desfaz_consumo_de_outros_produtos(): void
+    {
+        $pomada = Produto::create(['nome' => 'Pomada', 'preco' => 25, 'estoque_qtd' => 2]);
+        $locao = Produto::create(['nome' => 'Loção', 'preco' => 50, 'estoque_qtd' => 2, 'unidade_consumo' => 'ml', 'conteudo_embalagem' => '500']);
+        $servico = Servico::create(['nome' => 'Barba', 'preco' => 20, 'duracao_minutos' => 15]);
+        $servico->produtosConsumidos()->attach($pomada->id, ['quantidade_consumida' => 1]);
+        $servico->produtosConsumidos()->attach($locao->id, ['quantidade_consumida' => 0, 'quantidade_fracionada' => '5']);
+        try {
+            $this->service->debitarConsumoServicos($this->criarAgendamento(), collect([$servico]));
+            $this->fail('Deveria recusar consumo sem embalagem aberta.');
+        } catch (RuntimeException $e) {
+            $this->assertSame(__('estoque.saldo_aberto_insuficiente', ['nome' => 'Loção']), $e->getMessage());
+        }
+        $this->assertSame(2, $pomada->fresh()->estoque_qtd);
+        $this->assertDatabaseCount('movimentacoes_estoque', 0);
+    }
+
+    public function test_nao_abre_embalagem_sem_saldo_fechado(): void
+    {
+        $produto = Produto::create(['nome' => 'Pomada', 'preco' => 25, 'estoque_qtd' => 0, 'unidade_consumo' => 'g', 'conteudo_embalagem' => '100']);
+        try {
+            $this->service->abrirEmbalagem($produto);
+            $this->fail('Deveria recusar abertura.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('0.00', $produto->fresh()->saldo_aberto);
+            $this->assertDatabaseCount('movimentacoes_estoque', 0);
+        }
+    }
+
     private function criarAgendamento(): Agendamento
     {
         $barbeiro = Barbeiro::create(['nome' => 'Pedro', 'percentual_comissao' => 50]);

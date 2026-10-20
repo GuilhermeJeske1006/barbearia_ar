@@ -1,3 +1,4 @@
+import barcodeScanner from './barcode-scanner';
 import mask from '@alpinejs/mask';
 import collapse from '@alpinejs/collapse';
 import QRCode from 'qrcode';
@@ -9,6 +10,7 @@ import stripeCheckout from './stripe-checkout';
 window.QRCode = QRCode;
 
 document.addEventListener('alpine:init', () => {
+    window.Alpine.data('barcodeScanner', barcodeScanner);
     window.Alpine.plugin(mask);
     window.Alpine.plugin(collapse);
     window.Alpine.data('stripeCheckout', stripeCheckout);

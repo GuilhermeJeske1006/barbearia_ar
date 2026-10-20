@@ -285,6 +285,41 @@ class ProcessarWebhookMercadoPagoActionTest extends TestCase
         ]);
     }
 
+    public function test_pdv_aprovado_registra_pagamento_mesmo_sem_saldo_aberto_para_consumo_em_ml(): void
+    {
+        $locao = Produto::create([
+            'barbearia_id' => $this->barbearia->id,
+            'nome' => 'Loção',
+            'preco' => 1500,
+            'estoque_qtd' => 2,
+            'unidade_consumo' => 'ml',
+            'conteudo_embalagem' => '500',
+        ]);
+        $this->servico->produtosConsumidos()->attach($locao->id, ['quantidade_consumida' => 0, 'quantidade_fracionada' => '5']);
+        $this->agendamento->update(['origem_pdv' => true]);
+
+        $pagamento = Pagamento::create([
+            'barbearia_id' => $this->barbearia->id,
+            'agendamento_id' => $this->agendamento->id,
+            'cliente_id' => $this->agendamento->cliente_id,
+            'valor_total' => 5000,
+            'metodo' => 'mp_checkout',
+            'mp_preference_id' => 'pref-123',
+            'mp_status' => 'pending',
+            'forma_split' => 'manual',
+        ]);
+
+        Log::spy();
+        $this->mockPagamentoApi('approved');
+        app(ProcessarWebhookMercadoPagoAction::class)->handle('mp-999');
+
+        $this->assertSame('concluido', $this->agendamento->fresh()->status);
+        $this->assertSame($pagamento->id, $this->agendamento->fresh()->pagamento_id);
+        $this->assertSame('approved', $pagamento->fresh()->mp_status);
+        $this->assertSame(2, $locao->fresh()->estoque_qtd);
+        Log::shouldHaveReceived('warning')->withArgs(fn ($mensagem) => str_contains($mensagem, 'consumo de insumo'))->once();
+    }
+
     public function test_agendamento_inexistente_nao_quebra(): void
     {
         Log::spy();

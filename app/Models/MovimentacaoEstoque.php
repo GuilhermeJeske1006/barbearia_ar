@@ -15,7 +15,7 @@ class MovimentacaoEstoque extends Model
 
     protected $fillable = [
         'barbearia_id', 'filial_id', 'produto_id', 'agendamento_id', 'user_id',
-        'tipo', 'quantidade', 'estoque_resultante', 'observacao',
+        'unidade', 'tipo', 'quantidade', 'estoque_resultante', 'observacao',
     ];
 
     public function produto(): BelongsTo

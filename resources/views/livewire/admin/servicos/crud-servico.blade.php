@@ -6,39 +6,46 @@
         @endcan
     </div>
 
-    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_servico') }}" onClose="cancelar" maxWidth="lg">
+    <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_servico') }}" onClose="cancelar" maxWidth="2xl">
         <form wire:submit="salvar" class="space-y-4">
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_servico') }}" autofocus />
 
             <x-ui.textarea label="{{ __('painel.descricao') }}" id="descricao" name="descricao" wire:model="descricao" placeholder="{{ __('painel.placeholder_descricao_servico') }}" rows="2" />
 
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.duracao_minutos') }}" id="duracaoMinutos" name="duracaoMinutos" type="number" min="1" wire:model="duracaoMinutos" placeholder="{{ __('painel.placeholder_duracao') }}" suffix="min" />
                 <x-ui.input label="{{ __('painel.preco') }}" id="preco" name="preco" type="number" step="0.01" min="0" wire:model="preco" placeholder="{{ __('painel.placeholder_preco') }}" prefix="{{ \App\Support\Money::simbolo() }}" />
-                <div class="flex items-center pt-6">
+                <div class="flex min-h-11 items-center">
                     <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
                 </div>
             </div>
 
             <div>
-                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ __('painel.produtos_consumidos') }}</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.produtos_consumidos') }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('painel.produtos_consumidos_ajuda') }}</p>
-                <div class="mt-2 grid max-h-48 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                <div class="mt-2 grid max-h-48 grid-cols-1 gap-2 overflow-y-auto">
                     @foreach ($this->produtosDisponiveis() as $produto)
-                        <div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm">
-                            <span class="truncate">{{ $produto->nome }}</span>
-                            <div class="flex items-center gap-2">
-                                <button type="button" wire:click="decrementarProdutoConsumo({{ $produto->id }})"
-                                    class="h-7 w-7 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">−</button>
-                                <span class="w-4 text-center font-semibold">{{ $produtosConsumo[$produto->id] ?? 0 }}</span>
-                                <button type="button" wire:click="incrementarProdutoConsumo({{ $produto->id }})"
-                                    class="h-7 w-7 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">+</button>
+                        <div class="flex flex-col gap-2 rounded-lg sm:flex-row sm:items-center sm:justify-between border border-slate-200 dark:border-slate-800 px-3 py-2.5 text-sm">
+                            <span class="min-w-0 break-words font-medium">{{ $produto->nome }}</span>
+                            <div class="flex shrink-0 items-center gap-2">
+                                <button type="button" wire:click="decrementarProdutoConsumo({{ $produto->id }})" aria-label="−1 {{ $produto->unidade_consumo }}"
+                                    class="min-h-11 min-w-11 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">−</button>
+                                <label class="flex items-center gap-1 text-xs">
+                                    <input aria-label="{{ __('estoque.consumo_aria', ['nome' => $produto->nome, 'unidade' => $produto->unidade_consumo]) }}" type="text" inputmode="{{ $produto->unidade_consumo === 'un' ? 'numeric' : 'decimal' }}" autocomplete="off" wire:model="produtosConsumo.{{ $produto->id }}" class="min-h-11 w-20 rounded border border-slate-300 bg-transparent px-2 text-base sm:text-sm dark:border-slate-700">
+                                    <span aria-hidden="true">{{ $produto->unidade_consumo }}</span>
+                                </label>
+                                <button type="button" wire:click="incrementarProdutoConsumo({{ $produto->id }})" aria-label="+1 {{ $produto->unidade_consumo }}"
+                                    class="min-h-11 min-w-11 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">+</button>
                             </div>
                         </div>
                     @endforeach
                 </div>
             </div>
 
+            @error('produtosConsumo') <p role="alert" class="text-red-600">{{ $message }}</p> @enderror
+            @foreach ($errors->get('produtosConsumo.*') as $mensagens)
+                @foreach ($mensagens as $mensagem)<p role="alert" class="text-red-600">{{ $mensagem }}</p>@endforeach
+            @endforeach
             <div class="flex gap-2">
                 <x-ui.button type="submit">{{ __('painel.salvar') }}</x-ui.button>
                 <x-ui.button variant="secondary" wire:click="cancelar">{{ __('painel.cancelar') }}</x-ui.button>

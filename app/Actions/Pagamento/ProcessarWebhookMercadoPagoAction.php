@@ -155,7 +155,17 @@ class ProcessarWebhookMercadoPagoAction
                 $this->comissaoService->registrar($pagamento);
 
                 if ($statusFinal === 'concluido' && $statusAnterior !== 'concluido') {
-                    $this->estoqueService->debitarConsumoServicos($agendamentoLocked, $agendamentoLocked->servicos);
+                    // O dinheiro já foi capturado no MP: falta de insumo (ex.:
+                    // nenhuma embalagem aberta pra consumo em ml/g) não pode
+                    // reverter o registro do pagamento — o job tentaria de
+                    // novo até desistir e o pagamento se perderia.
+                    try {
+                        $this->estoqueService->debitarConsumoServicos($agendamentoLocked, $agendamentoLocked->servicos);
+                    } catch (\RuntimeException $e) {
+                        Log::warning('Webhook Mercado Pago: consumo de insumo não debitado; requer conciliacao', [
+                            'mp_payment_id' => $mpPaymentId, 'agendamento_id' => $agendamentoLocked->id, 'erro' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 $confirmouAgoraOnline = $statusFinal === 'confirmado' && $statusAnterior === 'pendente';

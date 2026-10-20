@@ -16,14 +16,14 @@
 
             <x-ui.input label="{{ __('painel.endereco') }}" id="endereco" name="endereco" wire:model="endereco" placeholder="{{ __('painel.placeholder_endereco') }}" />
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.cidade') }}" id="cidade" name="cidade" wire:model="cidade" placeholder="{{ __('painel.placeholder_cidade') }}" />
                 <x-ui.input label="{{ __('painel.provincia') }}" id="provincia" name="provincia" wire:model="provincia" placeholder="{{ __('painel.placeholder_provincia') }}" />
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
-                <div class="flex items-center pt-6">
+                <div class="flex min-h-11 items-center">
                     <x-ui.checkbox wire:model="ativo" :label="__('painel.ativo')" />
                 </div>
             </div>

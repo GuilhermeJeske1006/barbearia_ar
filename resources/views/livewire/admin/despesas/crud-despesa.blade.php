@@ -16,7 +16,7 @@
             <x-ui.input label="{{ __('despesas.descricao') }}" id="descricao" name="descricao" wire:model="descricao" autofocus />
             <x-ui.input label="{{ __('despesas.fornecedor') }}" id="fornecedor" name="fornecedor" wire:model="fornecedor" />
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui.input label="{{ __('painel.valor') }}" id="valor" name="valor" type="number" step="0.01" min="0" wire:model="valor" prefix="{{ \App\Support\Money::simbolo() }}" />
                 <x-ui.input label="{{ __('painel.data') }}" id="dataDespesa" name="dataDespesa" type="date" wire:model="dataDespesa" />
             </div>

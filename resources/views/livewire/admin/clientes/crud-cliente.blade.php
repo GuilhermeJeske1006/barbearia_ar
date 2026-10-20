@@ -12,13 +12,13 @@
 
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_cliente') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus class="sm:col-span-2" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_cliente') }}" autofocus />
                 <x-ui.input label="{{ __('painel.telefone') }}" id="telefone" name="telefone" type="tel" wire:model="telefone" placeholder="{{ \App\Support\InputMasks::placeholderTelefone() }}" x-mask:dynamic="{{ \App\Support\InputMasks::telefone() }}" />
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" class="sm:col-span-2" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-ui.input label="{{ __('painel.email') }}" id="email" name="email" type="email" wire:model="email" placeholder="{{ __('painel.placeholder_email') }}" />
                 <x-ui.input label="{{ __('painel.dni') }}" id="dni" name="dni" wire:model="dni" placeholder="{{ \App\Support\InputMasks::placeholderDocumentoPessoal() }}" x-mask="{{ \App\Support\InputMasks::documentoPessoal() }}" />
             </div>
 

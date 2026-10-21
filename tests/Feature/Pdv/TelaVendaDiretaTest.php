@@ -71,6 +71,17 @@ class TelaVendaDiretaTest extends TestCase
         ]);
     }
 
+    public function test_inicia_venda_da_consulta_e_avanca_ate_pagamento(): void
+    {
+        Livewire::actingAs($this->dono)->test(TelaVendaDireta::class)
+            ->call('iniciarVendaComBarbeiro', $this->barbeiro->id)
+            ->assertSet('etapa', 1)->assertSet('barbeiroId', $this->barbeiro->id)
+            ->call('toggleServico', $this->servico->id)->call('irParaBarbeiro')
+            ->assertSet('etapa', 3)
+            ->set('clienteNome', 'Cliente consulta')->set('clienteTelefone', '11999999999')
+            ->call('confirmarCliente')->assertHasNoErrors()->assertSet('etapa', 4);
+    }
+
     public function test_codigo_adiciona_unidade_sem_baixar_estoque_e_respeita_disponibilidade(): void
     {
         $this->produto->update(['codigo_barras' => '0012345678905', 'estoque_qtd' => 1]);

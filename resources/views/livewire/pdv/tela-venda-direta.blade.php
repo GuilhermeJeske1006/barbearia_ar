@@ -139,6 +139,11 @@
                                 <span class="font-bold">{{ $barbeiro->nome }}</span>
                             </div>
 
+                            <button type="button" wire:click="iniciarVendaComBarbeiro({{ $barbeiro->id }})"
+                                class="mb-3 rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white hover:bg-brand-700">
+                                {{ __('pdv.iniciar_venda_barbeiro') }}
+                            </button>
+                            <p class="mb-3 text-xs text-slate-400">{{ __('pdv.horarios_consulta') }}</p>
                             @if ($barbeiro->horariosLivres->isEmpty())
                                 <p class="text-sm text-slate-500">{{ __('pdv.nenhum_horario_livre') }}</p>
                             @else

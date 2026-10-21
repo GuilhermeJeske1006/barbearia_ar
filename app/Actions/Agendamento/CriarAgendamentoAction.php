@@ -2,6 +2,7 @@
 
 namespace App\Actions\Agendamento;
 
+use App\Actions\Notificacoes\NotificarNovaReservaAction;
 use App\Models\Agendamento;
 use App\Models\Barbeiro;
 use App\Models\Cliente;
@@ -93,6 +94,10 @@ class CriarAgendamentoAction
                 // Lança RuntimeException e desfaz a transação (agendamento
                 // incluído) se algum produto não tiver estoque suficiente.
                 $this->estoque->ajustar([], $quantidadesValidas, origemAgendamento: $agendamento);
+            }
+
+            if ($criadoPor === 'cliente_online') {
+                app(NotificarNovaReservaAction::class)->handle($agendamento);
             }
 
             return $agendamento;

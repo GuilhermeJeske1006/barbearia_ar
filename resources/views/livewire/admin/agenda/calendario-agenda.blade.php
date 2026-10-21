@@ -243,7 +243,7 @@
                                                         @foreach ($acoes as $novoStatus => $label)
                                                             <button type="button"
                                                                 wire:click="transicionar({{ $agendamento->id }}, '{{ $novoStatus }}')"
-                                                                @if(in_array($novoStatus, ['cancelado', 'no_show'])) wire:confirm="{{ __('painel.confirmar_remocao') }}" @endif
+                                                                @if(in_array($novoStatus, ['cancelado', 'no_show'])) wire:confirm="{{ __($novoStatus === 'cancelado' ? 'painel.confirmar_cancelamento_agendamento' : 'painel.confirmar_falta_agendamento') }}" @endif
                                                                 class="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60">
                                                                 {{ __($label) }}
                                                             </button>

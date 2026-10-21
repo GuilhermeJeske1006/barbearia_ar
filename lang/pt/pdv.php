@@ -86,4 +86,6 @@ return [
     'agendamento_carregado' => 'Agendamento carregado — os itens já marcados vêm selecionados, pode ajustar antes de cobrar.',
     'agendamento_ja_pago_aviso' => 'Este agendamento já foi pago. Selecione abaixo só o que o cliente quer adicionar agora.',
     'agendamento_ja_pago_outro_lugar' => 'Este agendamento já foi pago em outra tela enquanto você preenchia a venda. Atualize a busca.',
+    'iniciar_venda_barbeiro' => 'Iniciar venda agora',
+    'horarios_consulta' => 'Os horários abaixo são para consulta. A venda direta registra o atendimento agora.',
 ];

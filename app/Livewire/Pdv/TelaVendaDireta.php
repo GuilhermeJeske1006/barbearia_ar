@@ -118,6 +118,15 @@ class TelaVendaDireta extends Component
 
     public string $categoriaFiltro = 'todos';
 
+    public function iniciarVendaComBarbeiro(int $barbeiroId): void
+    {
+        $barbeiro = Barbeiro::where('ativo', true)->findOrFail($barbeiroId);
+        $this->novaVenda();
+        $this->iniciado = true;
+        $this->barbeiroId = $barbeiro->id;
+        $this->etapa = 1;
+    }
+
     public function iniciar(): void
     {
         $this->iniciado = true;
@@ -398,7 +407,7 @@ class TelaVendaDireta extends Component
             return;
         }
 
-        $this->etapa = 2;
+        $this->etapa = $this->barbeiroId ? 3 : 2;
     }
 
     public function voltar(): void

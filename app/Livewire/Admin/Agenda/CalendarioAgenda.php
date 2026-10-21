@@ -22,6 +22,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use RuntimeException;
@@ -35,7 +36,8 @@ class CalendarioAgenda extends Component
         'em_atendimento' => ['concluido', 'cancelado'],
     ];
 
-    public string $data;
+    #[Url]
+    public string $data = '';
 
     public bool $mostrarForm = false;
 
@@ -86,7 +88,9 @@ class CalendarioAgenda extends Component
 
     public function mount(): void
     {
-        $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->data) || ! Carbon::hasFormat($this->data, 'Y-m-d')) {
+            $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
+        }
         $this->ultimaChecagem = now()->toDateTimeString();
     }
 
@@ -360,6 +364,7 @@ class CalendarioAgenda extends Component
 
         $this->erroTransicao = null;
         $agendamento->update(['status' => $novoStatus]);
+        $this->dispatch('notificacao-recebida');
 
         if ($novoStatus === 'concluido') {
             $notificarPesquisa->handle($agendamento);
@@ -574,6 +579,7 @@ class CalendarioAgenda extends Component
             report($e);
         }
 
+        $this->dispatch('notificacao-recebida');
         $this->fecharPagamento();
     }
 

@@ -86,4 +86,6 @@ return [
     'agendamento_carregado' => 'Turno cargado — los ítems ya reservados vienen seleccionados, podés ajustarlos antes de cobrar.',
     'agendamento_ja_pago_aviso' => 'Este turno ya fue pagado. Seleccioná abajo solo lo que el cliente quiere agregar ahora.',
     'agendamento_ja_pago_outro_lugar' => 'Este turno ya fue pagado desde otra pantalla mientras completabas la venta. Actualizá la búsqueda.',
+    'iniciar_venda_barbeiro' => 'Iniciar venta ahora',
+    'horarios_consulta' => 'Los horarios de abajo son de consulta. La venta directa registra la atención ahora.',
 ];

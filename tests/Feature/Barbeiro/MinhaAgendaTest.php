@@ -3,6 +3,7 @@
 namespace Tests\Feature\Barbeiro;
 
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
+use App\Actions\Notificacoes\NotificarNovaReservaAction;
 use App\Livewire\Barbeiro\MinhaAgenda;
 use App\Models\Agendamento;
 use App\Models\Barbearia;
@@ -13,9 +14,9 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class MinhaAgendaTest extends TestCase
@@ -67,6 +68,29 @@ class MinhaAgendaTest extends TestCase
             'nome' => 'María',
             'telefone' => '111',
         ]);
+    }
+
+    public function test_aviso_vai_ao_barbeiro_escolhido_e_abre_sua_agenda_na_data(): void
+    {
+        $outro = User::factory()->create(['barbearia_atual_id' => $this->barbearia->id]);
+        $outro->assignRole('barbeiro');
+        $reserva = $this->criarAgendamento($this->barbeiro, Carbon::tomorrow()->setTime(10, 0));
+        app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+        app(NotificarNovaReservaAction::class)->handle($reserva);
+        $aviso = $this->barbeiroUser->notifications()->firstOrFail();
+        $this->assertSame(route('barbeiro.minha-agenda', ['data' => Carbon::tomorrow()->toDateString()]), $aviso->data['link']);
+        $this->assertSame(0, $outro->notifications()->count());
+        app(PermissionRegistrar::class)->setPermissionsTeamId($this->barbearia->id);
+        Livewire::actingAs($this->barbeiroUser)->withQueryParams(['data' => Carbon::tomorrow()->toDateString()])
+            ->test(MinhaAgenda::class)->assertSet('data', Carbon::tomorrow()->toDateString())->assertSee('María');
+    }
+
+    public function test_barbeiro_inativo_nao_recebe_aviso(): void
+    {
+        $this->barbeiroUser->update(['ativo' => false]);
+        $reserva = $this->criarAgendamento($this->barbeiro, Carbon::tomorrow()->setTime(10, 0));
+        app(NotificarNovaReservaAction::class)->handle($reserva);
+        $this->assertSame(0, $this->barbeiroUser->notifications()->count());
     }
 
     private function criarAgendamento(Barbeiro $barbeiro, Carbon $inicio): Agendamento

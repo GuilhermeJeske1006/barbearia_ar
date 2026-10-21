@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
@@ -19,13 +20,16 @@ use Livewire\Component;
 #[Layout('layouts::app')]
 class MinhaAgenda extends Component
 {
-    public string $data;
+    #[Url]
+    public string $data = '';
 
     public string $ultimaChecagem;
 
     public function mount(): void
     {
-        $this->data = now()->toDateString();
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->data) || ! Carbon::hasFormat($this->data, 'Y-m-d')) {
+            $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
+        }
         $this->ultimaChecagem = now()->toDateTimeString();
     }
 

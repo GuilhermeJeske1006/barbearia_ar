@@ -33,4 +33,11 @@ return [
 
     'pagamento_transferencia_titulo' => 'Nuevo comprobante de transferencia',
     'pagamento_transferencia_mensagem' => ':nome envió un comprobante. Revisalo en pagos pendientes.',
+    'nova_reserva_mensagem' => ':cliente — :data a las :hora con :barbeiro',
+    'reservas_ativas' => 'Reservas activas',
+    'ver_reserva' => 'Ver reserva',
+    'nova_reserva_email_assunto' => 'Nueva reserva — :barbearia',
+    'reservas_ativas_ajuda' => 'Leer el aviso no quita la reserva. Permanece aquí hasta finalizar la atención, cancelarla o marcar la ausencia.',
+    'historico_avisos' => 'Historial de avisos',
+    'sino_resumo' => ':ativas reservas activas y :nao_lidas avisos sin leer.',
 ];

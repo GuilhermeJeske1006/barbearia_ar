@@ -1,0 +1,15 @@
+{
+  "results": [
+    "Login do dono e painel sem erros",
+    "Reserva pública no celular: escolher serviço e barbeiro",
+    "Reserva pública: data futura, cliente e confirmação automática",
+    "Aviso chega ao dono com painel já aberto e persiste após leitura",
+    "Aviso abre a agenda na data futura correta",
+    "Barbeiro recebe apenas sua reserva e abre a própria agenda",
+    "Barbeiro pode consultar comissões e não gerenciar agenda do dono",
+    "Venda direta: consulta → serviço → cliente → pagamento → conclusão",
+    "Comissão do atendimento aparece para o barbeiro responsável",
+    "Cancelar reserva retira o destaque e mantém o histórico"
+  ],
+  "errors": []
+}

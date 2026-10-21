@@ -375,4 +375,7 @@ return [
 
     'seo_agendar_descricao' => 'Reservá tu turno en :nome con Barberya.',
     'slogan' => 'Tu turno empieza ahora.',
+    'ver_mais_notificacoes' => 'Ver más notificaciones',
+    'confirmar_cancelamento_agendamento' => '¿Cancelar esta reserva? Permanecerá en el historial.',
+    'confirmar_falta_agendamento' => '¿Marcar que el cliente no asistió a esta reserva?',
 ];

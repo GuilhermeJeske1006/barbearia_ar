@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Actions\Agendamento\CriarAgendamentoAction;
 use App\Actions\Auth\RegistrarDonoEBarbeariaAction;
+use App\Actions\Notificacoes\NotificarNovaReservaAction;
 use App\Livewire\Admin\Agenda\CalendarioAgenda;
+use App\Livewire\NotificacoesBell;
 use App\Models\Agendamento;
 use App\Models\Barbearia;
 use App\Models\Barbeiro;
@@ -12,14 +15,18 @@ use App\Models\Cliente;
 use App\Models\Produto;
 use App\Models\Servico;
 use App\Models\User;
+use App\Notifications\AgendamentoConfirmado;
 use App\Notifications\AgendamentoPesquisaSatisfacao;
+use App\Notifications\NovaReservaEmail;
+use App\Notifications\NovaReservaRecebida;
 use Carbon\Carbon;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class CalendarioAgendaTest extends TestCase
@@ -84,6 +91,119 @@ class CalendarioAgendaTest extends TestCase
         ]);
     }
 
+    public function test_lembrete_reflete_data_atual_e_sai_do_destaque_quando_marca_falta(): void
+    {
+        app(NotificarNovaReservaAction::class)->handle($this->agendamento);
+        $novaData = Carbon::tomorrow()->setTime(14, 0);
+        $this->agendamento->update(['data_hora_inicio' => $novaData, 'data_hora_fim' => $novaData->copy()->addMinutes(30)]);
+        $sino = Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertSee($novaData->format('d/m/Y'))->assertSee('14:00')
+            ->assertViewHas('reservasAtivas', fn ($avisos) => str_contains($avisos->first()->data['link'], 'data='.$novaData->toDateString()));
+        $this->agendamento->update(['status' => 'no_show']);
+        $sino->call('atualizar')->assertViewHas('reservasAtivas', fn ($avisos) => $avisos->isEmpty());
+    }
+
+    public function test_sino_sem_filial_nao_quebra_o_painel_nem_expoe_avisos(): void
+    {
+        app(NotificarNovaReservaAction::class)->handle($this->agendamento);
+        app()->forgetInstance('filial.id');
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertViewHas('totalAvisos', 0)->assertDontSee('María');
+    }
+
+    public function test_reserva_anterior_aos_avisos_tambem_fica_destacada(): void
+    {
+        $this->assertSame(0, $this->dono->notifications()->count());
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertViewHas('reservasAtivas', fn ($avisos) => $avisos->count() === 1)
+            ->assertViewHas('totalAvisos', 1)->assertSee('María');
+        $this->assertSame(0, $this->dono->notifications()->count());
+    }
+
+    public function test_ler_aviso_mantem_reserva_ativa_ate_concluir(): void
+    {
+        app(NotificarNovaReservaAction::class)->handle($this->agendamento);
+        $componente = Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->call('marcarTodasComoLidas')->assertSee(__('notificacoes.reservas_ativas'))
+            ->assertViewHas('totalAvisos', 1)
+            ->assertViewHas('reservasAtivas', fn ($avisos) => $avisos->count() === 1);
+        $this->agendamento->update(['status' => 'concluido']);
+        $componente->call('atualizar')->assertViewHas('totalAvisos', 0)
+            ->assertViewHas('reservasAtivas', fn ($avisos) => $avisos->isEmpty())->assertSee('María');
+    }
+
+    public function test_cancelar_retira_destaque_sem_apagar_historico(): void
+    {
+        app(NotificarNovaReservaAction::class)->handle($this->agendamento);
+        $this->agendamento->update(['status' => 'cancelado']);
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertViewHas('reservasAtivas', fn ($avisos) => $avisos->isEmpty())->assertSee('María');
+    }
+
+    public function test_email_da_reserva_preserva_detalhes_e_link_sem_tenant_na_fila(): void
+    {
+        $aviso = new NovaReservaRecebida($this->agendamento);
+        $email = unserialize(serialize(new NovaReservaEmail(
+            $aviso->toArray($this->dono), $this->barbearia->nome,
+        )));
+        app()->forgetInstance('barbearia.id');
+        app()->forgetInstance('filial.id');
+        $mensagem = $email->toMail($this->dono);
+        $this->assertStringContainsString('María', implode(' ', $mensagem->introLines));
+        $this->assertStringContainsString('10:00', implode(' ', $mensagem->introLines));
+        $this->assertStringContainsString('data=', $mensagem->actionUrl);
+        $this->assertTrue($email->afterCommit);
+    }
+
+    public function test_link_da_notificacao_abre_o_dia_da_reserva(): void
+    {
+        Livewire::actingAs($this->dono)->withQueryParams(['data' => '2026-10-24'])
+            ->test(CalendarioAgenda::class)->assertSet('data', '2026-10-24');
+    }
+
+    public function test_reserva_online_grava_aviso_sem_contexto_de_permissoes_do_dono(): void
+    {
+        BarbeiroHorario::create([
+            'barbeiro_id' => $this->barbeiro->id,
+            'dia_semana' => Carbon::tomorrow()->dayOfWeek,
+            'hora_inicio' => '09:00', 'hora_fim' => '18:00',
+        ]);
+        app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+        $reserva = app(CriarAgendamentoAction::class)->handle(
+            $this->barbeiro, $this->agendamento->cliente, Carbon::tomorrow()->setTime(11, 0),
+            $this->agendamento->servicos, 'cliente_online',
+        );
+        $aviso = $this->dono->notifications()->firstOrFail();
+        $this->assertSame($reserva->id, $aviso->data['agendamento_id']);
+        $this->assertStringContainsString('data='.Carbon::tomorrow()->toDateString(), $aviso->data['link']);
+    }
+
+    public function test_sino_nao_expoe_nem_marca_aviso_de_outra_filial(): void
+    {
+        $id = (string) Str::uuid();
+        $this->dono->notifications()->create([
+            'id' => $id, 'type' => NovaReservaRecebida::class,
+            'data' => ['titulo' => 'Reserva de outra filial',
+                'barbearia_id' => $this->barbearia->id, 'filial_id' => 999999],
+        ]);
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertDontSee('Reserva de outra filial')->call('marcarComoLida', $id)
+            ->call('marcarTodasComoLidas');
+        $this->assertNull($this->dono->notifications()->findOrFail($id)->read_at);
+    }
+
+    public function test_nova_reserva_permanece_no_sino_apos_reabrir(): void
+    {
+        app(NotificarNovaReservaAction::class)->handle($this->agendamento);
+        $this->assertSame(1, $this->dono->unreadNotifications()->count());
+        $id = $this->dono->unreadNotifications()->first()->id;
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertSee('María')->assertSee('10:00')->call('marcarComoLida', $id);
+        Livewire::actingAs($this->dono)->test(NotificacoesBell::class)
+            ->assertSee('María')->assertSet('limite', 10);
+        $this->assertSame(0, $this->dono->unreadNotifications()->count());
+    }
+
     public function test_mostra_agendamentos_do_dia_agrupados_por_barbeiro(): void
     {
         Livewire::actingAs($this->dono)
@@ -111,7 +231,8 @@ class CalendarioAgendaTest extends TestCase
     {
         Livewire::actingAs($this->dono)
             ->test(CalendarioAgenda::class)
-            ->call('transicionar', $this->agendamento->id, 'em_atendimento');
+            ->call('transicionar', $this->agendamento->id, 'em_atendimento')
+            ->assertDispatched('notificacao-recebida');
 
         $this->assertSame('em_atendimento', $this->agendamento->fresh()->status);
     }
@@ -276,7 +397,7 @@ class CalendarioAgendaTest extends TestCase
             ->call('salvarNovo');
 
         $criado = Agendamento::where('barbeiro_id', $barbeiro2->id)->first();
-        Notification::assertSentTo($criado->cliente, \App\Notifications\AgendamentoConfirmado::class);
+        Notification::assertSentTo($criado->cliente, AgendamentoConfirmado::class);
     }
 
     public function test_grade_mostra_todos_horarios_do_expediente_mesmo_sem_agendamento(): void

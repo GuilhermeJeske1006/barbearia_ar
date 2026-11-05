@@ -48,6 +48,10 @@ class ControleEstoque extends Component
     public function mount(): void
     {
         $this->normalizarFiltros();
+        $id = filter_var(request()->query('detalhe'), FILTER_VALIDATE_INT);
+        if ($id && Produto::find($id)) {
+            $this->consultarProduto($id);
+        }
     }
 
     public function updatedAba(): void

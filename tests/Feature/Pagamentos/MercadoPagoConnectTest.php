@@ -69,7 +69,7 @@ class MercadoPagoConnectTest extends TestCase
             'state' => $state,
         ]));
 
-        $response->assertRedirect(route('painel'));
+        $response->assertRedirect(route('admin.pagamentos'));
 
         $this->barbearia->refresh();
         $this->assertSame('APP_USR-token-123', $this->barbearia->mp_access_token);
@@ -160,7 +160,7 @@ class MercadoPagoConnectTest extends TestCase
         Http::fake(['api.mercadopago.com/oauth/token' => Http::response(['error' => 'invalid_grant'], 400)]);
         $this->actingAs($this->dono)->get(route('mercadopago.conectar'));
         $this->get(route('mercadopago.callback', ['code' => 'code', 'state' => session('mp_oauth_state')]))
-            ->assertRedirect(route('painel'))->assertSessionHas('erro');
+            ->assertRedirect(route('admin.pagamentos'))->assertSessionHas('erro');
         $this->assertSame('token-anterior', $this->barbearia->fresh()->mp_access_token);
         $this->assertNull(session('mp_oauth_state'));
     }

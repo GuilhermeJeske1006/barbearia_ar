@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -52,8 +54,33 @@ class CrudProduto extends Component
 
     public ?int $removendoId = null;
 
+    #[Url(except: '')]
+    public string $busca = '';
+
+    public ?string $feedback = null;
+
+    #[Locked]
+    public bool $voltarAoEstoque = false;
+
+    public function mount(): void
+    {
+        $id = filter_var(request()->query('editar'), FILTER_VALIDATE_INT);
+        if ($id && Produto::find($id)) {
+            $this->voltarAoEstoque = request()->query('origem') === 'estoque';
+            $this->editar($id);
+        } elseif (request()->boolean('novo')) {
+            $this->criar();
+        }
+    }
+
+    public function updatingBusca(): void
+    {
+        $this->resetPage();
+    }
+
     public function criar(): void
     {
+        $this->resetValidation();
         $this->reset(['editandoId', 'nome', 'codigoBarras', 'unidadeConsumo', 'conteudoEmbalagem', 'descricao', 'preco', 'estoqueQtd', 'estoqueMinimo', 'ativo', 'apenasInsumo', 'foto']);
         $this->ativo = true;
         $this->mostrarForm = true;
@@ -61,6 +88,7 @@ class CrudProduto extends Component
 
     public function editar(int $id): void
     {
+        $this->resetValidation();
         $produto = Produto::findOrFail($id);
 
         $this->editandoId = $produto->id;
@@ -141,13 +169,21 @@ class CrudProduto extends Component
 
         $this->mostrarForm = false;
         $this->reset(['editandoId', 'nome', 'codigoBarras', 'unidadeConsumo', 'conteudoEmbalagem', 'descricao', 'preco', 'estoqueQtd', 'estoqueMinimo', 'ativo', 'apenasInsumo', 'foto']);
+        $this->feedback = __('fluxos.produto_salvo');
+        if ($this->voltarAoEstoque) {
+            $this->redirectRoute('admin.produtos.estoque', ['detalhe' => $produto->id], navigate: true);
+        }
     }
 
     public function cancelar(): void
     {
+        $id = $this->editandoId;
         $this->mostrarForm = false;
         $this->resetValidation();
         $this->reset(['editandoId', 'nome', 'codigoBarras', 'unidadeConsumo', 'conteudoEmbalagem', 'descricao', 'preco', 'estoqueQtd', 'estoqueMinimo', 'ativo', 'apenasInsumo', 'foto']);
+        if ($this->voltarAoEstoque && $id) {
+            $this->redirectRoute('admin.produtos.estoque', ['detalhe' => $id], navigate: true);
+        }
     }
 
     public function confirmarRemocao(int $id): void
@@ -164,12 +200,18 @@ class CrudProduto extends Component
     {
         Produto::findOrFail($this->removendoId)->delete();
         $this->removendoId = null;
+        $this->feedback = __('fluxos.produto_removido');
+        $this->resetPage();
     }
 
     public function render()
     {
         return view('livewire.admin.produtos.crud-produto', [
-            'produtos' => Produto::orderBy('nome')->paginate(10),
+            'produtos' => Produto::query()
+                ->when(trim($this->busca) !== '', fn ($q) => $q->where(fn ($q) => $q
+                    ->where('nome', 'like', '%'.trim($this->busca).'%')
+                    ->orWhere('codigo_barras', 'like', '%'.trim($this->busca).'%')))
+                ->orderBy('nome')->paginate(10),
         ]);
     }
 }

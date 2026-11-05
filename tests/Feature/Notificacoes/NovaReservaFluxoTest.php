@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Queue;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\TransportInterface;
+use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\RawMessage;
 use Tests\TestCase;
 
@@ -58,6 +59,65 @@ class NovaReservaFluxoTest extends TestCase
     private function reservar(): Agendamento
     {
         return app(CriarAgendamentoAction::class)->handle($this->barbeiro, $this->cliente, Carbon::tomorrow()->setTime(10, 0), collect([$this->servico]), 'cliente_online');
+    }
+
+    private function emailsEnviadosPara(): array
+    {
+        return collect(app('mail.manager')->mailer()->getSymfonyTransport()->messages())
+            ->map(fn ($message) => $message->getOriginalMessage()->getTo()[0]->getAddress())
+            ->sort()->values()->all();
+    }
+
+    private function emailPara(string $endereco): Email
+    {
+        return collect(app('mail.manager')->mailer()->getSymfonyTransport()->messages())
+            ->map(fn ($message) => $message->getOriginalMessage())
+            ->first(fn ($email) => $email->getTo()[0]->getAddress() === $endereco);
+    }
+
+    public function test_agendamento_manual_avisa_dono_e_barbeiro_mas_nao_quem_criou(): void
+    {
+        $atendente = app(CriarUsuarioBarbeariaAction::class)->handle($this->dono->barbearia_atual_id, 'Ana', 'front@flow.test', 'senha-forte-123', '222', 'atendente', null, $this->dono->filial_atual_id);
+        $this->actingAs($atendente);
+        app(CriarAgendamentoAction::class)->handle($this->barbeiro, $this->cliente, Carbon::tomorrow()->setTime(10, 0), collect([$this->servico]), 'atendente');
+        $this->assertSame(['barber@flow.test', 'owner@flow.test'], $this->emailsEnviadosPara());
+        $this->assertSame(1, $this->dono->notifications()->count());
+        $this->assertSame(0, $atendente->notifications()->count());
+        $this->assertStringContainsString('Ana', $this->emailPara('owner@flow.test')->getHtmlBody());
+    }
+
+    public function test_agendamento_manual_do_dono_manda_email_para_ele_sem_aviso_no_sino(): void
+    {
+        $this->actingAs($this->dono);
+        app(CriarAgendamentoAction::class)->handle($this->barbeiro, $this->cliente, Carbon::tomorrow()->setTime(10, 0), collect([$this->servico]), 'atendente');
+        $this->assertSame(['barber@flow.test', 'owner@flow.test'], $this->emailsEnviadosPara());
+        $this->assertSame(0, $this->dono->notifications()->count());
+    }
+
+    public function test_venda_direta_no_pdv_manda_so_email_ao_dono_sem_aviso_no_sino(): void
+    {
+        $this->actingAs($this->dono);
+        app(CriarAgendamentoAction::class)->handle($this->barbeiro, $this->cliente, Carbon::tomorrow()->setTime(10, 0), collect([$this->servico]), 'pdv', origemPdv: true);
+        $this->assertSame(['owner@flow.test'], $this->emailsEnviadosPara());
+        $this->assertDatabaseCount('notifications', 0);
+        $email = $this->emailPara('owner@flow.test');
+        $this->assertStringContainsString('PDV', $email->getSubject());
+        $this->assertStringContainsString('Cliente Teste', $email->getHtmlBody());
+    }
+
+    public function test_venda_no_pdv_lancada_por_atendente_tambem_avisa_dono_por_email(): void
+    {
+        $atendente = app(CriarUsuarioBarbeariaAction::class)->handle($this->dono->barbearia_atual_id, 'Ana', 'front@flow.test', 'senha-forte-123', '222', 'atendente', null, $this->dono->filial_atual_id);
+        $this->actingAs($atendente);
+        app(CriarAgendamentoAction::class)->handle($this->barbeiro, $this->cliente, Carbon::tomorrow()->setTime(10, 0), collect([$this->servico]), 'pdv', origemPdv: true);
+        $this->assertSame(['owner@flow.test'], $this->emailsEnviadosPara());
+        $this->assertStringContainsString('Ana', $this->emailPara('owner@flow.test')->getHtmlBody());
+    }
+
+    public function test_reserva_online_informa_origem_no_email_do_dono(): void
+    {
+        $this->reservar();
+        $this->assertStringContainsString('reserva online', $this->emailPara('owner@flow.test')->getHtmlBody());
     }
 
     public function test_outro_tenant_nao_recebe_avisos_nem_emails(): void

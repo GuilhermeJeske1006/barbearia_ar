@@ -73,7 +73,7 @@ class RegisterTest extends TestCase
             ->set('cuitBarbearia', '00.000.000/0001-00')
             ->set('idiomaPadrao', 'pt')
             ->call('avancarParaPagamento')
-            ->assertRedirect(route('painel'));
+            ->assertRedirect(route('admin.primeiros-passos'));
 
         $barbearia = Barbearia::where('slug', 'barbearia-vintage')->firstOrFail();
         $this->assertSame('Barbearia Vintage', $barbearia->nome);
@@ -110,7 +110,7 @@ class RegisterTest extends TestCase
             ->set('slugBarbearia', 'central')
             ->set('idiomaPadrao', 'es')
             ->call('avancarParaPagamento')
-            ->assertRedirect(route('painel'));
+            ->assertRedirect(route('admin.primeiros-passos'));
 
         $barbearia = Barbearia::where('slug', 'central')->firstOrFail();
         $this->assertNull($barbearia->telefone);

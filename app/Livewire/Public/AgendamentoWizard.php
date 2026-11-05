@@ -131,15 +131,22 @@ class AgendamentoWizard extends Component
         // vazia. A constraint 'servicos.filial_id = filiais.id' do próprio
         // whereHas continua de pé, então cada filial só conta os serviços
         // dela mesma.
+        // Mesmo critério de servicosDisponiveis(): serviço só conta se algum
+        // profissional ativo que aceita reserva online o realiza — senão a
+        // filial aparecia e levava a uma etapa 2 vazia do mesmo jeito.
         return Filial::where('ativo', true)
-            ->whereHas('servicos', fn ($q) => $q->withoutGlobalScope('filial')->where('ativo', true))
+            ->whereHas('servicos', fn ($q) => $q->withoutGlobalScope('filial')->where('ativo', true)
+                ->whereHas('barbeiros', fn ($b) => $b->withoutGlobalScope('filial')->where('ativo', true)->where('aceita_online', true)))
             ->orderBy('nome')
             ->get();
     }
 
     public function servicosDisponiveis(): Collection
     {
-        return Servico::where('ativo', true)->orderBy('nome')->get();
+        return Servico::where('ativo', true)
+            ->whereHas('barbeiros', fn ($query) => $query->where('ativo', true)->where('aceita_online', true))
+            ->orderBy('nome')
+            ->get();
     }
 
     public function barbeirosDisponiveis(): Collection
@@ -245,7 +252,7 @@ class AgendamentoWizard extends Component
 
     public function servicosSelecionadosCollection(): Collection
     {
-        return Servico::where('ativo', true)->whereIn('id', $this->servicosSelecionados)->get();
+        return $this->servicosDisponiveis()->whereIn('id', $this->servicosSelecionados)->values();
     }
 
     public function irParaEtapa2(): void

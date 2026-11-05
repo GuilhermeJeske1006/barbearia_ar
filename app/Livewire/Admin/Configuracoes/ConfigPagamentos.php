@@ -72,6 +72,7 @@ class ConfigPagamentos extends Component
         ]);
 
         session()->flash('status', __('painel.mp_desconectado'));
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     public function salvarTransferencia(): void
@@ -92,6 +93,7 @@ class ConfigPagamentos extends Component
         );
 
         session()->flash('status', __('painel.configuracoes_salvas'));
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     public function render()

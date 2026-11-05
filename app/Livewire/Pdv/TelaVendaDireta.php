@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use RuntimeException;
 
@@ -66,6 +67,9 @@ class TelaVendaDireta extends Component
     public string $clienteTelefone = '';
 
     public string $clienteNome = '';
+
+    #[Locked]
+    public ?int $clienteSelecionadoId = null;
 
     public string $metodoPagamento = 'dinheiro';
 
@@ -117,6 +121,41 @@ class TelaVendaDireta extends Component
     public ?string $erro = null;
 
     public string $categoriaFiltro = 'todos';
+
+    public function mount(): void
+    {
+        $agendamentoId = filter_var(request()->query('agendamento'), FILTER_VALIDATE_INT);
+        if ($agendamentoId) {
+            $agendamento = Agendamento::whereIn('status', self::STATUS_ACIONAVEIS)
+                ->whereDate('data_hora_inicio', now()->toDateString())->find($agendamentoId);
+            if ($agendamento) {
+                $this->iniciado = true;
+                $this->selecionarAgendamento($agendamento->id);
+            } else {
+                $this->erro = __('fluxos.contexto_indisponivel');
+            }
+
+            return;
+        }
+
+        $clienteId = filter_var(request()->query('cliente'), FILTER_VALIDATE_INT);
+        if (! $clienteId) {
+            return;
+        }
+
+        $cliente = Cliente::find($clienteId);
+        if (! $cliente) {
+            $this->erro = __('fluxos.contexto_indisponivel');
+
+            return;
+        }
+
+        $this->clienteSelecionadoId = $cliente->id;
+        $this->clienteNome = $cliente->nome;
+        $this->clienteTelefone = $cliente->telefone;
+        $this->iniciado = true;
+        $this->etapa = 1;
+    }
 
     public function iniciarVendaComBarbeiro(int $barbeiroId): void
     {
@@ -199,6 +238,7 @@ class TelaVendaDireta extends Component
         $this->barbeiroId = $agendamento->barbeiro_id;
         $this->clienteNome = $agendamento->cliente->nome;
         $this->clienteTelefone = $agendamento->cliente->telefone;
+        $this->clienteSelecionadoId = $agendamento->cliente_id;
         $this->erro = null;
 
         if ($this->agendamentoJaPago) {
@@ -235,7 +275,7 @@ class TelaVendaDireta extends Component
     {
         $this->reset([
             'agendamentoVinculadoId', 'agendamentoJaPago', 'barbeiroId',
-            'servicosSelecionados', 'produtosSelecionados', 'clienteNome', 'clienteTelefone',
+            'servicosSelecionados', 'produtosSelecionados', 'clienteNome', 'clienteTelefone', 'clienteSelecionadoId',
         ]);
     }
 
@@ -243,6 +283,13 @@ class TelaVendaDireta extends Component
     {
         if (trim($this->clienteTelefone) === '') {
             return null;
+        }
+
+        if ($this->clienteSelecionadoId) {
+            $selecionado = Cliente::find($this->clienteSelecionadoId);
+            if ($selecionado && $selecionado->telefone === $this->clienteTelefone) {
+                return $selecionado;
+            }
         }
 
         return Cliente::where('telefone', $this->clienteTelefone)->first();
@@ -456,7 +503,7 @@ class TelaVendaDireta extends Component
         }
 
         $barbeiro = Barbeiro::findOrFail($this->barbeiroId);
-        $cliente = Cliente::firstOrCreate(
+        $cliente = $this->clienteExistente() ?? Cliente::firstOrCreate(
             ['telefone' => $this->clienteTelefone],
             ['nome' => $this->clienteNome],
         );
@@ -817,7 +864,7 @@ class TelaVendaDireta extends Component
         $this->reset([
             'iniciado', 'etapa', 'modoInicial', 'abaVerificar', 'buscaTermo', 'agendamentoVinculadoId', 'agendamentoJaPago',
             'barbeiroId', 'servicosSelecionados', 'produtosSelecionados',
-            'clienteTelefone', 'clienteNome', 'metodoPagamento', 'vendaConcluida',
+            'clienteTelefone', 'clienteNome', 'clienteSelecionadoId', 'metodoPagamento', 'vendaConcluida',
             'mpInitPoint', 'agendamentoAguardandoId', 'erro', 'categoriaFiltro',
         ]);
     }

@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Admin\Servicos;
 
+use App\Models\Barbeiro;
 use App\Models\Produto;
 use App\Models\Servico;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -19,6 +21,9 @@ class CrudServico extends Component
 
     /** @var array<int, int> produto_id => quantidade_consumida */
     public array $produtosConsumo = [];
+
+    /** @var array<int, int> */
+    public array $barbeirosSelecionados = [];
 
     #[Validate('required|string|max:255')]
     public string $nome = '';
@@ -38,16 +43,30 @@ class CrudServico extends Component
 
     public ?int $removendoId = null;
 
+    /** Deep-links: ?novo=1 abre o cadastro, ?editar=ID abre a edição. */
+    public function mount(): void
+    {
+        $id = filter_var(request()->query('editar'), FILTER_VALIDATE_INT);
+
+        if ($id && Servico::whereKey($id)->exists()) {
+            $this->editar($id);
+        } elseif (request()->boolean('novo')) {
+            $this->criar();
+        }
+    }
+
     public function criar(): void
     {
-        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo']);
+        $this->resetValidation();
+        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo', 'barbeirosSelecionados']);
         $this->ativo = true;
         $this->mostrarForm = true;
     }
 
     public function editar(int $id): void
     {
-        $servico = Servico::with('produtosConsumidos')->findOrFail($id);
+        $this->resetValidation();
+        $servico = Servico::with(['produtosConsumidos', 'barbeiros'])->findOrFail($id);
 
         $this->editandoId = $servico->id;
         $this->nome = $servico->nome;
@@ -55,6 +74,7 @@ class CrudServico extends Component
         $this->duracaoMinutos = (string) $servico->duracao_minutos;
         $this->preco = (string) $servico->preco;
         $this->ativo = $servico->ativo;
+        $this->barbeirosSelecionados = $servico->barbeiros->pluck('id')->all();
         $this->produtosConsumo = $servico->produtosConsumidos
             ->mapWithKeys(fn (Produto $produto) => [$produto->id => $produto->unidade_consumo === 'un' ? $produto->pivot->quantidade_consumida : $produto->pivot->quantidade_fracionada])
             ->all();
@@ -69,6 +89,11 @@ class CrudServico extends Component
     public function produtosDisponiveis(): Collection
     {
         return Produto::where('ativo', true)->whereNotNull('estoque_qtd')->orderBy('nome')->get();
+    }
+
+    public function barbeirosDisponiveis(): Collection
+    {
+        return Barbeiro::orderBy('nome')->get();
     }
 
     public function incrementarProdutoConsumo(int $produtoId): void
@@ -101,6 +126,16 @@ class CrudServico extends Component
     public function salvar(): void
     {
         $this->validate();
+        $this->validate([
+            'barbeirosSelecionados' => 'array',
+            'barbeirosSelecionados.*' => 'integer|distinct',
+        ]);
+
+        if (Barbeiro::whereIn('id', $this->barbeirosSelecionados)->count() !== count($this->barbeirosSelecionados)) {
+            $this->addError('barbeirosSelecionados', __('fluxos.profissional_indisponivel'));
+
+            return;
+        }
 
         // Sem o filtro de 'ativo' do picker: um insumo desativado depois de
         // entrar na receita continua nela (invisível no form) e não pode
@@ -130,28 +165,41 @@ class CrudServico extends Component
                     : ['quantidade_consumida' => 0, 'quantidade_fracionada' => $quantidade];
             }
         }
-        $servico = Servico::updateOrCreate(
-            ['id' => $this->editandoId],
-            [
-                'nome' => $this->nome,
-                'descricao' => $this->descricao,
-                'duracao_minutos' => $this->duracaoMinutos,
-                'preco' => $this->preco,
-                'ativo' => $this->ativo,
-            ],
-        );
+        DB::transaction(function () use ($receita) {
+            $servico = Servico::updateOrCreate(
+                ['id' => $this->editandoId],
+                [
+                    'nome' => $this->nome,
+                    'descricao' => $this->descricao,
+                    'duracao_minutos' => $this->duracaoMinutos,
+                    'preco' => $this->preco,
+                    'ativo' => $this->ativo,
+                ],
+            );
 
-        $servico->produtosConsumidos()->sync($receita);
+            $servico->produtosConsumidos()->sync($receita);
+            // IDs sem atributos preservam comissão e duração personalizadas
+            // dos vínculos já existentes. sync() puro compara com a tabela
+            // pivô inteira e apagaria vínculos de profissionais soft-deleted
+            // (ex.: dono que desligou o próprio atendimento), que não aparecem
+            // no form — ao religar, perderia serviços e comissões. Por isso o
+            // detach se limita aos profissionais visíveis (scopes aplicados).
+            $visiveis = $servico->barbeiros()->pluck('barbeiros.id');
+            $servico->barbeiros()->detach($visiveis->diff($this->barbeirosSelecionados)->all());
+            $servico->barbeiros()->syncWithoutDetaching($this->barbeirosSelecionados);
+        });
 
         $this->mostrarForm = false;
-        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo']);
+        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo', 'barbeirosSelecionados']);
+        session()->flash('status', __('fluxos.servico_salvo'));
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     public function cancelar(): void
     {
         $this->mostrarForm = false;
         $this->resetValidation();
-        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo']);
+        $this->reset(['editandoId', 'nome', 'descricao', 'duracaoMinutos', 'preco', 'ativo', 'produtosConsumo', 'barbeirosSelecionados']);
     }
 
     public function confirmarRemocao(int $id): void
@@ -168,12 +216,13 @@ class CrudServico extends Component
     {
         Servico::findOrFail($this->removendoId)->delete();
         $this->removendoId = null;
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     public function render()
     {
         return view('livewire.admin.servicos.crud-servico', [
-            'servicos' => Servico::orderBy('nome')->paginate(10),
+            'servicos' => Servico::withCount(['barbeiros as barbeiros_ativos_count' => fn ($query) => $query->where('ativo', true)])->orderBy('nome')->paginate(10),
         ]);
     }
 }

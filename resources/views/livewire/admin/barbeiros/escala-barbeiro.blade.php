@@ -1,8 +1,18 @@
 <div>
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.horarios_barbero') }} — {{ $barbeiro->nome }}</h1>
         <x-ui.button variant="link" :href="route('admin.barbeiros')">&larr; {{ __('painel.voltar') }}</x-ui.button>
     </div>
+
+    <nav aria-label="{{ __('painel.barberos') }}" class="mt-4 flex flex-wrap gap-3">
+        <x-ui.button variant="secondary" :href="route('admin.barbeiros.bloqueios', $barbeiro)" wire:navigate>{{ __('painel.bloqueios') }}</x-ui.button>
+        @can('servicos.gerenciar')
+            <x-ui.button variant="secondary" :href="route('admin.servicos')" wire:navigate>{{ __('painel.servicios') }}</x-ui.button>
+        @endcan
+        @can('agenda.gerenciar')
+            <x-ui.button variant="secondary" :href="route('admin.agenda')" wire:navigate>{{ __('fluxos.revisar_agenda') }}</x-ui.button>
+        @endcan
+    </nav>
 
     @if (session('status'))
         <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
@@ -21,16 +31,16 @@
 
                 @if ($config['ativo'])
                     <div class="flex items-center gap-2 text-sm">
-                        <x-ui.input type="time" id="hora_inicio_{{ $dia }}" wire:model="dias.{{ $dia }}.hora_inicio" class="w-32" />
+                        <x-ui.input type="time" id="hora_inicio_{{ $dia }}" name="dias.{{ $dia }}.hora_inicio" aria-label="{{ __('painel.dia_' . $dia) }} · {{ __('painel.data_inicio') }}" wire:model="dias.{{ $dia }}.hora_inicio" class="w-32" />
                         <span class="text-slate-400">—</span>
-                        <x-ui.input type="time" id="hora_fim_{{ $dia }}" wire:model="dias.{{ $dia }}.hora_fim" class="w-32" />
+                        <x-ui.input type="time" id="hora_fim_{{ $dia }}" name="dias.{{ $dia }}.hora_fim" aria-label="{{ __('painel.dia_' . $dia) }} · {{ __('painel.data_fim') }}" wire:model="dias.{{ $dia }}.hora_fim" class="w-32" />
                     </div>
 
                     <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                         <span>{{ __('painel.intervalo') }}:</span>
-                        <x-ui.input type="time" id="intervalo_inicio_{{ $dia }}" wire:model="dias.{{ $dia }}.intervalo_inicio" class="w-32" />
+                        <x-ui.input type="time" id="intervalo_inicio_{{ $dia }}" name="dias.{{ $dia }}.intervalo_inicio" aria-label="{{ __('painel.dia_' . $dia) }} · {{ __('painel.intervalo') }} · {{ __('painel.data_inicio') }}" wire:model="dias.{{ $dia }}.intervalo_inicio" class="w-32" />
                         <span class="text-slate-400">—</span>
-                        <x-ui.input type="time" id="intervalo_fim_{{ $dia }}" wire:model="dias.{{ $dia }}.intervalo_fim" class="w-32" />
+                        <x-ui.input type="time" id="intervalo_fim_{{ $dia }}" name="dias.{{ $dia }}.intervalo_fim" aria-label="{{ __('painel.dia_' . $dia) }} · {{ __('painel.intervalo') }} · {{ __('painel.data_fim') }}" wire:model="dias.{{ $dia }}.intervalo_fim" class="w-32" />
                     </div>
 
                     @error("dias.{$dia}.hora_inicio") <p class="w-full text-sm text-red-600">{{ $message }}</p> @enderror
@@ -42,6 +52,6 @@
             </div>
         @endforeach
 
-        <x-ui.button type="submit" class="mt-4">{{ __('painel.salvar') }}</x-ui.button>
+        <x-ui.button type="submit" class="mt-4" wire:loading.attr="disabled" wire:target="salvar">{{ __('painel.salvar') }}</x-ui.button>
     </form>
 </div>

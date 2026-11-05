@@ -4,6 +4,9 @@
         <div class="space-y-5" x-data x-init="$nextTick(() => $refs.titulo.focus({ preventScroll: true }))" @estoque-atualizado.window="$nextTick(() => { $el.parentElement.scrollTop = 0; $refs.titulo.focus({ preventScroll: true }); })" wire:key="detalhe-estoque-{{ $consultado->id }}">
             <div>
                 <h3 tabindex="-1" x-ref="titulo" class="break-words text-xl font-extrabold text-slate-900 focus:outline-none dark:text-white">{{ $consultado->nome }}</h3>
+                @can('produtos.gerenciar')
+                    <a href="{{ route('admin.produtos', ['editar' => $consultado->id, 'origem' => 'estoque']) }}" wire:navigate class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline dark:text-brand-300">{{ __('fluxos.editar_produto') }}</a>
+                @endcan
                 <p class="mt-1 text-xs text-slate-600 dark:text-slate-400">@if ($consultado->codigo_barras)<span class="break-all">{{ $consultado->codigo_barras }}</span>@else{{ __('estoque.sem_codigo') }}@endif <span class="mx-2" aria-hidden="true">·</span> <x-ui.money :value="$consultado->preco" /></p>
                 @if (! $consultado->ativo)<p class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ __('estoque.inativo_venda') }}</p>@endif
             </div>

@@ -1,4 +1,10 @@
-<div>
+<div x-on:pdv-inativo.window="$wire.novaVenda()">
+    @if ($clienteSelecionadoId && $etapa === 1)
+        <p role="status" class="mb-4 rounded-xl border border-brand-500/40 bg-brand-500/10 p-3 text-sm text-brand-300">{{ __('fluxos.cliente_contexto', ['nome' => $clienteNome]) }}</p>
+    @endif
+    @if ($erro && ! $iniciado)
+        <x-ui.alert tone="danger-dark">{{ $erro }}</x-ui.alert>
+    @endif
     @if (! $iniciado)
         @php $barbeariaAtual = app()->bound('barbearia') ? app('barbearia') : null; @endphp
         <div class="flex min-h-[calc(100vh-140px)] flex-col items-center justify-center py-16 text-center">

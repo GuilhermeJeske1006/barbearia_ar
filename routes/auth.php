@@ -13,6 +13,7 @@ use App\Livewire\Admin\Configuracoes\ConfiguracoesBarbearia;
 use App\Livewire\Admin\Configuracoes\ConfigWhatsApp;
 use App\Livewire\Admin\Despesas\CrudDespesa;
 use App\Livewire\Admin\Filiais\CrudFilial;
+use App\Livewire\Admin\Onboarding\PrimeirosPassos;
 use App\Livewire\Admin\Pagamentos\PagamentosPendentes;
 use App\Livewire\Admin\Produtos\ControleEstoque;
 use App\Livewire\Admin\Produtos\CrudProduto;
@@ -55,6 +56,9 @@ Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativ
     Route::get('/', Painel::class)->name('painel');
 
     Route::get('/perfil', Perfil::class)->name('perfil');
+
+    Route::get('/primeiros-passos', PrimeirosPassos::class)
+        ->middleware('can:barbearia.gerenciar')->name('admin.primeiros-passos');
 
     Route::get('/assinatura', MinhaAssinatura::class)->name('admin.assinatura');
 
@@ -133,7 +137,7 @@ Route::middleware(['auth', 'usuario.ativo', 'tenant', 'filial', 'assinatura.ativ
         ->middleware('can:agenda.visualizar_propria')->name('barbeiro.minha-agenda');
 
     Route::get('/meus-horarios', MeusHorarios::class)
-        ->middleware('can:horarios.visualizar_propria')->name('barbeiro.meus-horarios');
+        ->middleware('can:horarios.acessar_proprios')->name('barbeiro.meus-horarios');
 });
 
 // Fora do prefixo /painel: a URL de callback é fixa, registrada uma única

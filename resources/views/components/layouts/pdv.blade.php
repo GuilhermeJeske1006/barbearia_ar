@@ -23,23 +23,35 @@
         x-data="{
             timer: null,
             hora: '',
+            relogio: null,
+            init() {
+                this.resetar();
+                this.atualizarHora();
+                this.relogio = setInterval(() => this.atualizarHora(), 15000);
+            },
+            destroy() {
+                clearTimeout(this.timer);
+                clearInterval(this.relogio);
+            },
             resetar() {
                 clearTimeout(this.timer)
-                this.timer = setTimeout(() => $wire.novaVenda(), 90000)
+                this.timer = setTimeout(() => window.dispatchEvent(new CustomEvent('pdv-inativo')), 90000)
             },
             atualizarHora() {
                 this.hora = new Date().toLocaleTimeString('{{ str_replace('_', '-', app()->getLocale()) }}', { hour: '2-digit', minute: '2-digit' })
             },
         }"
-        x-init="resetar(); atualizarHora(); setInterval(() => atualizarHora(), 15000)"
+
         @click.capture="resetar()"
+        @keydown.capture="resetar()"
+        @input.capture="resetar()"
         class="flex min-h-screen flex-col"
     >
         <header class="flex items-center justify-between bg-slate-900 px-6 py-3.5">
             <div class="flex items-center gap-3">
                 @php $barbeariaAtual = app()->bound('barbearia') ? app('barbearia') : null; @endphp
                 @if ($barbeariaAtual?->logo_path)
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" class="h-9 w-9 shrink-0 rounded-full object-cover">
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($barbeariaAtual->logo_path) }}" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover">
                 @endif
                 <div>
                     <p class="font-display text-lg leading-tight tracking-wide">{{ $barbeariaAtual?->nome ?? config('app.name') }}</p>
@@ -48,12 +60,23 @@
             </div>
             <span class="font-display text-lg tracking-wide text-slate-400" x-text="hora"></span>
         </header>
+        <nav aria-label="{{ __('fluxos.navegacao_pdv') }}" class="flex flex-wrap items-center gap-2 border-t border-slate-800 bg-slate-900 px-6 py-2 text-sm">
+            <a href="{{ route('painel') }}" wire:navigate class="inline-flex min-h-11 items-center rounded-lg px-3 text-slate-200 hover:bg-slate-800">← {{ __('fluxos.voltar_painel') }}</a>
+            @can('agenda.gerenciar')
+                <a href="{{ route('admin.agenda') }}" wire:navigate class="inline-flex min-h-11 items-center rounded-lg px-3 text-slate-200 hover:bg-slate-800">{{ __('painel.agenda') }}</a>
+            @endcan
+            @can('clientes.gerenciar')
+                <a href="{{ route('admin.clientes') }}" wire:navigate class="inline-flex min-h-11 items-center rounded-lg px-3 text-slate-200 hover:bg-slate-800">{{ __('painel.clientes') }}</a>
+            @endcan
+        </nav>
         <div class="barber-stripe h-1 w-full"></div>
 
         <main class="mx-auto w-full max-w-[100rem] flex-1 px-6 py-6 lg:px-10 lg:py-8">
             {{ $slot }}
         </main>
     </div>
+
+    <x-ui.toast-container />
 
     @livewireScripts
 </body>

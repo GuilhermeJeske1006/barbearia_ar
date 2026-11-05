@@ -6,13 +6,21 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <x-ui.button variant="secondary" size="sm" wire:click="diaAnterior">&larr;</x-ui.button>
+            <x-ui.button variant="secondary" size="sm" wire:click="diaAnterior" aria-label="{{ __('fluxos.dia_anterior') }}">&larr;</x-ui.button>
             <x-ui.button variant="secondary" size="sm" wire:click="hoje">{{ __('painel.hoje') }}</x-ui.button>
-            <x-ui.input type="date" id="data" wire:model.live="data" class="w-40" />
-            <x-ui.button variant="secondary" size="sm" wire:click="proximoDia">&rarr;</x-ui.button>
+            <x-ui.input type="date" id="data" aria-label="{{ __('painel.data') }}" wire:model.live="data" class="w-40" />
+            <x-ui.button variant="secondary" size="sm" wire:click="proximoDia" aria-label="{{ __('fluxos.proximo_dia') }}">&rarr;</x-ui.button>
             <x-ui.button size="sm" wire:click="abrirForm" class="sm:ml-2">{{ __('painel.novo_agendamento') }}</x-ui.button>
         </div>
     </div>
+
+    @if ($sucesso)
+        <x-ui.alert tone="success" class="mt-3" role="status">{{ $sucesso }}</x-ui.alert>
+    @endif
+
+    @if ($avisoFluxo)
+        <x-ui.alert tone="warning" class="mt-3" role="status">{{ $avisoFluxo }}</x-ui.alert>
+    @endif
 
     @if ($erroTransicao)
         <x-ui.alert tone="danger" class="mt-3">{{ $erroTransicao }}</x-ui.alert>
@@ -60,6 +68,15 @@
                 @endif
             </div>
 
+            @if ($this->barbeirosParaForm()->isEmpty())
+                <x-ui.alert tone="warning">
+                    {{ __('fluxos.cadastre_barbeiro') }}
+                    @can('barbeiros.gerenciar')
+                        <a href="{{ route('admin.barbeiros') }}" wire:navigate class="ml-1 font-semibold underline">{{ __('painel.barberos') }}</a>
+                    @endcan
+                </x-ui.alert>
+            @endif
+
             <x-ui.select label="{{ __('painel.barbeiro') }}" id="novoBarbeiroId" name="novoBarbeiroId" wire:model.live="novoBarbeiroId">
                 <option value="">{{ __('painel.selecione') }}</option>
                 @foreach ($this->barbeirosParaForm() as $barbeiro)
@@ -74,8 +91,23 @@
                         <x-ui.checkbox value="{{ $servico->id }}" wire:model.live="novoServicosSelecionados">{{ $servico->nome }}</x-ui.checkbox>
                     @endforeach
                 </div>
+                @if ($novoBarbeiroId && $this->servicosParaForm()->isEmpty())
+                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        {{ __('fluxos.vincule_servicos') }}
+                        @can('servicos.gerenciar')
+                            <a href="{{ route('admin.servicos') }}" wire:navigate class="font-semibold text-brand-600 underline">{{ __('painel.servicos') }}</a>
+                        @endcan
+                        @can('barbeiros.gerenciar')
+                            <a href="{{ route('admin.barbeiros') }}" wire:navigate class="ml-2 font-semibold text-brand-600 underline">{{ __('painel.barberos') }}</a>
+                        @endcan
+                    </p>
+                @endif
                 @error('novoServicosSelecionados') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
+
+            @if ($horarioSugerido)
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('fluxos.horario_sugerido', ['hora' => $horarioSugerido]) }}</p>
+            @endif
 
             <div class="grid grid-cols-2 gap-4">
                 <x-ui.input label="{{ __('painel.data') }}" id="novoData" name="novoData" type="date" wire:model.live="novoData" />
@@ -89,7 +121,12 @@
             </div>
 
             @if ($novoBarbeiroId && $novoServicosSelecionados !== [] && $this->horariosParaForm()->isEmpty())
-                <x-ui.alert tone="warning">{{ __('painel.sem_horario_disponivel') }}</x-ui.alert>
+                <x-ui.alert tone="warning">
+                    {{ __('painel.sem_horario_disponivel') }}
+                    @can('barbeiros.gerenciar')
+                        <a href="{{ route('admin.barbeiros.horarios', $novoBarbeiroId) }}" wire:navigate class="ml-1 font-semibold underline">{{ __('fluxos.configurar_horarios') }}</a>
+                    @endcan
+                </x-ui.alert>
             @endif
 
             <div class="flex gap-2">
@@ -191,7 +228,7 @@
                                                 default => ['bg-red-500', '✕'],
                                             };
                                         @endphp
-                                        <div x-data="{ open: false }" class="relative" wire:key="evt-{{ $agendamento->id }}">
+                                        <div id="agendamento-{{ $agendamento->id }}" x-data="{ open: window.location.hash === '#agendamento-{{ $agendamento->id }}' }" x-on:hashchange.window="open = window.location.hash === '#agendamento-{{ $agendamento->id }}'" class="relative scroll-mt-24" wire:key="evt-{{ $agendamento->id }}">
                                             <button type="button" @click="open = !open"
                                                 class="{{ $corEvento }} w-full rounded-md px-2 py-1 text-left text-[10.5px] font-bold text-white">
                                                 <span class="sr-only">{{ __("painel.status_{$agendamento->status}") }} — </span>
@@ -203,11 +240,14 @@
                                                 class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" x-on:keydown.escape.window="open = false">
                                                 <div class="fixed inset-0 bg-slate-900/50" @click="open = false"></div>
 
-                                                <div class="relative w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-3 shadow-xl">
+                                                <div class="relative w-72 rounded-lg border border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 p-3 shadow-xl">
                                                     <div class="flex items-center justify-between">
                                                         <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $agendamento->cliente->nome }}</span>
                                                         <x-ui.status-agendamento :status="$agendamento->status" />
                                                     </div>
+                                                    @can('clientes.gerenciar')
+                                                        <a href="{{ route('admin.clientes', ['busca' => $agendamento->cliente->telefone]) }}" wire:navigate class="mt-1 inline-block text-xs font-semibold text-brand-600 hover:underline">{{ __('painel.clientes') }} →</a>
+                                                    @endcan
                                                     <p class="mt-1 text-xs text-slate-400">{{ $agendamento->servicos->pluck('nome')->join(', ') }}</p>
                                                     <p class="text-xs text-slate-400">{{ $agendamento->data_hora_inicio->format('H:i') }}–{{ $agendamento->data_hora_fim->format('H:i') }}</p>
 
@@ -252,6 +292,12 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @else
+                                        <button type="button" wire:click="abrirForm({{ $barbeiro->id }}, '{{ $horario }}')"
+                                            aria-label="{{ __('fluxos.agendar_horario', ['hora' => $horario, 'barbeiro' => $barbeiro->nome]) }}"
+                                            class="min-h-9 w-full rounded-md text-sm font-semibold text-slate-400 transition-colors hover:bg-brand-50 hover:text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 dark:hover:bg-brand-950">
+                                            <span aria-hidden="true">+</span>
+                                        </button>
                                     @endif
                                 </div>
                             @endforeach

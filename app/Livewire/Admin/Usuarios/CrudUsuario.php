@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Usuarios;
 
+use App\Actions\Usuarios\AlternarAtendimentoDonoAction;
 use App\Actions\Usuarios\AtualizarUsuarioBarbeariaAction;
 use App\Actions\Usuarios\CriarUsuarioBarbeariaAction;
 use App\Models\Barbeiro;
@@ -171,32 +172,7 @@ class CrudUsuario extends Component
     {
         $user = User::doTenantAtual()->findOrFail($id);
 
-        if ($user->tipo !== 'dono') {
-            return;
-        }
-
-        $barbeiro = Barbeiro::withTrashed()->where('user_id', $user->id)->first();
-
-        if ($barbeiro && ! $barbeiro->trashed()) {
-            $barbeiro->delete();
-
-            return;
-        }
-
-        if ($barbeiro && $barbeiro->trashed()) {
-            $barbeiro->restore();
-            $barbeiro->update(['ativo' => true]);
-
-            return;
-        }
-
-        Barbeiro::create([
-            'user_id' => $user->id,
-            'nome' => $user->name,
-            'percentual_comissao' => 0,
-            'ativo' => true,
-            'aceita_online' => true,
-        ]);
+        app(AlternarAtendimentoDonoAction::class)->handle($user);
     }
 
     public function render()

@@ -1,8 +1,15 @@
 <div>
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.bloqueios') }} — {{ $barbeiro->nome }}</h1>
         <x-ui.button variant="link" :href="route('admin.barbeiros')">&larr; {{ __('painel.voltar') }}</x-ui.button>
     </div>
+
+    <nav aria-label="{{ __('painel.barberos') }}" class="mt-4 flex flex-wrap gap-3">
+        <x-ui.button variant="secondary" :href="route('admin.barbeiros.horarios', $barbeiro)" wire:navigate>{{ __('painel.horarios_barbero') }}</x-ui.button>
+        @can('agenda.gerenciar')
+            <x-ui.button variant="secondary" :href="route('admin.agenda')" wire:navigate>{{ __('fluxos.revisar_agenda') }}</x-ui.button>
+        @endcan
+    </nav>
 
     @if (session('status'))
         <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
@@ -26,11 +33,19 @@
             @if ($this->agendamentosAfetados()->isNotEmpty())
                 <x-ui.alert tone="warning">
                     {{ __('painel.bloqueio_agendamentos_afetados', ['quantidade' => $this->agendamentosAfetados()->count()]) }}
+                    <p class="mt-2">{{ __('fluxos.bloqueios_agendamentos_ajuda') }}</p>
+                    @can('agenda.gerenciar')
+                        <ul class="mt-2 space-y-1">
+                            @foreach ($this->agendamentosAfetados() as $afetado)
+                                <li><a class="underline" href="{{ route('admin.agenda', ['data' => $afetado->data_hora_inicio->toDateString()]) }}" target="_blank" rel="noopener">{{ $afetado->data_hora_inicio->format('d/m/Y H:i') }} · {{ $afetado->cliente->nome }}</a></li>
+                            @endforeach
+                        </ul>
+                    @endcan
                 </x-ui.alert>
             @endif
 
             <div class="flex gap-2">
-                <x-ui.button type="submit">{{ __('painel.salvar') }}</x-ui.button>
+                <x-ui.button type="submit" wire:loading.attr="disabled" wire:target="salvar">{{ __('painel.salvar') }}</x-ui.button>
                 <x-ui.button variant="secondary" wire:click="cancelar">{{ __('painel.cancelar') }}</x-ui.button>
             </div>
         </form>

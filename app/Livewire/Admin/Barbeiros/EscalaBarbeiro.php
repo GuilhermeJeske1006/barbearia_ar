@@ -99,6 +99,7 @@ class EscalaBarbeiro extends Component
         });
 
         session()->flash('status', __('painel.horario_salvo'));
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     /**

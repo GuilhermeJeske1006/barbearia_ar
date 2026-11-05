@@ -22,6 +22,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -68,6 +69,13 @@ class CalendarioAgenda extends Component
 
     public ?string $erroTransicao = null;
 
+    public ?string $avisoFluxo = null;
+
+    public ?string $sucesso = null;
+
+    #[Locked]
+    public ?string $horarioSugerido = null;
+
     public string $ultimaChecagem;
 
     public bool $mostrarPagamento = false;
@@ -92,6 +100,21 @@ class CalendarioAgenda extends Component
             $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
         }
         $this->ultimaChecagem = now()->toDateTimeString();
+
+        if (request()->boolean('novo') || request()->has('cliente')) {
+            $this->abrirForm();
+
+            if (request()->has('cliente')) {
+                $clienteId = filter_var(request()->query('cliente'), FILTER_VALIDATE_INT);
+                $cliente = $clienteId ? Cliente::find($clienteId) : null;
+
+                if ($cliente) {
+                    $this->selecionarCliente($cliente->id);
+                } else {
+                    $this->avisoFluxo = __('fluxos.cliente_indisponivel');
+                }
+            }
+        }
     }
 
     /**
@@ -135,12 +158,28 @@ class CalendarioAgenda extends Component
         $this->data = now(app('barbearia')->timezone ?? config('app.timezone'))->toDateString();
     }
 
-    public function abrirForm(): void
+    public function abrirForm(?int $barbeiroId = null, ?string $horario = null): void
     {
+        $this->resetValidation();
+        $this->sucesso = null;
+        $this->horarioSugerido = null;
         $this->reset([
             'novoClienteNome', 'novoClienteTelefone', 'novoClienteId', 'buscaCliente', 'novoBarbeiroId',
             'novoServicosSelecionados', 'novoHorario', 'erroForm',
         ]);
+        $barbeiros = $this->barbeirosParaForm();
+
+        if ($barbeiros->count() === 1) {
+            $this->novoBarbeiroId = $barbeiros->first()->id;
+        }
+
+        if ($barbeiroId && $barbeiros->contains('id', $barbeiroId)) {
+            $this->novoBarbeiroId = $barbeiroId;
+            if ($horario && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $horario)) {
+                $this->horarioSugerido = $horario;
+            }
+        }
+
         $this->novoData = $this->data;
         $this->mostrarForm = true;
     }
@@ -148,6 +187,7 @@ class CalendarioAgenda extends Component
     public function fecharForm(): void
     {
         $this->mostrarForm = false;
+        $this->horarioSugerido = null;
         $this->resetValidation();
         $this->reset([
             'novoClienteNome', 'novoClienteTelefone', 'novoClienteId', 'buscaCliente', 'novoBarbeiroId',
@@ -166,8 +206,9 @@ class CalendarioAgenda extends Component
             return collect();
         }
 
-        return Cliente::where('nome', 'like', "%{$busca}%")
-            ->orWhere('telefone', 'like', "%{$busca}%")
+        return Cliente::where(fn ($query) => $query
+            ->where('nome', 'like', "%{$busca}%")
+            ->orWhere('telefone', 'like', "%{$busca}%"))
             ->orderBy('nome')
             ->limit(8)
             ->get();
@@ -191,18 +232,22 @@ class CalendarioAgenda extends Component
     public function updatedNovoBarbeiroId(): void
     {
         $this->novoHorario = '';
+        $this->horarioSugerido = null;
         $idsValidos = $this->servicosParaForm()->pluck('id')->all();
         $this->novoServicosSelecionados = array_values(array_intersect($this->novoServicosSelecionados, $idsValidos));
     }
 
     public function updatedNovoServicosSelecionados(): void
     {
-        $this->novoHorario = '';
+        $this->novoHorario = $this->horarioSugerido && $this->horariosParaForm()->contains($this->horarioSugerido)
+            ? $this->horarioSugerido
+            : '';
     }
 
     public function updatedNovoData(): void
     {
         $this->novoHorario = '';
+        $this->horarioSugerido = null;
     }
 
     public function barbeirosParaForm(): Collection
@@ -242,7 +287,7 @@ class CalendarioAgenda extends Component
      */
     public function horariosParaForm(): Collection
     {
-        if (! $this->novoBarbeiroId || $this->novoServicosSelecionados === [] || ! $this->novoData) {
+        if (! $this->novoBarbeiroId || $this->novoServicosSelecionados === [] || ! Carbon::hasFormat($this->novoData, 'Y-m-d')) {
             return collect();
         }
 
@@ -298,6 +343,7 @@ class CalendarioAgenda extends Component
 
         $this->data = $this->novoData;
         $this->fecharForm();
+        $this->sucesso = __('fluxos.agendamento_salvo');
     }
 
     /**

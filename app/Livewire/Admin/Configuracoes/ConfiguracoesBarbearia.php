@@ -143,6 +143,7 @@ class ConfiguracoesBarbearia extends Component
         }
 
         session()->flash('status', __('painel.configuracoes_salvas'));
+        $this->dispatch('primeiros-passos-atualizado');
     }
 
     public function adicionarFotos(): void

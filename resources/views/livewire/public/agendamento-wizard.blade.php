@@ -355,8 +355,7 @@
             @endif
 
             <div class="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
-                @php $dias = collect(range(0, 13))->map(fn ($i) => \Carbon\Carbon::today()->addDays($i)); @endphp
-                @foreach ($dias as $dia)
+                @foreach ($this->diasSelecionaveis() as $dia)
                     <label class="relative block shrink-0 cursor-pointer rounded-lg border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-2.5 py-2 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 has-checked:border-brand-600 has-checked:bg-brand-600 has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-600">
                         <input type="radio" wire:model.live="data" value="{{ $dia->toDateString() }}" class="sr-only">
                         {{ mb_strtoupper($dia->translatedFormat('D')) }}

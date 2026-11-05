@@ -22,10 +22,24 @@ class DisponibilidadeService
     ) {}
 
     /**
+     * $ocultarPassados: wizard público e PDV nunca devem oferecer horário
+     * que já começou. Só a agenda do admin desliga, pra permitir lançar
+     * um atendimento retroativo (ex.: encaixe registrado depois).
+     *
      * @return Collection<int, Carbon> start times of free slots
      */
-    public function slotsDisponiveis(Barbeiro $barbeiro, Carbon $data, int $duracaoMinutos): Collection
+    public function slotsDisponiveis(Barbeiro $barbeiro, Carbon $data, int $duracaoMinutos, bool $ocultarPassados = true): Collection
     {
+        // Comparado como texto de relógio local (Y-m-d H:i:s), não como
+        // instante: $data e os horários vindos do banco estão no fuso do app,
+        // mas guardam a hora de parede da barbearia (ver CriarAgendamentoAction)
+        // — comparar instantes com um now() em outro fuso deslocaria o corte.
+        $agoraLocal = $ocultarPassados ? $this->agoraNaBarbearia()->format('Y-m-d H:i:s') : null;
+
+        if ($agoraLocal !== null && $data->toDateString() < substr($agoraLocal, 0, 10)) {
+            return collect();
+        }
+
         $diaSemana = $data->dayOfWeek;
 
         $escalas = $barbeiro->horarios()->where('dia_semana', $diaSemana)->get();
@@ -44,7 +58,7 @@ class DisponibilidadeService
             ->whereNotIn('status', ['cancelado', 'no_show'])
             ->get(['data_hora_inicio', 'data_hora_fim']);
 
-        return $escalas->flatMap(function ($escala) use ($data, $duracaoMinutos, $bloqueios, $agendamentosExistentes) {
+        return $escalas->flatMap(function ($escala) use ($data, $duracaoMinutos, $bloqueios, $agendamentosExistentes, $agoraLocal) {
             $inicio = $data->copy()->setTimeFromTimeString($escala->hora_inicio);
             $fim = $data->copy()->setTimeFromTimeString($escala->hora_fim);
 
@@ -54,6 +68,11 @@ class DisponibilidadeService
                 $slotFim = $slotInicio->copy()->addMinutes($duracaoMinutos);
 
                 if ($slotFim->gt($fim)) {
+                    continue;
+                }
+
+                // Horário que já começou não é mais oferecido.
+                if ($agoraLocal !== null && $slotInicio->format('Y-m-d H:i:s') <= $agoraLocal) {
                     continue;
                 }
 
@@ -143,6 +162,13 @@ class DisponibilidadeService
             ->contains(fn ($b) => $this->sobrepoe($inicio, $fim, $b->data_inicio, $b->data_fim));
 
         return ! $bloqueado;
+    }
+
+    private function agoraNaBarbearia(): Carbon
+    {
+        $timezone = app()->bound('barbearia') ? app('barbearia')->timezone : null;
+
+        return Carbon::now($timezone ?: config('app.timezone'));
     }
 
     private function sobrepoe(Carbon $inicioA, Carbon $fimA, Carbon $inicioB, Carbon $fimB): bool

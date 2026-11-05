@@ -252,8 +252,9 @@ class CalendarioAgenda extends Component
             return collect();
         }
 
+        // Admin pode lançar atendimento retroativo — não esconde horário passado.
         return app(CalcularSlotsDisponiveisAction::class)
-            ->handle($barbeiro, Carbon::parse($this->novoData), $this->novoServicosSelecionadosCollection())
+            ->handle($barbeiro, Carbon::parse($this->novoData), $this->novoServicosSelecionadosCollection(), ocultarPassados: false)
             ->map(fn (Carbon $slot) => $slot->format('H:i'))
             ->values();
     }

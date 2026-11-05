@@ -219,6 +219,20 @@ class AgendamentoWizard extends Component
         return $this->agora()->dayOfWeek;
     }
 
+    /**
+     * Próximos 14 dias a partir de hoje no fuso da barbearia — o mesmo fuso
+     * de $this->data no mount(), senão perto da meia-noite o chip de "hoje"
+     * divergia da data pré-selecionada.
+     *
+     * @return Collection<int, Carbon>
+     */
+    public function diasSelecionaveis(): Collection
+    {
+        $hoje = $this->agora()->startOfDay();
+
+        return collect(range(0, 13))->map(fn (int $i) => $hoje->copy()->addDays($i));
+    }
+
     public function duracaoTotal(): int
     {
         return $this->servicosSelecionadosCollection()->sum('duracao_minutos');

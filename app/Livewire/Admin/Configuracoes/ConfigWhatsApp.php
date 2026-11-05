@@ -114,6 +114,7 @@ class ConfigWhatsApp extends Component
             $dados = $wuzapi->status($barbearia->wuzapi_token);
             $conectado = (bool) ($dados['loggedIn'] ?? false);
             $novoStatus = $conectado ? Barbearia::STATUS_WHATSAPP_CONECTADO : Barbearia::STATUS_WHATSAPP_CONECTANDO;
+            $statusAnterior = $barbearia->status_conexao_whatsapp;
 
             $barbearia->update([
                 'status_conexao_whatsapp' => $novoStatus,
@@ -123,6 +124,11 @@ class ConfigWhatsApp extends Component
 
             $this->statusConexao = $novoStatus;
             $this->numeroConectado = $barbearia->numero_whatsapp_conectado;
+
+            // Só na transição: verificarStatus roda em wire:poll a cada 3s.
+            if ($conectado && $statusAnterior !== Barbearia::STATUS_WHATSAPP_CONECTADO) {
+                $this->dispatch('primeiros-passos-atualizado');
+            }
             $this->ultimaSincronizacaoEm = $barbearia->whatsapp_sincronizado_em?->diffForHumans();
 
             if ($conectado) {

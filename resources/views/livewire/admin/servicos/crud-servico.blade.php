@@ -6,6 +6,10 @@
         @endcan
     </div>
 
+    @if (session('status'))
+        <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
+    @endif
+
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_servico') }}" onClose="cancelar" maxWidth="2xl">
         <form wire:submit="salvar" class="space-y-4">
             <x-ui.input label="{{ __('painel.nome') }}" id="nome" name="nome" wire:model="nome" placeholder="{{ __('painel.placeholder_nome_servico') }}" autofocus />
@@ -20,11 +24,33 @@
                 </div>
             </div>
 
+            <fieldset class="space-y-2">
+                <legend class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('fluxos.profissionais_servico') }}</legend>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('fluxos.profissionais_servico_ajuda') }}</p>
+                <div class="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
+                    @forelse ($this->barbeirosDisponiveis() as $barbeiro)
+                        <div wire:key="servico-barbeiro-{{ $barbeiro->id }}" class="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                            <x-ui.checkbox wire:model="barbeirosSelecionados" :value="$barbeiro->id" :label="$barbeiro->nome . ($barbeiro->ativo ? '' : ' (' . __('fluxos.profissional_inativo') . ')')" />
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('fluxos.sem_profissionais') }}</p>
+                    @endforelse
+                </div>
+                @error('barbeirosSelecionados') <p role="alert" class="text-sm text-red-600">{{ $message }}</p> @enderror
+                @error('barbeirosSelecionados.*') <p role="alert" class="text-sm text-red-600">{{ $message }}</p> @enderror
+                @can('barbeiros.gerenciar')
+                    <div class="flex flex-wrap items-center gap-3">
+                        <x-ui.button variant="link" :href="route('admin.barbeiros')" target="_blank" rel="noopener">{{ __('fluxos.gerenciar_profissionais') }} ↗</x-ui.button>
+                        <x-ui.button variant="link" wire:click="$refresh">{{ __('fluxos.atualizar_opcoes') }}</x-ui.button>
+                    </div>
+                @endcan
+            </fieldset>
+
             <div>
                 <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('painel.produtos_consumidos') }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('painel.produtos_consumidos_ajuda') }}</p>
                 <div class="mt-2 grid max-h-48 grid-cols-1 gap-2 overflow-y-auto">
-                    @foreach ($this->produtosDisponiveis() as $produto)
+                    @forelse ($this->produtosDisponiveis() as $produto)
                         <div class="flex flex-col gap-2 rounded-lg sm:flex-row sm:items-center sm:justify-between border border-slate-200 dark:border-slate-800 px-3 py-2.5 text-sm">
                             <span class="min-w-0 break-words font-medium">{{ $produto->nome }}</span>
                             <div class="flex shrink-0 items-center gap-2">
@@ -38,7 +64,15 @@
                                     class="min-h-11 min-w-11 rounded-md bg-slate-100 dark:bg-slate-800 text-sm leading-none hover:bg-slate-200 dark:hover:bg-slate-700">+</button>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('fluxos.sem_insumos') }}</p>
+                        @can('produtos.gerenciar')
+                            <div class="flex flex-wrap items-center gap-3">
+                                <x-ui.button variant="link" :href="route('admin.produtos')" target="_blank" rel="noopener">{{ __('painel.produtos') }} ↗</x-ui.button>
+                                <x-ui.button variant="link" wire:click="$refresh">{{ __('fluxos.atualizar_opcoes') }}</x-ui.button>
+                            </div>
+                        @endcan
+                    @endforelse
                 </div>
             </div>
 
@@ -47,7 +81,7 @@
                 @foreach ($mensagens as $mensagem)<p role="alert" class="text-red-600">{{ $mensagem }}</p>@endforeach
             @endforeach
             <div class="flex gap-2">
-                <x-ui.button type="submit">{{ __('painel.salvar') }}</x-ui.button>
+                <x-ui.button type="submit" wire:loading.attr="disabled" wire:target="salvar">{{ __('painel.salvar') }}</x-ui.button>
                 <x-ui.button variant="secondary" wire:click="cancelar">{{ __('painel.cancelar') }}</x-ui.button>
             </div>
         </form>
@@ -70,6 +104,7 @@
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.duracao_minutos') }}</th>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.preco') }}</th>
                     <th class="px-4 py-2.5 font-bold">{{ __('painel.ativo') }}</th>
+                    <th class="px-4 py-2.5 font-bold">{{ __('painel.barberos') }}</th>
                     <th class="px-4 py-2.5"></th>
                 </tr>
             </thead>
@@ -82,6 +117,13 @@
                         <td class="px-4 py-2.5">
                             <x-ui.badge :tone="$servico->ativo ? 'green' : 'slate'">{{ $servico->ativo ? __('painel.sim') : __('painel.nao') }}</x-ui.badge>
                         </td>
+                        <td class="px-4 py-2.5">
+                            @if ($servico->barbeiros_ativos_count)
+                                {{ $servico->barbeiros_ativos_count }}
+                            @else
+                                <span class="text-amber-700 dark:text-amber-400">{{ __('fluxos.servico_sem_profissionais') }}</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-2.5 text-right">
                             @can('servicos.gerenciar')
                                 <div class="flex items-center justify-end gap-1">
@@ -93,7 +135,15 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5"><x-ui.empty-state icon="💈" :title="__('painel.nenhum_registro')" /></td>
+                        <td colspan="6">
+                            <x-ui.empty-state icon="💈" :title="__('fluxos.sem_servicos_titulo')" :description="__('fluxos.sem_servicos_descricao')">
+                                @can('servicos.gerenciar')
+                                    <x-slot:action>
+                                        <x-ui.button wire:click="criar">{{ __('painel.novo_servico') }}</x-ui.button>
+                                    </x-slot:action>
+                                @endcan
+                            </x-ui.empty-state>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>

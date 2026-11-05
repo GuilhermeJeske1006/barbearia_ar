@@ -36,7 +36,7 @@ class RegisterPaisTest extends TestCase
             ->set('paisBarbearia', $pais)
             ->set('idiomaPadrao', 'pt')
             ->call('avancarParaPagamento')
-            ->assertRedirect(route('painel'));
+            ->assertRedirect(route('admin.primeiros-passos'));
     }
 
     public function test_escolher_colombia_define_moeda_cop_e_timezone_bogota(): void

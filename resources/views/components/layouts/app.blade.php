@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? config('app.name') }}</title>
+    <title>{{ $title ?? \App\Support\Navegacao::titulo(request()->route()?->getName()) }} · {{ config('app.name') }}</title>
     <meta name="description" content="Painel de gestão Barberya — agenda, comissões e pagamentos da sua barbearia em um só lugar.">
     <meta name="theme-color" content="#1a334f">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}">
@@ -15,16 +15,17 @@
     @livewireStyles
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <a href="#conteudo-principal" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3 focus:text-slate-900">{{ __('fluxos.ir_conteudo') }}</a>
     <div class="flex min-h-screen" x-data="{ mobileOpen: false }">
         <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-slate-900/60 md:hidden"></div>
 
-        <aside :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-60 md:translate-x-0">
+        <aside id="menu-principal" @keydown.escape.window="mobileOpen = false" :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col overflow-y-auto bg-slate-900 px-3 py-5 transition-transform duration-200 md:relative md:z-auto md:w-60 md:translate-x-0">
             <div class="mb-5 flex items-center justify-between px-2">
                 <a href="{{ route('painel') }}" wire:navigate class="flex items-center gap-2 font-display text-base tracking-wide text-white">
                     <img src="{{ asset('images/Barberya_Logo_Isotipo-05.png') }}" alt="" class="h-7 w-7 shrink-0">
                     <span class="truncate">{{ app()->bound('barbearia') ? app('barbearia')->nome : config('app.name') }}</span>
                 </a>
-                <button type="button" @click="mobileOpen = false" class="text-slate-400 hover:text-white md:hidden" aria-label="{{ __('painel.cancelar') }}">
+                <button type="button" @click="mobileOpen = false" class="flex min-h-11 min-w-11 items-center justify-center text-slate-400 hover:text-white md:hidden" aria-label="{{ __('painel.cancelar') }}">
                     &times;
                 </button>
             </div>
@@ -32,7 +33,19 @@
             <nav class="flex flex-1 flex-col gap-0.5" @click.capture="mobileOpen = false">
                 <x-ui.nav-item :href="route('painel')" :active="request()->routeIs('painel')">{{ __('painel.painel') }}</x-ui.nav-item>
 
-                @canany(['agenda.gerenciar', 'agenda.visualizar_propria', 'pdv.operar', 'horarios.visualizar_propria'])
+                @php
+                    // Calculado uma vez por página e só para quem configura a
+                    // barbearia; some do topo quando o essencial termina e
+                    // continua acessível em Configurações.
+                    $guiaMenu = app()->bound('barbearia') && auth()->user()?->can('barbearia.gerenciar')
+                        ? app(\App\Services\PrimeirosPassosService::class)->resumo(auth()->user())
+                        : null;
+                @endphp
+                @if ($guiaMenu && ! $guiaMenu['completo'])
+                    <x-ui.nav-item :href="route('admin.primeiros-passos')" :active="request()->routeIs('admin.primeiros-passos')" :badge="$guiaMenu['feitas'].'/'.$guiaMenu['total']" :badge-label="__('onboarding.progresso', ['feitas' => $guiaMenu['feitas'], 'total' => $guiaMenu['total']])">{{ __('onboarding.titulo') }}</x-ui.nav-item>
+                @endif
+
+                @canany(['agenda.gerenciar', 'agenda.visualizar_propria', 'pdv.operar', 'horarios.acessar_proprios'])
                     <div x-data="{ open: true }" class="mt-4 border-t border-slate-800/60 pt-1.5">
                         <button type="button" @click="open = !open" class="flex w-full items-center justify-between gap-1.5 px-3 pb-1.5 pt-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-slate-300">
                             <span class="flex items-center gap-1.5">
@@ -57,7 +70,7 @@
                             @can('pdv.operar')
                                 <x-ui.nav-item :href="route('pdv')" :active="request()->routeIs('pdv')">{{ __('pdv.titulo') }}</x-ui.nav-item>
                             @endcan
-                            @can('horarios.visualizar_propria')
+                            @can('horarios.acessar_proprios')
                                 <x-ui.nav-item :href="route('barbeiro.meus-horarios')" :active="request()->routeIs('barbeiro.meus-horarios')">{{ __('painel.horarios_barbero') }}</x-ui.nav-item>
                             @endcan
                         </div>
@@ -86,6 +99,7 @@
                             @endcan
                             @can('produtos.gerenciar')
                                 <x-ui.nav-item :href="route('admin.produtos')" :active="request()->routeIs('admin.produtos')">{{ __('painel.productos') }}</x-ui.nav-item>
+                                <x-ui.nav-item :href="route('admin.produtos.estoque')" :active="request()->routeIs('admin.produtos.estoque')">{{ __('fluxos.estoque') }}</x-ui.nav-item>
                             @endcan
                             @can('clientes.gerenciar')
                                 <x-ui.nav-item :href="route('admin.clientes')" :active="request()->routeIs('admin.clientes')">{{ __('painel.clientes') }}</x-ui.nav-item>
@@ -114,7 +128,7 @@
                     </div>
                 @endcan
 
-                @canany(['financeiro.visualizar', 'comissoes.visualizar_propria'])
+                @canany(['financeiro.visualizar', 'financeiro.gerenciar', 'comissoes.visualizar_propria'])
                     <div x-data="{ open: true }" class="mt-4 border-t border-slate-800/60 pt-1.5">
                         <button type="button" @click="open = !open" class="flex w-full items-center justify-between gap-1.5 px-3 pb-1.5 pt-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-slate-300">
                             <span class="flex items-center gap-1.5">
@@ -165,11 +179,24 @@
                             </svg>
                         </button>
                         <div x-show="open" x-collapse>
-                            <x-ui.nav-item :href="route('admin.filiais')" :active="request()->routeIs('admin.filiais')">{{ __('painel.filiais') }}</x-ui.nav-item>
+                            @if ($guiaMenu && $guiaMenu['completo'])
+                                <x-ui.nav-item :href="route('admin.primeiros-passos')" :active="request()->routeIs('admin.primeiros-passos')">{{ __('onboarding.titulo') }}</x-ui.nav-item>
+                            @endif
+                            <x-ui.nav-item :href="route('admin.configuracoes')" :active="request()->routeIs('admin.configuracoes')">{{ __('painel.ajustes') }}</x-ui.nav-item>
+                            @can('filiais.gerenciar')
+                                <x-ui.nav-item :href="route('admin.filiais')" :active="request()->routeIs('admin.filiais')">{{ __('painel.filiais') }}</x-ui.nav-item>
+                            @endcan
                             <x-ui.nav-item :href="route('admin.pagamentos')" :active="request()->routeIs('admin.pagamentos')">{{ __('painel.pagamentos_titulo') }}</x-ui.nav-item>
                             <x-ui.nav-item :href="route('admin.whatsapp')" :active="request()->routeIs('admin.whatsapp')">{{ __('painel.whatsapp_titulo') }}</x-ui.nav-item>
-                            <x-ui.nav-item :href="route('admin.configuracoes')" :active="request()->routeIs('admin.configuracoes')">{{ __('painel.ajustes') }}</x-ui.nav-item>
                             <x-ui.nav-item :href="route('admin.assinatura')" :active="request()->routeIs('admin.assinatura')">{{ __('painel.assinatura_titulo') }}</x-ui.nav-item>
+                            @if (app()->bound('barbearia'))
+                                <a href="{{ route('public.agendamento', app('barbearia')->slug) }}" target="_blank" rel="noopener" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-white">
+                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-600"></span>
+                                    <span class="truncate">{{ __('onboarding.ver_minha_pagina') }}</span>
+                                    <span class="sr-only">{{ __('onboarding.abre_nova_aba') }}</span>
+                                    <span aria-hidden="true" class="ml-auto">↗</span>
+                                </a>
+                            @endif
                         </div>
                     </div>
                 @endcan
@@ -207,7 +234,7 @@
 
         <div class="min-w-0 flex-1 overflow-x-hidden">
             <div class="flex items-center justify-between gap-2 px-4 py-3 md:justify-end md:px-6">
-                <button type="button" @click="mobileOpen = true" class="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white md:hidden" aria-label="{{ __('painel.painel') }}">
+                <button type="button" @click="mobileOpen = true" :aria-expanded="mobileOpen" aria-controls="menu-principal" class="flex min-h-11 min-w-11 items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white md:hidden" aria-label="{{ __('painel.painel') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-6 w-6">
                         <path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
                     </svg>
@@ -219,7 +246,12 @@
                     <livewire:language-switcher />
                 </div>
             </div>
-            <main class="mx-auto max-w-6xl px-4 pb-12 md:px-6">
+            <main id="conteudo-principal" tabindex="-1" class="mx-auto max-w-6xl px-4 pb-12 md:px-6">
+                <x-ui.breadcrumbs />
+                <livewire:guia-primeiros-passos />
+                @if (session('filial_status'))
+                    <div role="status" class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">{{ session('filial_status') }}</div>
+                @endif
                 {{ $slot }}
             </main>
         </div>

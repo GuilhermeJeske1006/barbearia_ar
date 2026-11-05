@@ -4,6 +4,8 @@ namespace App\Livewire\Admin\Clientes;
 
 use App\Models\Cliente;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -34,7 +36,11 @@ class CrudCliente extends Component
 
     public ?int $removendoId = null;
 
+    #[Url]
     public string $busca = '';
+
+    #[Locked]
+    public ?int $clienteSalvoId = null;
 
     public function updatingBusca(): void
     {
@@ -43,12 +49,14 @@ class CrudCliente extends Component
 
     public function criar(): void
     {
+        $this->resetValidation();
         $this->reset(['editandoId', 'nome', 'telefone', 'email', 'dni', 'observacoes']);
         $this->mostrarForm = true;
     }
 
     public function editar(int $id): void
     {
+        $this->resetValidation();
         $cliente = Cliente::findOrFail($id);
 
         $this->editandoId = $cliente->id;
@@ -64,7 +72,7 @@ class CrudCliente extends Component
     {
         $this->validate();
 
-        Cliente::updateOrCreate(
+        $cliente = Cliente::updateOrCreate(
             ['id' => $this->editandoId],
             [
                 'nome' => $this->nome,
@@ -75,6 +83,7 @@ class CrudCliente extends Component
             ],
         );
 
+        $this->clienteSalvoId = $cliente->id;
         $this->mostrarForm = false;
         $this->reset(['editandoId', 'nome', 'telefone', 'email', 'dni', 'observacoes']);
     }
@@ -99,6 +108,9 @@ class CrudCliente extends Component
     public function remover(): void
     {
         Cliente::findOrFail($this->removendoId)->delete();
+        if ($this->clienteSalvoId === $this->removendoId) {
+            $this->clienteSalvoId = null;
+        }
         $this->removendoId = null;
     }
 

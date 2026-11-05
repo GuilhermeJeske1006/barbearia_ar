@@ -1,16 +1,26 @@
 <div>
     <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">
-        {{ __('painel.agenda') }} — {{ $barbearia?->nome ?? auth()->user()->name }}
+        {{ __('painel.painel') }} — {{ $barbearia?->nome ?? auth()->user()->name }}
     </h1>
 
     <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
         {{ auth()->user()->email }} · {{ auth()->user()->tipo }}
     </p>
 
+    {{-- Guia completo de primeiros passos no topo do painel até a barbearia
+         concluir a configuração essencial e ficar pronta para reservas.
+         Depois some daqui e continua acessível em Configurações. --}}
+    @if ($guia && ! $guia['completo'])
+        <div class="mt-5">
+            <livewire:admin.onboarding.primeiros-passos :embutido="true" />
+        </div>
+    @endif
+
     <div class="mt-5">
         <p class="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{{ __('painel.acesso_rapido') }}</p>
         <div class="mt-2 flex flex-wrap gap-2">
             @can('agenda.gerenciar')
+                <x-ui.quick-link :href="route('admin.agenda', ['novo' => 1])" icon="calendar">{{ __('painel.novo_agendamento') }}</x-ui.quick-link>
                 <x-ui.quick-link :href="route('admin.agenda')" icon="calendar">{{ __('painel.agenda') }}</x-ui.quick-link>
             @elsecan('agenda.visualizar_propria')
                 <x-ui.quick-link :href="route('barbeiro.minha-agenda')" icon="calendar">{{ __('painel.agenda') }}</x-ui.quick-link>
@@ -34,13 +44,13 @@
 
     @if ($ehGestor)
         <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <x-ui.kpi label="{{ __('painel.faturamento_hoje') }}" value="{{ \App\Support\Money::format($metricas['faturamento_hoje']) }}" />
-            <x-ui.kpi label="{{ __('painel.turnos_hoje') }}" value="{{ $metricas['agendamentos_hoje'] }}" />
-            <x-ui.kpi label="{{ __('painel.aguardando_confirmacao') }}" value="{{ $metricas['aguardando_confirmacao'] }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
-            <x-ui.kpi label="{{ __('painel.clientes_novos_mes') }}" value="{{ $metricas['clientes_novos_mes'] }}" />
+            <x-ui.kpi :href="auth()->user()->can('financeiro.visualizar') ? route('admin.relatorios.lucro') : null" label="{{ __('painel.faturamento_hoje') }}" value="{{ \App\Support\Money::format($metricas['faturamento_hoje']) }}" />
+            <x-ui.kpi :href="route('admin.agenda')" label="{{ __('painel.turnos_hoje') }}" value="{{ $metricas['agendamentos_hoje'] }}" />
+            <x-ui.kpi :href="route('admin.agenda')" label="{{ __('painel.aguardando_confirmacao') }}" value="{{ $metricas['aguardando_confirmacao'] }}" />
+            <x-ui.kpi :href="auth()->user()->can('financeiro.visualizar') ? route('admin.relatorios.comissoes') : (auth()->user()->can('comissoes.visualizar_propria') ? route('barbeiro.minhas-comissoes') : null)" label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
+            <x-ui.kpi :href="auth()->user()->can('clientes.gerenciar') ? route('admin.clientes') : null" label="{{ __('painel.clientes_novos_mes') }}" value="{{ $metricas['clientes_novos_mes'] }}" />
             <x-ui.kpi label="{{ __('painel.ticket_medio_hoje') }}" value="{{ \App\Support\Money::format($metricas['ticket_medio_hoje']) }}" />
-            <x-ui.kpi label="{{ __('painel.produtos_estoque_baixo') }}" value="{{ $metricas['produtos_estoque_baixo'] }}" />
+            <x-ui.kpi :href="auth()->user()->can('produtos.gerenciar') ? route('admin.produtos.estoque') : null" label="{{ __('painel.produtos_estoque_baixo') }}" value="{{ $metricas['produtos_estoque_baixo'] }}" />
         </div>
 
         @php
@@ -87,7 +97,7 @@
             @else
                 <div class="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
                     @foreach ($proximosAgendamentos as $agendamento)
-                        <div class="flex items-center justify-between gap-3 py-2.5">
+                        <a href="{{ route('admin.agenda', ['data' => $agendamento->data_hora_inicio->toDateString()]) }}#agendamento-{{ $agendamento->id }}" wire:navigate class="flex items-center justify-between gap-3 rounded-lg py-2.5 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-brand-600 dark:hover:bg-slate-800">
                             <div class="flex items-center gap-3">
                                 <span class="text-sm font-extrabold text-slate-900 dark:text-white">{{ $agendamento->data_hora_inicio->format('H:i') }}</span>
                                 <div>
@@ -96,17 +106,17 @@
                                 </div>
                             </div>
                             <x-ui.status-agendamento :status="$agendamento->status" />
-                        </div>
+                        </a>
                     @endforeach
                 </div>
             @endif
         </x-ui.card>
     @else
         <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <x-ui.kpi label="{{ __('painel.atendimentos_hoje') }}" value="{{ $metricas['atendimentos_hoje'] }}" />
-            <x-ui.kpi label="{{ __('painel.proximo_atendimento') }}" value="{{ $metricas['proximo_horario']?->format('H:i') ?? '—' }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
-            <x-ui.kpi label="{{ __('painel.comissoes_pagas_mes') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pagas_mes']) }}" />
+            <x-ui.kpi :href="auth()->user()->can('agenda.visualizar_propria') ? route('barbeiro.minha-agenda') : null" label="{{ __('painel.atendimentos_hoje') }}" value="{{ $metricas['atendimentos_hoje'] }}" />
+            <x-ui.kpi :href="auth()->user()->can('agenda.visualizar_propria') ? route('barbeiro.minha-agenda') : null" label="{{ __('painel.proximo_atendimento') }}" value="{{ $metricas['proximo_horario']?->format('H:i') ?? '—' }}" />
+            <x-ui.kpi :href="auth()->user()->can('financeiro.visualizar') ? route('admin.relatorios.comissoes') : (auth()->user()->can('comissoes.visualizar_propria') ? route('barbeiro.minhas-comissoes') : null)" label="{{ __('painel.comissoes_a_pagar') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pendentes']) }}" />
+            <x-ui.kpi :href="auth()->user()->can('comissoes.visualizar_propria') ? route('barbeiro.minhas-comissoes') : null" label="{{ __('painel.comissoes_pagas_mes') }}" value="{{ \App\Support\Money::format($metricas['comissoes_pagas_mes']) }}" />
         </div>
 
         <div
@@ -136,7 +146,7 @@
             <p class="text-sm font-bold text-slate-900 dark:text-white">{{ __('painel.link_publico_titulo') }}</p>
             <p class="mt-0.5 text-[12.5px] text-slate-500 dark:text-slate-400">{{ __('painel.link_publico_desc') }}</p>
 
-            <div class="mt-3 flex items-center gap-2">
+            <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <x-ui.input
                     id="link-publico-agendamento"
                     type="text"
@@ -151,6 +161,9 @@
                     id="copiar-link-publico-btn"
                     onclick="navigator.clipboard.writeText(document.getElementById('link-publico-agendamento').value).then(() => { const btn = document.getElementById('copiar-link-publico-btn'); const original = btn.textContent; btn.textContent = '{{ __('painel.link_copiado') }}'; setTimeout(() => btn.textContent = original, 2000); })"
                 >{{ __('painel.copiar_link') }}</x-ui.button>
+                <x-ui.button :href="$linkPublico" target="_blank" rel="noopener" variant="secondary" size="md">
+                    {{ __('onboarding.ver_minha_pagina') }}<span class="sr-only"> {{ __('onboarding.abre_nova_aba') }}</span>
+                </x-ui.button>
             </div>
         </x-ui.card>
     @endif

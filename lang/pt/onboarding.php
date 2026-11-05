@@ -1,0 +1,98 @@
+<?php
+
+return [
+    // Cadastro em etapas (Livewire\Auth\Register)
+    'cadastro_progresso' => 'Progresso do cadastro',
+    'cadastro_etapa_conta' => 'Sua conta',
+    'cadastro_etapa_barbearia' => 'Sua barbearia',
+    'cadastro_etapa_local' => 'Localização',
+    'cadastro_etapa_revisao' => 'Revisão',
+    'cadastro_ajuda_1' => 'Dados do responsável pela barbearia. Você usará o e-mail e a senha para entrar no painel.',
+    'cadastro_ajuda_2' => 'O nome e o endereço público aparecem para os clientes na página de reservas.',
+    'cadastro_ajuda_3' => 'Opcional, mas ajuda os clientes a encontrarem você.',
+    'cadastro_ajuda_4' => 'Confira os dados antes de criar a conta. Tudo pode ser alterado depois em Ajustes.',
+    'cadastro_link_previa' => 'Seus clientes vão reservar em: :url',
+    'cadastro_pais_ajuda' => 'O país define a moeda e o fuso horário. Você pode ajustá-los depois em Ajustes.',
+    'cadastro_depois_titulo' => 'Depois de criar a conta, vamos guiar você para:',
+    'etapa_x_de_y' => 'Etapa :atual de :total',
+    'etapa_concluida' => 'Etapa concluída',
+    'continuar' => 'Continuar',
+
+    // Guia de primeiros passos
+    'titulo' => 'Primeiros passos',
+    'subtitulo' => 'Siga as etapas para deixar sua barbearia pronta para receber reservas.',
+    'unidade' => 'Unidade: :nome',
+    'progresso' => ':feitas de :total etapas concluídas',
+    'pronta' => 'Pronta para receber reservas online',
+    'nao_pronta' => 'Ainda não recebe reservas online',
+    'nao_pronta_combinacao' => 'Nenhum profissional com reserva online ativa tem horário e serviço ao mesmo tempo. Revise a equipe para liberar as reservas.',
+    'tudo_pronto' => 'Tudo pronto! Sua barbearia já pode receber reservas online. Divulgue o link para os clientes.',
+    'revisar_equipe' => 'Revisar equipe',
+    'status_concluida' => 'Concluída',
+    'status_pendente' => 'Pendente',
+    'status_opcional' => 'Opcional',
+    'status_proxima' => 'Próxima etapa',
+    'obrigatorias' => 'Etapas essenciais',
+    'opcionais' => 'Recomendadas',
+    'sem_permissao' => 'Peça a um responsável com acesso a esta área para concluir esta etapa.',
+
+    'passo_dados_titulo' => 'Complete os dados da barbearia',
+    'passo_dados_descricao' => 'Telefone e endereço aparecem na página de reservas e nas mensagens aos clientes. Aproveite para enviar logo e capa.',
+    'passo_dados_acao' => 'Completar dados',
+    'passo_dados_falta' => 'Falta: :campos',
+
+    'passo_equipe_titulo' => 'Cadastre quem atende',
+    'passo_equipe_descricao' => 'Adicione os profissionais que fazem os atendimentos. Se você também atende, use “Eu também atendo”.',
+    'passo_equipe_acao' => 'Cadastrar profissional',
+    'passo_equipe_eu_atendo' => 'Eu também atendo',
+    'passo_equipe_total' => ':total profissional(is) ativo(s)',
+
+    'passo_horarios_titulo' => 'Defina os horários de atendimento',
+    'passo_horarios_descricao' => 'Informe os dias e horários de cada profissional. Sem horário, não há vagas para reservar.',
+    'passo_horarios_acao' => 'Configurar horários',
+    'passo_horarios_sem_horario' => 'Sem horário definido:',
+    'passo_horarios_requer' => 'Cadastre um profissional primeiro.',
+
+    'passo_servicos_titulo' => 'Cadastre os serviços',
+    'passo_servicos_descricao' => 'Crie os serviços com preço e duração e marque quem realiza cada um.',
+    'passo_servicos_acao' => 'Cadastrar serviço',
+    'passo_servicos_sem_profissional' => ':total serviço(s) sem profissional ativo',
+    'passo_servicos_revisar' => 'Vincular profissionais',
+
+    'passo_pagamentos_titulo' => 'Configure os pagamentos online',
+    'passo_pagamentos_descricao' => 'Conecte o Mercado Pago ou cadastre uma chave para transferência. Sem isso, o cliente paga na barbearia.',
+    'passo_pagamentos_acao' => 'Configurar pagamentos',
+
+    'passo_whatsapp_titulo' => 'Conecte o WhatsApp',
+    'passo_whatsapp_descricao' => 'Envie confirmações e lembretes automáticos aos clientes.',
+    'passo_whatsapp_acao' => 'Conectar WhatsApp',
+
+    'passo_divulgar_titulo' => 'Teste e divulgue seu link de reservas',
+    'passo_divulgar_descricao' => 'Abra sua página, faça uma reserva de teste e compartilhe o link com os clientes. A etapa é concluída com o primeiro agendamento.',
+    'passo_divulgar_acao' => 'Abrir página de reservas',
+    'passo_divulgar_requer' => 'Conclua equipe, horários e serviços para liberar as reservas.',
+    'abre_nova_aba' => '(abre em nova aba)',
+
+    // Card do painel, menu e faixa contextual
+    'painel_titulo' => 'Configure sua barbearia',
+    'painel_proxima' => 'Próxima etapa: :etapa',
+    'painel_continuar' => 'Continuar configuração',
+    'ver_etapas' => 'Ver todas as etapas',
+    'faixa_rotulo' => 'Guia de primeiros passos',
+    'faixa_etapa' => 'Primeiros passos · Etapa :atual de :total',
+    'faixa_concluida' => 'Esta etapa está concluída.',
+    'faixa_pendente' => 'Conclua esta etapa para avançar.',
+    'faixa_opcional' => 'Etapa opcional: configure agora ou depois.',
+    'faixa_proxima' => 'Próxima: :etapa',
+    'ver_minha_pagina' => 'Ver minha página',
+    'voltar_guia' => 'Voltar ao guia',
+
+    // Feedback após salvar
+    'barbeiro_salvo' => 'Profissional salvo',
+    'barbeiro_salvo_proximo' => 'Confira os horários e os serviços vinculados para liberar as reservas.',
+    'barbeiro_salvo_ok' => 'Os dados do profissional foram atualizados.',
+    'definir_horarios' => 'Definir horários',
+    'servico_salvo_titulo' => 'Serviço salvo',
+    'atendimento_dono_ativado' => 'Você foi incluído na equipe. Defina seus horários para receber reservas.',
+    'atendimento_dono_desativado' => 'Você saiu da equipe de atendimento.',
+];

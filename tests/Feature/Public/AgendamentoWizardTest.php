@@ -182,6 +182,48 @@ class AgendamentoWizardTest extends TestCase
             ->assertDontSee('Barba Norte');
     }
 
+    public function test_com_unico_barbeiro_mostra_apenas_servicos_ativos_vinculados(): void
+    {
+        Servico::create(['nome' => 'Sem profissional', 'duracao_minutos' => 20, 'preco' => 3000]);
+        $inativo = Servico::create(['nome' => 'Serviço desativado', 'duracao_minutos' => 20, 'preco' => 3000, 'ativo' => false]);
+        $this->barbeiro->servicos()->attach($inativo->id);
+
+        Livewire::test(AgendamentoWizard::class)
+            ->assertSee('Corte')
+            ->assertDontSee('Sem profissional')
+            ->assertDontSee('Serviço desativado')
+            ->call('iniciar')
+            ->assertSet('etapa', 2)
+            ->assertSee('Corte')
+            ->assertDontSee('Sem profissional')
+            ->assertDontSee('Serviço desativado');
+    }
+
+    public function test_servicos_publicos_exigem_barbeiro_ativo_que_aceita_online(): void
+    {
+        $offline = Barbeiro::create(['nome' => 'Somente presencial', 'percentual_comissao' => 50, 'aceita_online' => false]);
+        $presencial = Servico::create(['nome' => 'Somente presencial', 'duracao_minutos' => 20, 'preco' => 3000]);
+        $offline->servicos()->attach($presencial->id);
+        $inativo = Barbeiro::create(['nome' => 'Inativo', 'percentual_comissao' => 50, 'ativo' => false, 'aceita_online' => true]);
+        $indisponivel = Servico::create(['nome' => 'Sem barbeiro ativo', 'duracao_minutos' => 20, 'preco' => 3000]);
+        $inativo->servicos()->attach($indisponivel->id);
+
+        $componente = Livewire::test(AgendamentoWizard::class)->call('iniciar');
+
+        $this->assertSame([$this->servico->id], $componente->instance()->servicosDisponiveis()->pluck('id')->all());
+    }
+
+    public function test_varios_barbeiros_mostram_uniao_dos_servicos_vinculados_em_ordem(): void
+    {
+        $outro = Barbeiro::create(['nome' => 'Lucas', 'percentual_comissao' => 50, 'aceita_online' => true]);
+        $barba = Servico::create(['nome' => 'Barba', 'duracao_minutos' => 20, 'preco' => 3000]);
+        $outro->servicos()->attach([$barba->id, $this->servico->id]);
+
+        $componente = Livewire::test(AgendamentoWizard::class)->call('iniciar');
+
+        $this->assertSame([$barba->id, $this->servico->id], $componente->instance()->servicosDisponiveis()->pluck('id')->all());
+    }
+
     public function test_horario_ja_ocupado_nao_aparece_disponivel(): void
     {
         $data = $this->proximaSegunda();

@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Admin\Barbeiros;
 
+use App\Models\Agendamento;
 use App\Models\Barbeiro;
-use App\Models\BarbeiroBloqueio;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -84,15 +84,16 @@ class BloqueiosBarbeiro extends Component
      * escala semanal): um bloqueio de férias costuma ser criado sabendo que
      * agendamentos existentes precisarão ser reatribuídos manualmente.
      *
-     * @return Collection<int, \App\Models\Agendamento>
+     * @return Collection<int, Agendamento>
      */
     public function agendamentosAfetados(): Collection
     {
-        if (! $this->dataInicio || ! $this->dataFim) {
+        if (! Carbon::hasFormat($this->dataInicio, 'Y-m-d') || ! Carbon::hasFormat($this->dataFim, 'Y-m-d') || $this->dataFim < $this->dataInicio) {
             return collect();
         }
 
         return $this->barbeiro->agendamentos()
+            ->with('cliente')
             ->whereNotIn('status', ['cancelado', 'no_show', 'concluido'])
             ->whereBetween('data_hora_inicio', [
                 Carbon::parse($this->dataInicio)->startOfDay(),

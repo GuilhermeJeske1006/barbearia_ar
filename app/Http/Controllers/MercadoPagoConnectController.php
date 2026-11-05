@@ -40,7 +40,7 @@ class MercadoPagoConnectController extends Controller
             || $request->query('state') !== session('mp_oauth_state')
             || ! session('mp_oauth_barbearia_id')
         ) {
-            return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
+            return redirect()->route('admin.pagamentos')->with('erro', __('painel.mp_conexao_falhou'));
         }
 
         $barbeariaOAuthId = session('mp_oauth_barbearia_id');
@@ -64,11 +64,11 @@ class MercadoPagoConnectController extends Controller
         } catch (RequestException|ConnectionException $e) {
             Log::warning('Mercado Pago: falha na conexao OAuth', ['barbearia_id' => $barbearia->id, 'exception' => $e::class]);
 
-            return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
+            return redirect()->route('admin.pagamentos')->with('erro', __('painel.mp_conexao_falhou'));
         }
 
         if (empty($token['access_token']) || empty($token['user_id'])) {
-            return redirect()->route('painel')->with('erro', __('painel.mp_conexao_falhou'));
+            return redirect()->route('admin.pagamentos')->with('erro', __('painel.mp_conexao_falhou'));
         }
 
         $barbearia->update([
@@ -79,6 +79,6 @@ class MercadoPagoConnectController extends Controller
             'mp_token_expira_em' => isset($token['expires_in']) ? now()->addSeconds($token['expires_in']) : null,
         ]);
 
-        return redirect()->route('painel')->with('status', __('painel.mp_conectado'));
+        return redirect()->route('admin.pagamentos')->with('status', __('painel.mp_conectado'));
     }
 }

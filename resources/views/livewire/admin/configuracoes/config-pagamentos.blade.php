@@ -2,7 +2,10 @@
     <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.pagamentos_titulo') }}</h1>
 
     @if (session('status'))
-        <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
+        <x-ui.alert tone="success" class="mt-4" role="status">{{ session('status') }}</x-ui.alert>
+    @endif
+    @if (session('erro'))
+        <x-ui.alert tone="danger" class="mt-4" role="alert">{{ session('erro') }}</x-ui.alert>
     @endif
 
     <section class="mt-6">
@@ -19,7 +22,7 @@
             @else
                 <p class="text-sm text-slate-600 dark:text-slate-400">{{ __('painel.mp_nao_conectado') }}</p>
 
-                <x-ui.button :href="route('mercadopago.conectar')" target="_blank" rel="noopener" class="mt-4">
+                <x-ui.button :href="route('mercadopago.conectar')" class="mt-4">
                     {{ __('painel.mp_conectar') }}
                 </x-ui.button>
             @endif

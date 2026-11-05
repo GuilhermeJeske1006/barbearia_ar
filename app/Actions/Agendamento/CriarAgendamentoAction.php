@@ -96,9 +96,12 @@ class CriarAgendamentoAction
                 $this->estoque->ajustar([], $quantidadesValidas, origemAgendamento: $agendamento);
             }
 
-            if ($criadoPor === 'cliente_online') {
-                app(NotificarNovaReservaAction::class)->handle($agendamento);
-            }
+            // Sino para a equipe (fora do PDV) e e-mail ao dono em toda origem —
+            // regras em NotificarNovaReservaAction.
+            app(NotificarNovaReservaAction::class)->handle(
+                $agendamento,
+                autorId: $criadoPor === 'cliente_online' ? null : auth()->id(),
+            );
 
             return $agendamento;
         });

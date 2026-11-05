@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -66,19 +67,152 @@ class Register extends Component
     #[Locked]
     public ?string $stripePublicKey = null;
 
-    private bool $slugTocado = false;
+    /**
+     * Etapas visuais dentro do passo 'dados': 1 conta do dono, 2 identidade
+     * da barbearia, 3 localização e idioma, 4 revisão. Cada avanço valida só
+     * os campos da etapa atual; o envio final (avancarParaPagamento) valida
+     * tudo de novo e volta para a etapa do primeiro campo com erro.
+     */
+    public const TOTAL_ETAPAS = 4;
 
-    public function updatedNomeBarbearia(): void
+    #[Locked]
+    public int $etapa = 1;
+
+    /**
+     * A URL pública acompanha o nome enquanto ainda for a gerada a partir do
+     * nome anterior; editada à mão, deixa de acompanhar. Usa o hook
+     * "updating" (valor antigo ainda no componente) porque o Livewire 4 só
+     * roda os "updated" depois de aplicar todos os campos da requisição — um
+     * updatedNomeBarbearia sobrescrevia a URL enviada junto com o nome.
+     */
+    public function updatingNomeBarbearia(mixed $valor): void
     {
-        if (! $this->slugTocado) {
-            $this->slugBarbearia = Str::slug($this->nomeBarbearia);
+        if ($this->slugBarbearia === Str::slug($this->nomeBarbearia)) {
+            $this->slugBarbearia = Str::slug((string) $valor);
         }
     }
 
     public function updatedSlugBarbearia(): void
     {
-        $this->slugTocado = true;
         $this->slugBarbearia = Str::slug($this->slugBarbearia);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function regrasDaEtapa(int $etapa): array
+    {
+        return match ($etapa) {
+            1 => [
+                'nome' => 'required|string|max:255',
+                'email' => 'required|email|max:255|unique:users,email',
+                'telefoneDono' => 'nullable|string|max:30',
+                'senha' => ['required', 'string', Password::default(), 'confirmed'],
+            ],
+            2 => [
+                'nomeBarbearia' => 'required|string|max:255',
+                'slugBarbearia' => 'required|string|max:255|alpha_dash|unique:barbearias,slug',
+                'telefoneBarbearia' => 'nullable|string|max:30',
+                'cuitBarbearia' => 'nullable|string|max:30',
+            ],
+            3 => [
+                'enderecoBarbearia' => 'nullable|string|max:255',
+                'cidadeBarbearia' => 'nullable|string|max:100',
+                'provinciaBarbearia' => 'nullable|string|max:100',
+                'paisBarbearia' => 'nullable|string|size:2',
+                'idiomaPadrao' => 'required|in:es,pt',
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * Rótulos dos campos nas mensagens de validação — sem isso o Laravel
+     * usava o nome interno ("slug barbearia já está em uso").
+     *
+     * @return array<string, string>
+     */
+    protected function validationAttributes(): array
+    {
+        return [
+            'nome' => __('painel.nome_completo'),
+            'email' => __('painel.email'),
+            'telefoneDono' => __('painel.telefone'),
+            'senha' => __('painel.senha'),
+            'nomeBarbearia' => __('painel.nome_barbearia'),
+            'slugBarbearia' => __('painel.url_barbearia'),
+            'telefoneBarbearia' => __('painel.telefone'),
+            'cuitBarbearia' => __('painel.cuit'),
+            'enderecoBarbearia' => __('painel.endereco'),
+            'cidadeBarbearia' => __('painel.cidade'),
+            'provinciaBarbearia' => __('painel.provincia'),
+            'paisBarbearia' => __('painel.pais'),
+            'idiomaPadrao' => __('painel.idioma_padrao'),
+        ];
+    }
+
+    private function etapaDoCampo(string $campo): int
+    {
+        foreach (range(1, self::TOTAL_ETAPAS - 1) as $etapa) {
+            if (array_key_exists($campo, $this->regrasDaEtapa($etapa))) {
+                return $etapa;
+            }
+        }
+
+        return self::TOTAL_ETAPAS;
+    }
+
+    /** Enter no formulário: avança nas etapas 1-3 e cria a conta na revisão. */
+    public function submeter(): void
+    {
+        $this->etapa < self::TOTAL_ETAPAS
+            ? $this->avancarEtapa()
+            : $this->avancarParaPagamento();
+    }
+
+    public function avancarEtapa(): void
+    {
+        $regras = $this->regrasDaEtapa($this->etapa);
+
+        if ($regras !== []) {
+            $this->validate($regras);
+        }
+
+        $this->etapa = min($this->etapa + 1, self::TOTAL_ETAPAS);
+        $this->dispatch('etapa-cadastro-alterada');
+    }
+
+    public function voltarEtapa(): void
+    {
+        $this->resetValidation();
+        $this->etapa = max($this->etapa - 1, 1);
+        $this->dispatch('etapa-cadastro-alterada');
+    }
+
+    /** Só volta: pular adiante deixaria etapas sem validação. */
+    public function irParaEtapa(int $etapa): void
+    {
+        if ($etapa >= 1 && $etapa < $this->etapa) {
+            $this->resetValidation();
+            $this->etapa = $etapa;
+            $this->dispatch('etapa-cadastro-alterada');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $regras
+     */
+    private function validarTudo(array $regras): void
+    {
+        try {
+            $this->validate($regras);
+        } catch (ValidationException $e) {
+            $primeiroCampo = array_key_first($e->validator->errors()->messages());
+            $this->etapa = $this->etapaDoCampo((string) $primeiroCampo);
+            $this->dispatch('etapa-cadastro-alterada');
+
+            throw $e;
+        }
     }
 
     /**
@@ -96,20 +230,10 @@ class Register extends Component
      */
     public function avancarParaPagamento(): void
     {
-        $this->validate([
-            'nome' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'telefoneDono' => 'nullable|string|max:30',
-            'senha' => ['required', 'string', Password::default(), 'confirmed'],
-            'nomeBarbearia' => 'required|string|max:255',
-            'slugBarbearia' => 'required|string|max:255|alpha_dash|unique:barbearias,slug',
-            'telefoneBarbearia' => 'nullable|string|max:30',
-            'enderecoBarbearia' => 'nullable|string|max:255',
-            'cidadeBarbearia' => 'nullable|string|max:100',
-            'provinciaBarbearia' => 'nullable|string|max:100',
-            'paisBarbearia' => 'nullable|string|size:2',
-            'cuitBarbearia' => 'nullable|string|max:30',
-            'idiomaPadrao' => 'required|in:es,pt',
+        $this->validarTudo([
+            ...$this->regrasDaEtapa(1),
+            ...$this->regrasDaEtapa(2),
+            ...$this->regrasDaEtapa(3),
         ]);
 
         // $assinatura = $action->handle(nome: $this->nome, email: $this->email);
@@ -155,7 +279,8 @@ class Register extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('painel'), navigate: true);
+        // Conta nova cai no guia de configuração, não num painel vazio.
+        $this->redirect(route('admin.primeiros-passos'), navigate: true);
     }
 
     public function voltarParaDados(): void
@@ -222,7 +347,8 @@ class Register extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('painel'), navigate: true);
+        // Conta nova cai no guia de configuração, não num painel vazio.
+        $this->redirect(route('admin.primeiros-passos'), navigate: true);
     }
 
     /**
@@ -239,6 +365,8 @@ class Register extends Component
                 ['email' => $this->email],
                 ['email' => 'unique:users,email'],
             )->errors()->first('email'));
+            $this->etapa = $this->etapaDoCampo('email');
+            $this->dispatch('etapa-cadastro-alterada');
 
             return;
         }
@@ -248,6 +376,8 @@ class Register extends Component
                 ['slugBarbearia' => $this->slugBarbearia],
                 ['slugBarbearia' => 'unique:barbearias,slug'],
             )->errors()->first('slugBarbearia'));
+            $this->etapa = $this->etapaDoCampo('slugBarbearia');
+            $this->dispatch('etapa-cadastro-alterada');
 
             return;
         }

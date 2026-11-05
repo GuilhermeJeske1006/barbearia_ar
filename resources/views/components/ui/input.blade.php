@@ -8,7 +8,8 @@
 ])
 
 @php
-    $id = $attributes->get('id') ?? $name;
+    $name = $name ?? $attributes->wire('model')->value();
+    $id = $attributes->get('id') ?? ($name ? 'campo-' . str_replace('.', '-', $name) : 'campo-' . \Illuminate\Support\Str::uuid());
     $hasError = $name && $errors->has($name);
 @endphp
 

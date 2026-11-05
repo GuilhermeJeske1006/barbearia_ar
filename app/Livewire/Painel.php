@@ -8,6 +8,7 @@ use App\Models\Cliente;
 use App\Models\Comissao;
 use App\Models\Pagamento;
 use App\Models\Produto;
+use App\Services\PrimeirosPassosService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -216,8 +217,13 @@ class Painel extends Component
     {
         $ehGestor = $this->ehGestor();
 
+        $guia = app()->bound('barbearia') && Auth::user()->can('barbearia.gerenciar')
+            ? app(PrimeirosPassosService::class)->resumo(Auth::user())
+            : null;
+
         return view('livewire.painel', [
             'barbearia' => app()->bound('barbearia') ? app('barbearia') : null,
+            'guia' => $guia,
             'ehGestor' => $ehGestor,
             'metricas' => $ehGestor ? $this->metricasGestor() : $this->metricasBarbeiro(),
             'proximosAgendamentos' => $ehGestor ? $this->proximosAgendamentosHoje() : collect(),

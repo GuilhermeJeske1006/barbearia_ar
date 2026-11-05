@@ -360,6 +360,37 @@ class CalendarioAgendaTest extends TestCase
         $this->assertSame('Cliente Novo', $criado->cliente->nome);
     }
 
+    public function test_unico_barbeiro_e_selecionado_ao_abrir_form_com_seus_servicos(): void
+    {
+        $corte = $this->agendamento->servicos->first();
+        $this->barbeiro->servicos()->attach($corte->id);
+        Servico::create(['nome' => 'Serviço sem vínculo', 'duracao_minutos' => 20, 'preco' => 3000]);
+        Barbeiro::create(['nome' => 'Inativo', 'percentual_comissao' => 50, 'ativo' => false]);
+
+        $componente = Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->assertSet('novoBarbeiroId', $this->barbeiro->id)
+            ->assertSee('Corte')
+            ->assertDontSee('Serviço sem vínculo');
+
+        $this->assertSame([$corte->id], $componente->instance()->servicosParaForm()->pluck('id')->all());
+
+        $componente->call('fecharForm')->call('abrirForm')
+            ->assertSet('novoBarbeiroId', $this->barbeiro->id)
+            ->assertSet('novoServicosSelecionados', []);
+    }
+
+    public function test_varios_barbeiros_exigem_escolha_no_novo_agendamento(): void
+    {
+        Barbeiro::create(['nome' => 'Lucas', 'percentual_comissao' => 50]);
+
+        Livewire::actingAs($this->dono)
+            ->test(CalendarioAgenda::class)
+            ->call('abrirForm')
+            ->assertSet('novoBarbeiroId', null);
+    }
+
     public function test_admin_cria_novo_agendamento_notifica_cliente(): void
     {
         Notification::fake();

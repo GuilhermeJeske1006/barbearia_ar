@@ -9,9 +9,9 @@ use App\Models\Barbeiro;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\CriaFilialParaTeste;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\CriaFilialParaTeste;
 use Tests\TestCase;
 
 class MeusHorariosTest extends TestCase
@@ -97,17 +97,9 @@ class MeusHorariosTest extends TestCase
 
     public function test_usuario_sem_barbeiro_vinculado_ve_aviso(): void
     {
-        $atendente = User::create([
-            'name' => 'Atendente',
-            'email' => 'atendente@example.com',
-            'password' => bcrypt('senha-forte-123'),
-            'tipo' => 'atendente',
-            'barbearia_atual_id' => $this->barbearia->id,
-            'ativo' => true,
-        ]);
-        $atendente->assignRole('atendente');
+        $this->barbeiro->update(['user_id' => null]);
 
-        Livewire::actingAs($atendente)
+        Livewire::actingAs($this->barbeiroUser)
             ->test(MeusHorarios::class)
             ->assertSeeText('vinculado');
     }
@@ -127,5 +119,44 @@ class MeusHorariosTest extends TestCase
         $this->actingAs($cliente)
             ->get(route('barbeiro.meus-horarios'))
             ->assertForbidden();
+    }
+
+    public function test_barbeiro_acessa_a_rota_e_ve_o_link_no_menu(): void
+    {
+        $this->actingAs($this->barbeiroUser)
+            ->get(route('barbeiro.meus-horarios'))
+            ->assertOk()
+            ->assertSee(route('barbeiro.meus-horarios'));
+    }
+
+    public function test_dono_nao_ve_o_link_no_menu_nem_acessa_a_tela_pessoal(): void
+    {
+        $dono = User::where('email', 'juan@example.com')->firstOrFail();
+
+        $this->assertTrue($dono->can('horarios.visualizar_propria'));
+
+        $this->actingAs($dono)
+            ->get(route('painel'))
+            ->assertOk()
+            ->assertDontSee(route('barbeiro.meus-horarios'));
+
+        $this->get(route('barbeiro.meus-horarios'))->assertForbidden();
+
+        Livewire::actingAs($dono)
+            ->test(MeusHorarios::class)
+            ->assertForbidden();
+    }
+
+    public function test_dono_que_tambem_e_barbeiro_continua_gerenciando_sua_escala(): void
+    {
+        $dono = User::where('email', 'juan@example.com')->firstOrFail();
+        $dono->assignRole('barbeiro');
+        $this->barbeiro->update(['user_id' => $dono->id]);
+
+        $this->actingAs($dono)
+            ->get(route('barbeiro.meus-horarios'))
+            ->assertForbidden();
+
+        $this->get(route('admin.barbeiros.horarios', $this->barbeiro))->assertOk();
     }
 }

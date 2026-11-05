@@ -4,18 +4,24 @@ namespace App\Livewire\Barbeiro;
 
 use App\Models\Barbeiro;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
  * Visão somente-leitura do próprio barbeiro sobre o próprio horário de
- * trabalho — permission 'horarios.visualizar_propria', diferente de
+ * trabalho — gate 'horarios.acessar_proprios', diferente de
  * 'barbeiros.gerenciar' (EscalaBarbeiro, dono/admin edita). Mesmo padrão de
  * MinhaAgenda: o barbeiro "vê", não "gerencia".
  */
 #[Layout('layouts::app')]
 class MeusHorarios extends Component
 {
+    public function mount(): void
+    {
+        Gate::authorize('horarios.acessar_proprios');
+    }
+
     private function barbeiro(): ?Barbeiro
     {
         return Barbeiro::where('user_id', Auth::id())->first();

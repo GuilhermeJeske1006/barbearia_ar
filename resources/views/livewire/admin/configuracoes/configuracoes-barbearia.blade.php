@@ -1,6 +1,14 @@
 <div>
     <h1 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">{{ __('painel.ajustes') }}</h1>
 
+    <nav aria-label="{{ __('fluxos.configuracoes_integracoes') }}" class="mt-4 flex flex-wrap gap-3">
+        <x-ui.button variant="secondary" :href="route('admin.pagamentos')" wire:navigate>{{ __('painel.pagamentos_titulo') }}</x-ui.button>
+        <x-ui.button variant="secondary" :href="route('admin.whatsapp')" wire:navigate>{{ __('painel.whatsapp_titulo') }}</x-ui.button>
+        @can('filiais.gerenciar')
+            <x-ui.button variant="secondary" :href="route('admin.filiais')" wire:navigate>{{ __('painel.filiais') }}</x-ui.button>
+        @endcan
+    </nav>
+
     @if (session('status'))
         <x-ui.alert tone="success" class="mt-4">{{ session('status') }}</x-ui.alert>
     @endif

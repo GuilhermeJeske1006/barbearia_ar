@@ -43,6 +43,12 @@ class AppServiceProvider extends ServiceProvider
         // habilidade antes de qualquer checagem de permission/role rodar.
         Gate::before(fn (User $user, string $ability) => $user->tipo === 'super_admin' ? true : null);
 
+        // O dono gerencia as escalas em Barbeiros. A visão pessoal é só
+        // para a equipe, mesmo quando o dono também atende ou tem essa
+        // permissão concedida por uma configuração antiga.
+        Gate::define('horarios.acessar_proprios', fn (User $user) => $user->tipo !== 'dono'
+            && $user->can('horarios.visualizar_propria'));
+
         // Livewire re-runs the page route's 'can:' middleware on every
         // wire:click/wire:submit AJAX call via a fake sub-request (see
         // PersistentMiddleware), but only for middleware on its own

@@ -76,9 +76,13 @@
                             <x-ui.badge tone="blue">{{ __('painel.papel_'.$usuario->tipo) }}</x-ui.badge>
                             @if ($usuario->tipo === 'dono')
                                 @php $atende = $this->donoAtendeComoBarbeiro($usuario->id); @endphp
-                                <button type="button" wire:click="alternarAtendeComoBarbeiro({{ $usuario->id }})" class="ml-1 align-middle">
+                                <div class="mt-2 space-y-2">
                                     <x-ui.badge :tone="$atende ? 'green' : 'slate'">{{ $atende ? __('painel.dono_atende_como_barbeiro') : __('painel.dono_nao_atende') }}</x-ui.badge>
-                                </button>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('painel.atendimento_dono_filial', ['filial' => app('filial')->nome]) }}</p>
+                                    <x-ui.button variant="secondary" wire:click="alternarAtendeComoBarbeiro({{ $usuario->id }})" wire:loading.attr="disabled" wire:target="alternarAtendeComoBarbeiro({{ $usuario->id }})">
+                                        {{ $atende ? __('painel.desativar_atendimento') : __('painel.ativar_atendimento') }}
+                                    </x-ui.button>
+                                </div>
                             @endif
                         </td>
                         <td class="px-4 py-2.5">

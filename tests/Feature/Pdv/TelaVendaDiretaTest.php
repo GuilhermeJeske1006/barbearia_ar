@@ -82,6 +82,59 @@ class TelaVendaDiretaTest extends TestCase
             ->call('confirmarCliente')->assertHasNoErrors()->assertSet('etapa', 4);
     }
 
+    public function test_atalho_de_cliente_preserva_identidade_ate_concluir_venda_e_limpa_proxima(): void
+    {
+        $cliente = Cliente::create(['nome' => 'Ana cadastrada', 'telefone' => '11988887777']);
+        $component = Livewire::actingAs($this->dono)->withQueryParams(['cliente' => $cliente->id])
+            ->test(TelaVendaDireta::class)
+            ->assertSet('iniciado', true)->assertSet('etapa', 1)
+            ->assertSet('clienteSelecionadoId', $cliente->id)
+            ->assertSet('clienteNome', $cliente->nome)->assertSet('clienteTelefone', $cliente->telefone)
+            ->call('toggleServico', $this->servico->id)->call('irParaBarbeiro')
+            ->call('escolherBarbeiro', $this->barbeiro->id)->call('confirmarCliente')
+            ->call('finalizar')->assertHasNoErrors()->assertSet('etapa', 5);
+
+        $this->assertSame($cliente->id, Agendamento::firstOrFail()->cliente_id);
+        $this->assertSame(1, Cliente::count());
+        $component->call('novaVenda')->assertSet('clienteSelecionadoId', null)
+            ->assertSet('clienteNome', '')->assertSet('clienteTelefone', '');
+    }
+
+    public function test_atalho_de_cliente_de_outra_filial_nao_pre_carrega_dados(): void
+    {
+        $cliente = Cliente::create(['nome' => 'Cliente privado', 'telefone' => '11988887777']);
+        $this->criarEBindarFilial($this->barbearia, 'Outra');
+        Livewire::actingAs($this->dono)->withQueryParams(['cliente' => $cliente->id])
+            ->test(TelaVendaDireta::class)->assertSet('clienteSelecionadoId', null)
+            ->assertSet('clienteNome', '')->assertSet('iniciado', false)
+            ->assertSet('erro', __('fluxos.contexto_indisponivel'));
+    }
+
+    public function test_atalho_da_agenda_carrega_carrinho_e_rejeita_atendimento_de_outro_dia(): void
+    {
+        $cliente = Cliente::create(['nome' => 'Ana', 'telefone' => '111']);
+        $agendamento = Agendamento::create([
+            'barbeiro_id' => $this->barbeiro->id,
+            'cliente_id' => $cliente->id,
+            'criado_por' => 'admin',
+            'data_hora_inicio' => now(),
+            'data_hora_fim' => now()->addMinutes(30),
+            'status' => 'confirmado',
+        ]);
+        $agendamento->servicos()->attach($this->servico->id, ['preco_cobrado' => 5000, 'percentual_comissao_aplicado' => 50]);
+        Livewire::actingAs($this->dono)->withQueryParams(['agendamento' => $agendamento->id])
+            ->test(TelaVendaDireta::class)->assertSet('iniciado', true)
+            ->assertSet('agendamentoVinculadoId', $agendamento->id)
+            ->assertSet('clienteSelecionadoId', $cliente->id)
+            ->assertSet('servicosSelecionados', [$this->servico->id])
+            ->call('irParaBarbeiro')->assertSet('etapa', 4);
+
+        $agendamento->update(['data_hora_inicio' => now()->subDay(), 'data_hora_fim' => now()->subDay()->addMinutes(30)]);
+        Livewire::withQueryParams(['agendamento' => $agendamento->id])->test(TelaVendaDireta::class)
+            ->assertSet('agendamentoVinculadoId', null)
+            ->assertSet('erro', __('fluxos.contexto_indisponivel'));
+    }
+
     public function test_codigo_adiciona_unidade_sem_baixar_estoque_e_respeita_disponibilidade(): void
     {
         $this->produto->update(['codigo_barras' => '0012345678905', 'estoque_qtd' => 1]);

@@ -18,10 +18,10 @@ class CalcularSlotsDisponiveisAction
      * @param  Collection<int, Servico>  $servicos
      * @return Collection<int, Carbon>
      */
-    public function handle(Barbeiro $barbeiro, Carbon $data, Collection $servicos): Collection
+    public function handle(Barbeiro $barbeiro, Carbon $data, Collection $servicos, bool $ocultarPassados = true): Collection
     {
         $duracaoTotal = $servicos->sum(fn (Servico $servico) => $barbeiro->duracaoParaServico($servico));
 
-        return $this->disponibilidade->slotsDisponiveis($barbeiro, $data, $duracaoTotal);
+        return $this->disponibilidade->slotsDisponiveis($barbeiro, $data, $duracaoTotal, $ocultarPassados);
     }
 }

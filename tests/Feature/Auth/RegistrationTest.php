@@ -41,7 +41,7 @@ class RegistrationTest extends TestCase
             ->set('nomeBarbearia', 'Barbería Central')
             ->set('slugBarbearia', 'barberia-central')
             ->call('avancarParaPagamento')
-            ->assertRedirect(route('painel'));
+            ->assertRedirect(route('admin.primeiros-passos'));
 
         $this->assertAuthenticated();
 

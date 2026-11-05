@@ -1,0 +1,98 @@
+<?php
+
+return [
+    // Registro por etapas (Livewire\Auth\Register)
+    'cadastro_progresso' => 'Progreso del registro',
+    'cadastro_etapa_conta' => 'Tu cuenta',
+    'cadastro_etapa_barbearia' => 'Tu barbería',
+    'cadastro_etapa_local' => 'Ubicación',
+    'cadastro_etapa_revisao' => 'Revisión',
+    'cadastro_ajuda_1' => 'Datos del responsable de la barbería. Vas a usar el e-mail y la contraseña para entrar al panel.',
+    'cadastro_ajuda_2' => 'El nombre y la dirección pública aparecen para los clientes en la página de reservas.',
+    'cadastro_ajuda_3' => 'Opcional, pero ayuda a que los clientes te encuentren.',
+    'cadastro_ajuda_4' => 'Revisá los datos antes de crear la cuenta. Todo se puede cambiar después en Ajustes.',
+    'cadastro_link_previa' => 'Tus clientes van a reservar en: :url',
+    'cadastro_pais_ajuda' => 'El país define la moneda y la zona horaria. Podés ajustarlos después en Ajustes.',
+    'cadastro_depois_titulo' => 'Después de crear la cuenta, te guiamos para:',
+    'etapa_x_de_y' => 'Paso :atual de :total',
+    'etapa_concluida' => 'Paso completado',
+    'continuar' => 'Continuar',
+
+    // Guía de primeros pasos
+    'titulo' => 'Primeros pasos',
+    'subtitulo' => 'Seguí los pasos para dejar tu barbería lista para recibir reservas.',
+    'unidade' => 'Sucursal: :nome',
+    'progresso' => ':feitas de :total pasos completados',
+    'pronta' => 'Lista para recibir reservas online',
+    'nao_pronta' => 'Todavía no recibe reservas online',
+    'nao_pronta_combinacao' => 'Ningún profesional con reservas online activas tiene horario y servicio al mismo tiempo. Revisá el equipo para habilitar las reservas.',
+    'tudo_pronto' => '¡Todo listo! Tu barbería ya puede recibir reservas online. Compartí el link con tus clientes.',
+    'revisar_equipe' => 'Revisar equipo',
+    'status_concluida' => 'Completado',
+    'status_pendente' => 'Pendiente',
+    'status_opcional' => 'Opcional',
+    'status_proxima' => 'Próximo paso',
+    'obrigatorias' => 'Pasos esenciales',
+    'opcionais' => 'Recomendados',
+    'sem_permissao' => 'Pedile a un responsable con acceso a esta área que complete este paso.',
+
+    'passo_dados_titulo' => 'Completá los datos de la barbería',
+    'passo_dados_descricao' => 'El teléfono y la dirección aparecen en la página de reservas y en los mensajes a los clientes. Aprovechá para subir logo y portada.',
+    'passo_dados_acao' => 'Completar datos',
+    'passo_dados_falta' => 'Falta: :campos',
+
+    'passo_equipe_titulo' => 'Registrá a quienes atienden',
+    'passo_equipe_descricao' => 'Agregá a los profesionales que hacen los servicios. Si vos también atendés, usá “Yo también atiendo”.',
+    'passo_equipe_acao' => 'Registrar profesional',
+    'passo_equipe_eu_atendo' => 'Yo también atiendo',
+    'passo_equipe_total' => ':total profesional(es) activo(s)',
+
+    'passo_horarios_titulo' => 'Definí los horarios de atención',
+    'passo_horarios_descricao' => 'Indicá los días y horarios de cada profesional. Sin horario no hay turnos para reservar.',
+    'passo_horarios_acao' => 'Configurar horarios',
+    'passo_horarios_sem_horario' => 'Sin horario definido:',
+    'passo_horarios_requer' => 'Registrá un profesional primero.',
+
+    'passo_servicos_titulo' => 'Registrá los servicios',
+    'passo_servicos_descricao' => 'Creá los servicios con precio y duración y marcá quién realiza cada uno.',
+    'passo_servicos_acao' => 'Registrar servicio',
+    'passo_servicos_sem_profissional' => ':total servicio(s) sin profesional activo',
+    'passo_servicos_revisar' => 'Vincular profesionales',
+
+    'passo_pagamentos_titulo' => 'Configurá los pagos online',
+    'passo_pagamentos_descricao' => 'Conectá Mercado Pago o cargá un alias para transferencias. Sin esto, el cliente paga en la barbería.',
+    'passo_pagamentos_acao' => 'Configurar pagos',
+
+    'passo_whatsapp_titulo' => 'Conectá WhatsApp',
+    'passo_whatsapp_descricao' => 'Enviá confirmaciones y recordatorios automáticos a los clientes.',
+    'passo_whatsapp_acao' => 'Conectar WhatsApp',
+
+    'passo_divulgar_titulo' => 'Probá y compartí tu link de reservas',
+    'passo_divulgar_descricao' => 'Abrí tu página, hacé una reserva de prueba y compartí el link con los clientes. El paso se completa con la primera reserva.',
+    'passo_divulgar_acao' => 'Abrir página de reservas',
+    'passo_divulgar_requer' => 'Completá equipo, horarios y servicios para habilitar las reservas.',
+    'abre_nova_aba' => '(se abre en una pestaña nueva)',
+
+    // Card del panel, menú y franja contextual
+    'painel_titulo' => 'Configurá tu barbería',
+    'painel_proxima' => 'Próximo paso: :etapa',
+    'painel_continuar' => 'Continuar configuración',
+    'ver_etapas' => 'Ver todos los pasos',
+    'faixa_rotulo' => 'Guía de primeros pasos',
+    'faixa_etapa' => 'Primeros pasos · Paso :atual de :total',
+    'faixa_concluida' => 'Este paso está completado.',
+    'faixa_pendente' => 'Completá este paso para avanzar.',
+    'faixa_opcional' => 'Paso opcional: configuralo ahora o más tarde.',
+    'faixa_proxima' => 'Próximo: :etapa',
+    'ver_minha_pagina' => 'Ver mi página',
+    'voltar_guia' => 'Volver a la guía',
+
+    // Feedback después de guardar
+    'barbeiro_salvo' => 'Profesional guardado',
+    'barbeiro_salvo_proximo' => 'Revisá los horarios y los servicios vinculados para habilitar las reservas.',
+    'barbeiro_salvo_ok' => 'Los datos del profesional fueron actualizados.',
+    'definir_horarios' => 'Definir horarios',
+    'servico_salvo_titulo' => 'Servicio guardado',
+    'atendimento_dono_ativado' => 'Te sumamos al equipo. Definí tus horarios para recibir reservas.',
+    'atendimento_dono_desativado' => 'Saliste del equipo de atención.',
+];

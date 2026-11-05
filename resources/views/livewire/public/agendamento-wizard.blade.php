@@ -3,6 +3,11 @@
         @php
             $barbearia = app()->bound('barbearia') ? app('barbearia') : null;
             $servicosPreview = $this->servicosDisponiveis();
+            // Com uma filial só, o mount já a bindou e os serviços contam;
+            // com várias, basta haver alguma filial com serviço ativo.
+            $aceitaReservas = app()->bound('filial.id')
+                ? $servicosPreview->isNotEmpty()
+                : $this->filiaisDisponiveis()->isNotEmpty();
             $equipe = $this->barbeirosDisponiveis();
             $fotos = $barbearia?->fotos ?? collect();
             $enderecoCompleto = $barbearia ? collect([$barbearia->endereco, $barbearia->cidade, $barbearia->provincia, $barbearia->pais])->filter()->join(', ') : '';
@@ -64,7 +69,11 @@
                     <p class="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{{ $barbearia?->descricao ?: __('agendamento.bem_vindo_desc') }}</p>
 
                     <div class="hidden lg:mt-6 lg:block">
-                        <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                        @if ($aceitaReservas)
+                            <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                        @else
+                            <x-ui.alert tone="warning" role="status">{{ __('agendamento.agenda_online_indisponivel') }}</x-ui.alert>
+                        @endif
                     </div>
                 </div>
             </aside>
@@ -167,7 +176,11 @@
                 </div>
 
                 <div class="sticky bottom-0 border-t border-slate-200 bg-ivory/95 px-6 py-3 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-900/95">
-                    <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                    @if ($aceitaReservas)
+                        <x-ui.button size="lg" wire:click="iniciar" class="w-full">{{ __('agendamento.comecar') }} →</x-ui.button>
+                    @else
+                        <x-ui.alert tone="warning" role="status">{{ __('agendamento.agenda_online_indisponivel') }}</x-ui.alert>
+                    @endif
                 </div>
             </div>
         </div>
@@ -251,7 +264,7 @@
             <p class="mb-3.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('agendamento.paso', ['n' => 1]) }}</p>
 
             <div class="space-y-2.5 md:grid md:grid-cols-2 md:gap-2.5 md:space-y-0">
-                @foreach ($this->filiaisDisponiveis() as $filial)
+                @forelse ($this->filiaisDisponiveis() as $filial)
                     <label @class([
                         'flex cursor-pointer flex-col rounded-xl border-[1.5px] bg-ivory dark:bg-slate-900 px-4 py-3.5 transition-colors',
                         'has-checked:border-brand-600 has-checked:bg-brand-50' => true,
@@ -263,7 +276,9 @@
                             <span class="mt-0.5 text-xs text-slate-400">{{ collect([$filial->endereco, $filial->cidade])->filter()->join(' — ') }}</span>
                         @endif
                     </label>
-                @endforeach
+                @empty
+                    <x-ui.alert tone="warning" role="status" class="md:col-span-2">{{ __('agendamento.agenda_online_indisponivel') }}</x-ui.alert>
+                @endforelse
             </div>
             @error('filialSelecionada') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
         @endif
@@ -274,7 +289,7 @@
             <p class="mb-3.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('agendamento.paso', ['n' => 2]) }}</p>
 
             <div class="space-y-2.5 md:grid md:grid-cols-2 md:gap-2.5 md:space-y-0">
-                @foreach ($this->servicosDisponiveis() as $servico)
+                @forelse ($this->servicosDisponiveis() as $servico)
                     <label @class([
                         'flex cursor-pointer flex-col rounded-xl border-[1.5px] bg-ivory dark:bg-slate-900 px-4 py-3.5 transition-colors',
                         'has-checked:border-brand-600 has-checked:bg-brand-50' => true,
@@ -290,7 +305,9 @@
                             <span class="mt-2 text-[12px] leading-snug text-slate-500 dark:text-slate-400">{{ $servico->descricao }}</span>
                         @endif
                     </label>
-                @endforeach
+                @empty
+                    <x-ui.alert tone="warning" role="status" class="md:col-span-2">{{ __('agendamento.agenda_online_indisponivel') }}</x-ui.alert>
+                @endforelse
             </div>
             @error('servicosSelecionados') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
         @endif
@@ -355,8 +372,7 @@
             @endif
 
             <div class="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
-                @php $dias = collect(range(0, 13))->map(fn ($i) => \Carbon\Carbon::today()->addDays($i)); @endphp
-                @foreach ($dias as $dia)
+                @foreach ($this->diasSelecionaveis() as $dia)
                     <label class="relative block shrink-0 cursor-pointer rounded-lg border-[1.5px] border-slate-200 dark:border-slate-800 bg-ivory dark:bg-slate-900 px-2.5 py-2 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 has-checked:border-brand-600 has-checked:bg-brand-600 has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-600">
                         <input type="radio" wire:model.live="data" value="{{ $dia->toDateString() }}" class="sr-only">
                         {{ mb_strtoupper($dia->translatedFormat('D')) }}

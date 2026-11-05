@@ -119,4 +119,5 @@ return [
     'pagamento_expirado_detalhe' => 'Este horario ya no está reservado. Si ya pagaste, contactá a la barbería antes de realizar otro pago.',
     'pagamento_revisao' => 'Pago recibido después de la cancelación',
     'pagamento_revisao_detalhe' => 'Recibimos el pago, pero el horario no está confirmado. Contactá a la barbería para coordinar otro horario o la devolución.',
+    'agenda_online_indisponivel' => 'Esta barbería todavía no habilitó la agenda online. Contactala para reservar.',
 ];

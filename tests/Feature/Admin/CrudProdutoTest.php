@@ -53,6 +53,32 @@ class CrudProdutoTest extends TestCase
             ->call('salvar')->assertHasNoErrors();
     }
 
+    public function test_estoque_abre_edicao_e_salvar_retorna_ao_produto(): void
+    {
+        $produto = Produto::create(['nome' => 'Pomada', 'preco' => 10, 'estoque_qtd' => 5]);
+        Livewire::actingAs($this->dono)->withQueryParams(['editar' => $produto->id, 'origem' => 'estoque'])
+            ->test(CrudProduto::class)->assertSet('mostrarForm', true)
+            ->assertSet('editandoId', $produto->id)->set('nome', 'Pomada atualizada')
+            ->call('salvar')->assertHasNoErrors()
+            ->assertRedirect(route('admin.produtos.estoque', ['detalhe' => $produto->id]));
+        $this->assertSame('Pomada atualizada', $produto->fresh()->nome);
+        $this->assertSame(5, $produto->fresh()->estoque_qtd);
+        Livewire::withQueryParams(['detalhe' => $produto->id])->test(ControleEstoque::class)
+            ->assertSet('produtoConsultadoId', $produto->id)->assertSee('Pomada atualizada');
+    }
+
+    public function test_atalhos_de_produtos_respeitam_filial_e_busca_mantem_contexto(): void
+    {
+        $produto = Produto::create(['nome' => 'Pomada privada', 'preco' => 10, 'estoque_qtd' => 5]);
+        $this->criarEBindarFilial($this->barbearia, 'Outra');
+        $local = Produto::create(['nome' => 'Bebida local', 'preco' => 5, 'codigo_barras' => '00123']);
+        Livewire::actingAs($this->dono)->withQueryParams(['editar' => $produto->id])
+            ->test(CrudProduto::class)->assertSet('mostrarForm', false)
+            ->assertDontSee('Pomada privada')->set('busca', '00123')->assertSee($local->nome);
+        Livewire::withQueryParams(['detalhe' => $produto->id])->test(ControleEstoque::class)
+            ->assertSet('produtoConsultadoId', null);
+    }
+
     public function test_consulta_nao_movimenta_e_contagem_detecta_alteracoes(): void
     {
         $produto = Produto::create(['nome' => 'Loção', 'preco' => 10, 'codigo_barras' => '01234567', 'estoque_qtd' => 5]);

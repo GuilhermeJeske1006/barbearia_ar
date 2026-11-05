@@ -19,7 +19,9 @@ class FilialSwitcher extends Component
 
         auth()->user()->update(['filial_atual_id' => $filial->id]);
 
-        $this->redirect(url()->previous(), navigate: true);
+        // IDs e formulários da unidade anterior não são válidos na nova.
+        session()->flash('filial_status', __('fluxos.filial_alterada', ['nome' => $filial->nome]));
+        $this->redirectRoute('painel', navigate: true);
     }
 
     public function render()

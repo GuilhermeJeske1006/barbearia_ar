@@ -6,8 +6,22 @@
         @endcan
     </div>
 
+    @if ($clienteSalvoId)
+        <x-ui.alert tone="success" class="mt-4" role="status">
+            <p>{{ __('fluxos.cliente_salvo') }}</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+                @can('agenda.gerenciar')
+                    <x-ui.button size="sm" :href="route('admin.agenda', ['cliente' => $clienteSalvoId, 'novo' => 1])" wire:navigate>{{ __('fluxos.agendar_cliente') }}</x-ui.button>
+                @endcan
+                @can('pdv.operar')
+                    <x-ui.button size="sm" variant="secondary" :href="route('pdv', ['cliente' => $clienteSalvoId])" wire:navigate>{{ __('fluxos.vender_cliente') }}</x-ui.button>
+                @endcan
+            </div>
+        </x-ui.alert>
+    @endif
+
     <div class="mt-4">
-        <x-ui.input type="search" id="busca" wire:model.live.debounce.400ms="busca" placeholder="{{ __('painel.buscar_cliente') }}" class="max-w-sm" />
+        <x-ui.input type="search" label="{{ __('painel.buscar_cliente') }}" id="busca" wire:model.live.debounce.400ms="busca" placeholder="{{ __('painel.buscar_cliente') }}" class="max-w-sm" />
     </div>
 
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_cliente') }}" onClose="cancelar" maxWidth="lg">
@@ -58,7 +72,13 @@
                         <td class="px-4 py-2.5">{{ $cliente->email ?? '—' }}</td>
                         <td class="px-4 py-2.5 text-right">
                             @can('clientes.gerenciar')
-                                <div class="flex items-center justify-end gap-1">
+                                <div class="flex flex-wrap items-center justify-end gap-1">
+                                    @can('agenda.gerenciar')
+                                        <x-ui.button size="sm" variant="secondary" :href="route('admin.agenda', ['cliente' => $cliente->id, 'novo' => 1])" wire:navigate>{{ __('fluxos.agendar_cliente') }}</x-ui.button>
+                                    @endcan
+                                    @can('pdv.operar')
+                                        <x-ui.button size="sm" variant="secondary" :href="route('pdv', ['cliente' => $cliente->id])" wire:navigate>{{ __('fluxos.vender_cliente') }}</x-ui.button>
+                                    @endcan
                                     <x-ui.icon-button icon="pencil" tooltip="{{ __('painel.editar') }}" wire:click="editar({{ $cliente->id }})" />
                                     <x-ui.icon-button icon="trash" variant="danger" tooltip="{{ __('painel.remover') }}" wire:click="confirmarRemocao({{ $cliente->id }})" />
                                 </div>

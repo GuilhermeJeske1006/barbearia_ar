@@ -1,5 +1,5 @@
 <div>
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-extrabold text-slate-900 dark:text-white">{{ __('painel.productos') }}</h1>
         <div class="flex gap-2">
             @can('produtos.gerenciar')
@@ -10,6 +10,13 @@
             @endcan
         </div>
     </div>
+
+    <div class="mt-4 max-w-md">
+        <x-ui.input type="search" name="busca" label="{{ __('fluxos.buscar_produtos') }}" wire:model.live.debounce.300ms="busca" />
+    </div>
+    @if ($feedback)
+        <p role="status" class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{{ $feedback }}</p>
+    @endif
 
     <x-ui.modal :show="$mostrarForm" title="{{ $editandoId ? __('painel.editar') : __('painel.novo_produto') }}" onClose="cancelar" maxWidth="lg">
         <form wire:submit="salvar" class="space-y-4">
@@ -54,6 +61,7 @@
                     {{ __('painel.estoque_atual') }}: <strong>{{ $estoqueQtd !== '' ? $estoqueQtd : '—' }}</strong>
                     — {{ __('painel.ajuste_de_estoque_via_historico') }}
                 </p>
+                <x-ui.button variant="secondary" href="{{ route('admin.produtos.estoque', ['detalhe' => $editandoId]) }}" wire:navigate>{{ __('fluxos.ver_estoque') }}</x-ui.button>
             @endif
 
             <div class="flex gap-2">
@@ -121,6 +129,7 @@
                         <td class="px-4 py-2.5 text-right">
                             @can('produtos.gerenciar')
                                 <div class="flex items-center justify-end gap-1">
+                                    <x-ui.button size="sm" variant="secondary" href="{{ route('admin.produtos.estoque', ['detalhe' => $produto->id]) }}" wire:navigate>{{ __('fluxos.ver_estoque') }}</x-ui.button>
                                     @if ($produto->estoque_qtd !== null)
                                         <x-ui.icon-button icon="arrow-down-tray" tooltip="{{ __('painel.entrada') }}" wire:click="abrirMovimentacao({{ $produto->id }}, 'entrada')" />
                                         <x-ui.icon-button icon="adjustments" tooltip="{{ __('painel.ajustar') }}" wire:click="abrirMovimentacao({{ $produto->id }}, 'ajuste')" />
